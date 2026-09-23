@@ -360,3 +360,56 @@ suite('DiffService: スナップショットの後片付け', () => {
     assert.strictEqual(snapshots.contents.has(only1), false);
   });
 });
+
+suite('DiffService.revertAfter: ターン単位で戻す', () => {
+  test('指定したターンより後の変更を新しい順に戻し、戻せなかったものを返す', async () => {
+    const h = harness({ [A]: 'v1\n' });
+    await h.service.create({ prompt: 'p', cwd: CWD });
+    // ターン 0: a.txt v1 → v2
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    h.fs.change(A, 'v2\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    // ターン 1: a.txt v2 → v3、b.txt 新規、c.txt は変更前が不明
+    await h.service.send('task-1', 'more');
+    await settle();
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    h.fs.change(A, 'v3\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: 'D:\\work\\b.txt' });
+    await settle();
+    h.fs.change('D:\\work\\b.txt', 'new\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: 'D:\\work\\b.txt' });
+    await settle();
+    h.fs.change('D:\\work\\c.txt', 'shell\n');
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+
+    const skipped = await h.diffs.revertAfter('task-1', 0);
+    assert.deepStrictEqual(skipped, ['c.txt']);
+    assert.strictEqual(h.fs.files.get(A), 'v2\n', 'ターン 0 の結果まで戻る');
+    assert.strictEqual(h.fs.files.has('D:\\work\\b.txt'), false);
+    const task = await h.store.load('task-1');
+    assert.ok(task?.turns[1]?.changes.every((c) => c.reverted || c.path === 'c.txt'));
+    assert.strictEqual(task?.turns[0]?.changes[0]?.reverted, false, 'ターン 0 は触らない');
+  });
+
+  test('-1 を指定すると全ターンを戻す', async () => {
+    const h = harness({ [A]: 'v1\n' });
+    await h.service.create({ prompt: 'p', cwd: CWD });
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    h.fs.change(A, 'v2\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await h.diffs.revertAfter('task-1', -1);
+    assert.strictEqual(h.fs.files.get(A), 'v1\n');
+  });
+});

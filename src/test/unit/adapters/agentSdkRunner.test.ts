@@ -516,3 +516,53 @@ suite('AgentSdkRunner: setModel', () => {
     assert.deepStrictEqual(fake.models, ['claude-opus-5', undefined]);
   });
 });
+
+suite('AgentSdkRunner: M9', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+  };
+
+  test('turn-end に、そのターンの最後の assistant メッセージの uuid を付ける', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.push(
+      msg({ type: 'assistant', uuid: 'u1', message: { content: [{ type: 'text', text: 'a' }] } })
+    );
+    fake.push(
+      msg({ type: 'assistant', uuid: 'u2', message: { content: [{ type: 'text', text: 'b' }] } })
+    );
+    fake.push(
+      msg({ type: 'result', subtype: 'success', is_error: false, usage: {}, modelUsage: {} })
+    );
+    fake.push(null);
+    await handle.done;
+    const end = events.find((e) => e.type === 'turn-end');
+    assert.ok(end?.type === 'turn-end' && end.ok);
+    assert.strictEqual(end.lastMessageUuid, 'u2');
+  });
+
+  test('resumeAt と fork を SDK の resumeSessionAt と forkSession に渡す', () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    runner.resume('sess-1', {
+      ...base,
+      resumeAt: 'u1',
+      fork: true,
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    const opts = fake.params[0]?.options;
+    assert.strictEqual(opts?.resume, 'sess-1');
+    assert.strictEqual(opts?.resumeSessionAt, 'u1');
+    assert.strictEqual(opts?.forkSession, true);
+  });
+});
