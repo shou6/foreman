@@ -41,6 +41,7 @@ const initial: PanelState = {
   diffs: {},
   attachments: [],
   models: [],
+  maxWidthEm: 72,
   strings: STRINGS,
 };
 

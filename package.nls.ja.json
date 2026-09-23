@@ -16,5 +16,6 @@
   "config.defaultPermissionMode": "新しいタスクでのツール実行の承認方式。",
   "config.defaultPermissionMode.default": "ツールの実行のたびに確認する（Claude Code の既定）。",
   "config.defaultPermissionMode.acceptEdits": "ファイルの編集は自動で許可し、それ以外は確認する。",
-  "command.attachToTask": "Foreman: タスクに添付"
+  "command.attachToTask": "Foreman: タスクに添付",
+  "config.taskViewWidth": "タスク画面の本文の最大の幅（em）。0 なら画面いっぱいに広げる。"
 }

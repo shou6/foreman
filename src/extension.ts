@@ -50,6 +50,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
   // 前回の履歴を読んでから、前回の終了で途中だったタスクを中断に直す（中断の記録が履歴にも残る）
+  // Claude との通信の記録（いつ・どのタスクが・何を使ったか）を出力パネルへ
+  const stamp = (): string => new Date().toISOString();
+  service.onDidReceiveEvent(({ taskId, turn, event }) => {
+    if (event.type === 'init') {
+      output.appendLine(
+        `${stamp()} [${taskId}] session ${event.sessionId} model=${event.model} turn=${turn}`
+      );
+    } else if (event.type === 'turn-end') {
+      const usage =
+        event.ok && event.usage !== undefined
+          ? ` in=${event.usage.inputTokens} cacheRead=${event.usage.cacheReadInputTokens} cacheWrite=${event.usage.cacheCreationInputTokens} out=${event.usage.outputTokens}`
+          : '';
+      output.appendLine(
+        `${stamp()} [${taskId}] turn ${turn} ${event.ok ? 'ok' : `failed: ${event.reason}`}${usage}`
+      );
+    }
+  });
+  service.onDidChange((task) => {
+    output.appendLine(`${stamp()} [${task.id}] ${task.status} "${task.title}"`);
+  });
   const transcripts = new Transcripts(service, transcriptStore, await transcriptStore.loadAll());
   await service.recover();
   const diffs = new DiffService({ service, fs: new NodeFileSystem(), snapshots, sep: path.sep });

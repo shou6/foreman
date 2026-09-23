@@ -196,6 +196,12 @@
           ],
           "default": "default",
           "description": "%config.defaultPermissionMode%"
+        },
+        "foreman.taskViewWidth": {
+          "type": "number",
+          "default": 72,
+          "minimum": 0,
+          "description": "%config.taskViewWidth%"
         }
       }
     }

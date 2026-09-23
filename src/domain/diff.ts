@@ -46,3 +46,27 @@ function normalize(content: string | undefined): string {
   }
   return content.endsWith('\n') ? content : content + '\n';
 }
+
+export interface NumberedLine extends DiffLine {
+  oldNo: number | undefined;
+  newNo: number | undefined;
+}
+
+/** 差分の各行に、変更前と変更後の行番号を付ける（インライン差分の表示用） */
+export function numberLines(lines: readonly DiffLine[]): NumberedLine[] {
+  let oldNo = 0;
+  let newNo = 0;
+  return lines.map((line) => {
+    if (line.kind === 'same') {
+      oldNo++;
+      newNo++;
+      return { ...line, oldNo, newNo };
+    }
+    if (line.kind === 'del') {
+      oldNo++;
+      return { ...line, oldNo, newNo: undefined };
+    }
+    newNo++;
+    return { ...line, oldNo: undefined, newNo };
+  });
+}

@@ -7,6 +7,7 @@ import type { Transcripts } from '../app/transcripts';
 import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
+import { readSettings } from './settings';
 import { statusLabel } from './taskTreeView';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
@@ -208,6 +209,7 @@ export class TaskPanels implements vscode.Disposable {
       changes,
       diffs: {},
       attachments: this.attachments.get(task.id) ?? [],
+      maxWidthEm: readSettings().taskViewWidth,
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),

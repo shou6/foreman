@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import type { TranscriptItem } from '../domain/transcript';
 import { renderMarkdown } from './markdown';
+import { numberLines } from '../domain/diff';
 import {
   diffKey,
   type DiffLine,
@@ -60,7 +61,10 @@ export function App({ state, post }: AppProps) {
       ? [state.model, ...state.models]
       : state.models;
   return (
-    <div class="panel">
+    <div
+      class="panel"
+      style={`--foreman-max-width: ${state.maxWidthEm > 0 ? `${state.maxWidthEm}em` : 'none'}`}
+    >
       <header class="head">
         <h1 class="title">{state.title}</h1>
         <span class="status" data-status={state.status}>
@@ -261,14 +265,14 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
                   <span class="file-dir">{dirname(change.path)}</span>
                 )}
               </button>
-              <span class="diff-counts">
-                {change.added !== undefined && <span class="added">+{change.added}</span>}
-                {change.removed !== undefined && <span class="removed">-{change.removed}</span>}
-                {change.before === undefined && change.kind !== 'created' && (
-                  <span class="unknown">{strings.unknownBefore}</span>
-                )}
-              </span>
               <span class="diff-file-actions">
+                <span class="diff-counts">
+                  {change.added !== undefined && <span class="added">+{change.added}</span>}
+                  {change.removed !== undefined && <span class="removed">-{change.removed}</span>}
+                  {change.before === undefined && change.kind !== 'created' && (
+                    <span class="unknown">{strings.unknownBefore}</span>
+                  )}
+                </span>
                 <button
                   class="ghost"
                   onClick={() => post({ type: 'openDiff', turn, path: change.path })}
@@ -291,8 +295,12 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
             </div>
             {lines !== undefined && (open[key] ?? true) && (
               <pre class="diff-lines">
-                {lines.map((line, i) => (
+                {numberLines(lines).map((line, i) => (
                   <div class="diff-line" data-kind={line.kind} key={i}>
+                    <span class="diff-no" data-old={line.oldNo} data-new={line.newNo}>
+                      <span>{line.oldNo ?? ''}</span>
+                      <span>{line.newNo ?? ''}</span>
+                    </span>
                     <span class="diff-sign">
                       {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
                     </span>

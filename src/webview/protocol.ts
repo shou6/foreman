@@ -53,6 +53,8 @@ export interface PanelState {
   diffs: Record<string, DiffLine[]>;
   /** 次の指示に添付するファイル（絶対パス） */
   attachments: string[];
+  /** 本文の最大の幅（em）。0 なら画面いっぱい */
+  maxWidthEm: number;
   strings: PanelStrings;
 }
 

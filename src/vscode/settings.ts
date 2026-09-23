@@ -7,6 +7,8 @@ export interface Settings {
   defaultModel: string | undefined;
   defaultPermissionMode: PermissionMode;
   notifications: NotificationSetting;
+  /** タスク画面の本文の最大の幅（em）。0 なら画面いっぱい */
+  taskViewWidth: number;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -23,5 +25,6 @@ export function readSettings(): Settings {
     defaultModel: text('defaultModel'),
     defaultPermissionMode: mode === 'acceptEdits' ? 'acceptEdits' : 'default',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
+    taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
   };
 }

@@ -619,3 +619,39 @@ body.dragging .composer {
   border-left: 3px solid var(--vscode-textBlockQuote-border);
   background: var(--vscode-textBlockQuote-background);
 }
+
+/* 幅と、差分カードの細部 */
+.transcript,
+.composer {
+  max-width: var(--foreman-max-width, 60em);
+}
+
+.diff-file-row {
+  background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
+}
+
+.diff-file-actions .diff-counts {
+  margin-right: 0.4em;
+}
+
+.diff-no {
+  display: inline-block;
+  width: 5.5em;
+  color: var(--vscode-editorLineNumber-foreground);
+  user-select: none;
+}
+
+.diff-no span {
+  display: inline-block;
+  width: 2.5em;
+  text-align: right;
+  margin-right: 0.25em;
+}
+
+.diff-line[data-kind='add'] .diff-sign {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.diff-line[data-kind='del'] .diff-sign {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}

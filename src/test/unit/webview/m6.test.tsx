@@ -44,6 +44,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     diffs: {},
     attachments: [],
     models: ['claude-opus-5', 'claude-sonnet-5'],
+    maxWidthEm: 72,
     strings: STRINGS,
     ...overrides,
   };
