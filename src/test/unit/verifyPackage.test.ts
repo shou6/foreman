@@ -70,3 +70,34 @@ suite('checkPackageFiles', () => {
     });
   });
 });
+
+suite('checkPackageFiles: Webview のバンドル', () => {
+  test('main と同じフォルダの .js と .css（Webview のバンドル）は入れてよい', () => {
+    const manifest = { main: './dist/extension.js' };
+    assert.deepStrictEqual(
+      checkPackageFiles(
+        [
+          'package.json',
+          'README.md',
+          'LICENSE',
+          'resources/icon.png',
+          'dist/extension.js',
+          'dist/webview.js',
+          'dist/webview.css',
+        ],
+        manifest
+      ),
+      { unexpected: [], missing: [] }
+    );
+  });
+
+  test('main が無ければ dist の中身はすべて意図しないもの', () => {
+    assert.deepStrictEqual(
+      checkPackageFiles(
+        ['package.json', 'README.md', 'LICENSE', 'resources/icon.png', 'dist/webview.js'],
+        {}
+      ),
+      { unexpected: ['dist/webview.js'], missing: [] }
+    );
+  });
+});
