@@ -162,3 +162,30 @@ suite('webview: 承認カード', () => {
     assert.strictEqual(message.type, 'decision');
   });
 });
+
+suite('webview: 常に許可の中身', () => {
+  test('提案されたルールの内容を「常に許可」の下に出す', () => {
+    const html = render(
+      <App
+        state={state({
+          pending: {
+            id: 'req-1',
+            toolName: 'Bash',
+            input: { command: 'git status' },
+            suggestions: [
+              {
+                type: 'addRules',
+                behavior: 'allow',
+                destination: 'session',
+                rules: [{ toolName: 'Bash', ruleContent: 'git status' }],
+              },
+            ],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('class="always-scope"'));
+    assert.ok(html.includes('Bash(git status)'));
+  });
+});

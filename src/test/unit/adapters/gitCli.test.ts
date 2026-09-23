@@ -126,3 +126,19 @@ suite('GitCli.prune', function () {
     assert.ok(!list.includes(path.resolve(wt)));
   });
 });
+
+suite('GitCli.showHead', function () {
+  this.timeout(30_000);
+  test('HEAD のファイルの内容を返す。フォルダや無いパスは undefined', async () => {
+    const repo = makeRepo();
+    const git = new GitCli();
+    fs.mkdirSync(path.join(repo, 'dir'));
+    fs.writeFileSync(path.join(repo, 'dir', 'b.txt'), 'b\n');
+    execFileSync('git', ['add', '.'], { cwd: repo });
+    execFileSync('git', ['commit', '-q', '-m', 'add dir'], { cwd: repo });
+    assert.strictEqual(await git.showHead(repo, 'a.txt'), 'a\n');
+    assert.strictEqual(await git.showHead(repo, ['dir', 'b.txt'].join(path.sep)), 'b\n');
+    assert.strictEqual(await git.showHead(repo, 'dir'), undefined);
+    assert.strictEqual(await git.showHead(repo, 'missing.txt'), undefined);
+  });
+});

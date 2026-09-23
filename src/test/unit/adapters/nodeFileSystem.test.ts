@@ -47,3 +47,26 @@ suite('NodeFileSystem', () => {
     );
   });
 });
+
+suite('NodeFileSystem.watch: フォルダ', () => {
+  test('フォルダの作成や変更は知らせない。中のファイルは知らせる', async function () {
+    this.timeout(10_000);
+    const dir = tmp();
+    const nfs = new NodeFileSystem();
+    const seen: string[] = [];
+    const stop = nfs.watch(dir, (p) => seen.push(p));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    fs.mkdirSync(path.join(dir, 'sub'));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    fs.writeFileSync(path.join(dir, 'sub', 'f.txt'), 'f');
+    for (let i = 0; i < 40 && !seen.some((p) => p.endsWith('f.txt')); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    stop();
+    assert.ok(seen.some((p) => path.resolve(p) === path.resolve(path.join(dir, 'sub', 'f.txt'))));
+    assert.ok(
+      !seen.some((p) => path.resolve(p) === path.resolve(path.join(dir, 'sub'))),
+      'seen: ' + JSON.stringify(seen)
+    );
+  });
+});
