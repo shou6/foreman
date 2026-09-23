@@ -16,7 +16,8 @@ export type RunnerEvent =
   /** 編集ツールの直前・直後（差分カードの材料） */
   | { type: 'file-edit'; phase: 'before' | 'after'; path: string }
   /** ターンの終了 */
-  | { type: 'turn-end'; ok: true; usage?: Usage }
+  /** lastMessageUuid はそのターンの最後の assistant メッセージ。会話の巻き戻しと切り出しの起点に使う */
+  | { type: 'turn-end'; ok: true; usage?: Usage; lastMessageUuid?: string }
   | { type: 'turn-end'; ok: false; interrupted: boolean; reason: string };
 
 /** ツールの実行前に届く承認の要求 */

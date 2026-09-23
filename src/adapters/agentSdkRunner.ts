@@ -183,6 +183,8 @@ export class AgentSdkRunner implements AgentRunner {
         cwd: options.cwd,
         model: options.model,
         resume: sessionId,
+        resumeSessionAt: options.resumeAt,
+        forkSession: options.fork === true ? true : undefined,
         pathToClaudeCodeExecutable: claudePath,
         includePartialMessages: true,
         permissionMode: perms.permissionMode as SdkPermissionMode,
@@ -196,12 +198,17 @@ export class AgentSdkRunner implements AgentRunner {
       },
     });
 
+    let lastAssistantUuid: string | undefined;
     const done = (async () => {
       try {
         for await (const message of query) {
+          if (message.type === 'assistant' && (message.parent_tool_use_id ?? null) === null) {
+            lastAssistantUuid = message.uuid;
+          }
           for (const event of normalizeMessage(message)) {
             if (event.type === 'turn-end') {
-              emitTurnEnd(event);
+              emitTurnEnd(event.ok ? { ...event, lastMessageUuid: lastAssistantUuid } : event);
+              lastAssistantUuid = undefined;
             } else {
               options.onEvent(event);
             }

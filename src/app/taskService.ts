@@ -175,7 +175,7 @@ export class TaskService {
       const event: TaskEvent = current.status === 'interrupted' ? 'resume' : 'prompt';
       const next = await this.commit(
         this.withTurn(
-          { ...current, status: transition(current.status, event) },
+          { ...current, status: transition(current.status, event), resumeAt: undefined },
           prompt,
           attachments,
           this.deps.now()
@@ -185,11 +185,73 @@ export class TaskService {
     });
     this.attach(
       task,
-      this.deps.runner.resume(
-        sessionId,
-        this.startOptions(task, promptWithAttachments(resumePrompt(previous, prompt), attachments))
-      )
+      this.deps.runner.resume(sessionId, {
+        ...this.startOptions(
+          task,
+          promptWithAttachments(resumePrompt(previous, prompt), attachments)
+        ),
+        // 会話を戻した後は、その地点から分岐した新しいセッションで続ける
+        resumeAt: previous.resumeAt,
+        fork: previous.resumeAt !== undefined ? true : undefined,
+      })
     );
+  }
+
+  /**
+   * 会話を指定のターンの直後まで戻す（FR-DIFF-8）。それより後のターンは消え、
+   * 次の指示はそのターンの最後のメッセージから分岐した新しいセッションで続く
+   */
+  async rewindConversation(id: string, turn: number): Promise<void> {
+    const task = await this.mustLoad(id);
+    if (task.status === 'running' || task.status === 'waiting') {
+      throw new Error(`Task "${id}" is running; stop it before rewinding`);
+    }
+    const target = task.turns[turn];
+    if (target === undefined) {
+      throw new Error(`Turn ${turn} not found`);
+    }
+    await this.close(id);
+    await this.update(id, (t) => ({
+      ...t,
+      status: 'done',
+      turns: t.turns.slice(0, turn + 1),
+      resumeAt: target.lastMessageUuid,
+    }));
+  }
+
+  /** 親の会話を引き継いだ新しいタスクを作る（FR-TASK-12）。fromTurn を指定すると、そのターンの直後から分岐する */
+  async fork(parentId: string, input: CreateInput & { fromTurn?: number }): Promise<Task> {
+    const parent = await this.mustLoad(parentId);
+    if (parent.sessionId === undefined) {
+      throw new Error(`Task "${parentId}" has no session to fork`);
+    }
+    const resumeAt =
+      input.fromTurn === undefined ? undefined : parent.turns[input.fromTurn]?.lastMessageUuid;
+    const now = this.deps.now();
+    const created = createTask({
+      id: input.id ?? this.deps.newId(),
+      prompt: input.prompt,
+      cwd: input.cwd,
+      worktree: input.worktree,
+      createdAt: now,
+      title: input.title,
+      model: input.model ?? parent.model,
+      permissionMode: input.permissionMode ?? parent.permissionMode,
+      parentTaskId: parentId,
+    });
+    const attachments = input.attachments ?? [];
+    const task = await this.serialize(created.id, () =>
+      this.commit(this.withTurn(created, input.prompt, attachments, now))
+    );
+    this.attach(
+      task,
+      this.deps.runner.resume(parent.sessionId, {
+        ...this.startOptions(task, promptWithAttachments(input.prompt, attachments)),
+        resumeAt,
+        fork: true,
+      })
+    );
+    return task;
   }
 
   /** 次のターンから使うモデルを変える（FR-VIEW-4）。undefined で Claude Code の既定 */
@@ -318,7 +380,12 @@ export class TaskService {
             return undefined;
           }
           return event.ok
-            ? this.endTurn(task, 'turn-completed', { ok: true, usage: event.usage })
+            ? this.endTurn(
+                task,
+                'turn-completed',
+                { ok: true, usage: event.usage },
+                event.lastMessageUuid
+              )
             : this.endTurn(task, event.interrupted ? 'stop' : 'error', {
                 ok: false,
                 reason: event.reason,
@@ -358,11 +425,21 @@ export class TaskService {
     return next;
   }
 
-  private endTurn(task: Task, event: TaskEvent, result: Turn['result']): Task {
+  private endTurn(
+    task: Task,
+    event: TaskEvent,
+    result: Turn['result'],
+    lastMessageUuid?: string
+  ): Task {
     const now = this.deps.now();
     const turns = task.turns.map((turn, i) =>
       i === task.turns.length - 1 && turn.endedAt === undefined
-        ? { ...turn, endedAt: now, result }
+        ? {
+            ...turn,
+            endedAt: now,
+            result,
+            lastMessageUuid: lastMessageUuid ?? turn.lastMessageUuid,
+          }
         : turn
     );
     return { ...task, status: transition(task.status, event), turns };

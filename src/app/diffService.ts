@@ -68,26 +68,70 @@ export class DiffService {
     if (task === undefined || change === undefined) {
       throw new Error(`Change "${path}" not found in turn ${turn}`);
     }
-    if (change.kind !== 'created' && change.before === undefined) {
+    if (!canRevert(change)) {
       throw new Error(`Cannot revert "${path}": the previous content is unknown`);
     }
-    const absolute = task.cwd + this.deps.sep + path;
+    await this.restore(task, change);
+    await this.markReverted(taskId, turn, [path]);
+  }
+
+  /**
+   * 指定したターンより後の変更を新しい順に戻す（FR-DIFF-8 のファイル側）。
+   * afterTurn に -1 を渡すと全ターン。戻せなかった（変更前が不明な）パスを返す
+   */
+  async revertAfter(taskId: string, afterTurn: number): Promise<string[]> {
+    const task = await this.deps.service.load(taskId);
+    if (task === undefined) {
+      throw new Error(`Task "${taskId}" not found`);
+    }
+    const skipped: string[] = [];
+    for (let i = task.turns.length - 1; i > afterTurn; i--) {
+      const turn = task.turns[i];
+      if (turn === undefined) {
+        continue;
+      }
+      const done: string[] = [];
+      for (const change of [...turn.changes].reverse()) {
+        if (change.reverted) {
+          continue;
+        }
+        if (!canRevert(change)) {
+          skipped.push(change.path);
+          continue;
+        }
+        await this.restore(task, change);
+        done.push(change.path);
+      }
+      if (done.length > 0) {
+        await this.markReverted(taskId, i, done);
+      }
+    }
+    return skipped;
+  }
+
+  private async restore(task: Task, change: FileChange): Promise<void> {
+    const absolute = task.cwd + this.deps.sep + change.path;
     if (change.kind === 'created') {
       await this.deps.fs.deleteFile(absolute);
-    } else {
-      const content = await this.deps.snapshots.load(change.before ?? '');
-      if (content === undefined) {
-        throw new Error(`Cannot revert "${path}": the snapshot is missing`);
-      }
-      await this.deps.fs.writeFile(absolute, content);
+      return;
     }
-    await this.deps.service.patch(taskId, (t) => ({
+    const content = await this.deps.snapshots.load(change.before ?? '');
+    if (content === undefined) {
+      throw new Error(`Cannot revert "${change.path}": the snapshot is missing`);
+    }
+    await this.deps.fs.writeFile(absolute, content);
+  }
+
+  private markReverted(taskId: string, turn: number, paths: readonly string[]): Promise<void> {
+    return this.deps.service.patch(taskId, (t) => ({
       ...t,
       turns: t.turns.map((tt, i) =>
         i === turn
           ? {
               ...tt,
-              changes: tt.changes.map((c) => (c.path === path ? { ...c, reverted: true } : c)),
+              changes: tt.changes.map((c) =>
+                paths.includes(c.path) ? { ...c, reverted: true } : c
+              ),
             }
           : tt
       ),
@@ -294,4 +338,9 @@ function hashesOf(task: Task): string[] {
   return task.turns.flatMap((turn) =>
     turn.changes.flatMap((c) => [c.before, c.after].filter((h): h is string => h !== undefined))
   );
+}
+
+/** 変更前に戻せるか。新規作成は消せばよく、それ以外は変更前の内容が要る */
+function canRevert(change: FileChange): boolean {
+  return change.kind === 'created' || change.before !== undefined;
 }

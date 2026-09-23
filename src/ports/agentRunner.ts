@@ -10,6 +10,10 @@ export interface StartOptions {
   alwaysAllowed: PermissionRule[];
   onPermissionRequest: (request: PermissionRequest) => Promise<PermissionDecision>;
   onEvent: (event: RunnerEvent) => void;
+  /** resume の時、このメッセージ（uuid）までで会話を切って再開する */
+  resumeAt?: string;
+  /** resume の時、元のセッションを変えずに新しいセッションへ分岐する */
+  fork?: boolean;
 }
 
 export interface RunHandle {

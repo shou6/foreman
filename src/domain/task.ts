@@ -52,6 +52,8 @@ export interface Turn {
   endedAt?: string;
   result?: TurnResult;
   changes: FileChange[];
+  /** このターンの最後の assistant メッセージの uuid。チェックポイントの起点 */
+  lastMessageUuid?: string;
 }
 
 /** タスクが使う git worktree（Phase 2）。無ければ作業ディレクトリでそのまま動く */
@@ -73,6 +75,8 @@ export interface Task {
   parentTaskId?: string;
   cwd: string;
   worktree?: Worktree;
+  /** 会話を戻した後、次の再開でこのメッセージから分岐する。使ったら消す */
+  resumeAt?: string;
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
