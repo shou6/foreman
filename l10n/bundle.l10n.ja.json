@@ -90,5 +90,9 @@
   "Start": "開始",
   "Edit": "編集",
   "Fork": "切り出す",
-  "No tasks": "タスクはありません"
+  "No tasks": "タスクはありません",
+  "Open a task to see its changes here.": "タスクを開くと、ここに変更が出ます。",
+  "Changes": "変更",
+  "Checkpoints": "チェックポイント",
+  "No changes yet": "変更はまだありません"
 }

@@ -42,6 +42,15 @@ export class TaskPanels implements vscode.Disposable {
   /** 次の指示に添付するファイル（タスクごと） */
   private readonly attachments = new Map<string, string[]>();
   private readonly subscriptions: vscode.Disposable[] = [];
+  /** 前面に出ているタスク画面のタスク。右サイドバーが追う */
+  private active: string | undefined;
+  private readonly activeChanged = new vscode.EventEmitter<void>();
+  readonly onDidChangeActive = this.activeChanged.event;
+
+  /** 今見ているタスク。無ければ undefined */
+  get activeTaskId(): string | undefined {
+    return this.active;
+  }
 
   constructor(private readonly deps: TaskPanelDeps) {
     const { service, transcripts, approvals } = deps;
@@ -102,8 +111,26 @@ export class TaskPanels implements vscode.Disposable {
     panel.webview.onDidReceiveMessage((message: ToExtension) => {
       void this.handle(taskId, message);
     });
-    panel.onDidDispose(() => this.panels.delete(taskId));
+    panel.onDidDispose(() => {
+      this.panels.delete(taskId);
+      if (this.active === taskId) {
+        this.setActive(undefined);
+      }
+    });
+    panel.onDidChangeViewState(({ webviewPanel }) => {
+      if (webviewPanel.active) {
+        this.setActive(taskId);
+      }
+    });
     this.panels.set(taskId, panel);
+    this.setActive(taskId);
+  }
+
+  private setActive(taskId: string | undefined): void {
+    if (this.active !== taskId) {
+      this.active = taskId;
+      this.activeChanged.fire();
+    }
   }
 
   /** ファイルを次の指示の添付に足す（FR-VIEW-5） */
@@ -154,7 +181,7 @@ export class TaskPanels implements vscode.Disposable {
           return;
         }
         case 'openDiff':
-          await this.openDiffEditor(taskId, message.turn, message.path);
+          await this.openDiff(taskId, message.turn, message.path);
           return;
         case 'revert':
           await this.deps.diffs.revert(taskId, message.turn, message.path);
@@ -212,7 +239,8 @@ export class TaskPanels implements vscode.Disposable {
   }
 
   /** VS Code の差分エディタで開く（FR-DIFF-4）。左が変更前、右が今のファイル */
-  private async openDiffEditor(taskId: string, turn: number, file: string): Promise<void> {
+  /** 変更前（スナップショット）と今のファイルを差分エディタで開く */
+  async openDiff(taskId: string, turn: number, file: string): Promise<void> {
     const task = await this.deps.service.load(taskId);
     const change = task?.turns[turn]?.changes.find((c) => c.path === file);
     if (task === undefined || change === undefined) {

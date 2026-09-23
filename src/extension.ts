@@ -28,6 +28,7 @@ import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
 import { ReviewActions } from './vscode/reviewActions';
 import { BoardPanel } from './vscode/boardPanel';
+import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -175,6 +176,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     },
   });
+  const details = new DetailsView({
+    extensionUri: context.extensionUri,
+    service,
+    diffs,
+    activeTaskId: () => panels.activeTaskId,
+    onDidChangeActive: (listener) => panels.onDidChangeActive(listener),
+    openTask: (taskId) => panels.open(taskId),
+    openDiff: (taskId, turn, path) => panels.openDiff(taskId, turn, path),
+    rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
+    fork: (taskId, turn) => checkpoints.fork(taskId, turn),
+    onError: (error) => {
+      void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+    },
+  });
   const tree = new TaskTreeProvider(service);
 
   context.subscriptions.push(
@@ -188,6 +203,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       () => readSettings().notifications
     ),
     vscode.window.registerTreeDataProvider('foreman.tasks', tree),
+    details,
+    vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
     // 差分エディタの左側（変更前）をスナップショットから出す
     vscode.workspace.registerTextDocumentContentProvider(SNAPSHOT_SCHEME, {
       provideTextDocumentContent: async (uri) =>

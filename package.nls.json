@@ -2,6 +2,8 @@
   "description": "Run Claude Code sessions as tasks: see who is running or waiting, approve tool calls, and review changes turn by turn.",
   "viewContainer.title": "Foreman",
   "view.tasks": "Tasks",
+  "viewContainer.details": "Foreman Task",
+  "view.details": "Changes and Checkpoints",
   "viewsWelcome.noTasks": "No tasks yet.\n[New Task](command:foreman.newTask)",
   "command.newTask": "New Task",
   "command.openTask": "Open Task",

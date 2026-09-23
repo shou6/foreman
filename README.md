@@ -10,13 +10,18 @@ Foreman uses the `claude` CLI that is already installed and logged in on your ma
 
 ## Features
 
-- **Tasks, not one chat**: each task is its own Claude Code session. The sidebar groups them by state: running, waiting for input, done, failed or interrupted.
+- **Tasks, not one chat**: each task is its own Claude Code session. The sidebar groups them by state: draft, running, waiting for input, review, done, failed or interrupted.
+- **Task board**: open the board from the sidebar to see drafts, running, waiting, review and done columns. Drag a draft into "Running" to start it, or a reviewed task into "Done" to approve it. A turn that changed files lands in "Review" until you approve it.
 - **Task view in an editor tab**: streamed output, tool calls, follow-up prompts (Ctrl+Enter) and a model switch. Open it next to your code.
 - **Approvals in the task view**: allow or deny each tool call, add a reason, or choose "always allow in this task". Questions from Claude appear as choices.
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file with one click. This works in folders that are not Git repositories.
 - **Attachments**: right-click a file and choose "Foreman: Attach to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
 - **Notifications and status bar**: know when a task needs you or has finished. The status bar counts running and waiting tasks.
 - **Persistence**: tasks, history and diff cards survive a restart. An interrupted task keeps its session, so your next prompt continues it.
+- **Git worktrees**: run a task in its own worktree and branch, then merge into the branch you started from or discard it. Worktrees live in `.foreman/worktrees` inside the repository.
+- **Checkpoints and forks**: every finished turn is a checkpoint. Rewind the files, or the files and the conversation, to that point. Fork a new task from any checkpoint; a worktree task forks from its own branch.
+- **Changes and checkpoints in the secondary side bar**: the "Foreman Task" view follows the task you are looking at and lists its changes and checkpoints.
+- **Export**: save a task as a Markdown file.
 
 ## Requirements
 
@@ -34,6 +39,11 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | `foreman.defaultModel` | Model for new tasks, for example `claude-sonnet-5`. Leave empty for the Claude Code default. |
 | `foreman.defaultPermissionMode` | `default` asks before every tool call. `acceptEdits` allows file edits automatically. |
 | `foreman.notifications` | `all`, `waiting` or `none`. |
+| `foreman.useWorktree` | Preselect "in a worktree" when creating or starting a task in a Git repository. |
+| `foreman.worktreeBranchPrefix` | Prefix for worktree branches. Default `foreman/`. |
+| `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. |
+| `foreman.toolCalls` | Show tool calls expanded or collapsed in the task view. |
+| `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. |
 
 ## How it works
 
@@ -47,7 +57,7 @@ Foreman talks to Claude Code through the official Claude Agent SDK. Each task ma
 
 ## Roadmap
 
-- Git worktrees per task for parallel work, a task board and turn-level checkpoints
+- Token usage per turn and a context meter
 - Context panel, prompt presets and one-click attachment of diagnostics and `git diff`
 
 ## License

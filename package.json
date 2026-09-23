@@ -41,6 +41,8 @@
     "dist/webview.css",
     "dist/board.js",
     "dist/board.css",
+    "dist/details.js",
+    "dist/details.css",
     "resources/**",
     "l10n/**",
     "package.nls.json",
@@ -57,6 +59,13 @@
           "title": "%viewContainer.title%",
           "icon": "resources/activity.svg"
         }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "foreman-details",
+          "title": "%viewContainer.details%",
+          "icon": "resources/activity.svg"
+        }
       ]
     },
     "views": {
@@ -64,6 +73,14 @@
         {
           "id": "foreman.tasks",
           "name": "%view.tasks%",
+          "icon": "resources/activity.svg"
+        }
+      ],
+      "foreman-details": [
+        {
+          "id": "foreman.details",
+          "type": "webview",
+          "name": "%view.details%",
           "icon": "resources/activity.svg"
         }
       ]

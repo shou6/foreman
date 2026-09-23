@@ -66,11 +66,19 @@ const board = {
   outfile: 'dist/board.js',
 };
 
+/** 右サイドバー（WebviewView）。details.css は dist/details.css に出る */
+const details = {
+  ...webview,
+  entryPoints: ['src/webview/details/main.tsx'],
+  outfile: 'dist/details.js',
+};
+
 async function main() {
   const contexts = await Promise.all([
     esbuild.context(extension),
     esbuild.context(webview),
     esbuild.context(board),
+    esbuild.context(details),
   ]);
   if (watch) {
     await Promise.all(contexts.map((ctx) => ctx.watch()));

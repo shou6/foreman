@@ -2,6 +2,8 @@
   "description": "Claude Code のセッションをタスクとして動かす。実行中と入力待ちを一目で確かめ、ツールの実行を承認し、変更をターンごとに確認できる。",
   "viewContainer.title": "Foreman",
   "view.tasks": "タスク",
+  "viewContainer.details": "Foreman のタスク",
+  "view.details": "変更とチェックポイント",
   "viewsWelcome.noTasks": "タスクはまだありません。\n[新しいタスク](command:foreman.newTask)",
   "command.newTask": "新しいタスク",
   "command.openTask": "タスクを開く",

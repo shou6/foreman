@@ -1,0 +1,179 @@
+/* 右サイドバー（このタスクの変更とチェックポイント）。VS Code のテーマ変数だけで色を決める */
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  background: transparent;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.details {
+  padding: 4px 0 12px;
+}
+
+.details.empty {
+  padding: 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.details-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 10px;
+}
+
+.details-head .title {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
+.status[data-status='running'] {
+  background: var(--vscode-progressBar-background);
+  color: var(--vscode-button-foreground);
+}
+
+.status[data-status='waiting'] {
+  background: var(--vscode-inputValidation-warningBackground);
+  color: var(--vscode-foreground);
+}
+
+.status[data-status='review'] {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.link:disabled {
+  color: var(--vscode-disabledForeground);
+  cursor: default;
+}
+
+.turn {
+  padding: 6px 12px;
+  border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border));
+}
+
+.turn-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.turn-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.turn-prompt {
+  flex: 1;
+  min-width: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-changes {
+  color: var(--vscode-disabledForeground);
+  font-size: 0.9em;
+}
+
+.changes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 0.92em;
+}
+
+.kind {
+  width: 1.2em;
+  text-align: center;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+.change[data-kind='created'] .kind {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.change[data-kind='deleted'] .kind {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.change[data-kind='modified'] .kind {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.counts {
+  display: flex;
+  gap: 4px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.added {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.removed {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.reverted {
+  color: var(--vscode-disabledForeground);
+  font-style: italic;
+}
+
+.checkpoint {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 0.9em;
+}
