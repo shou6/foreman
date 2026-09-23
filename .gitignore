@@ -27,3 +27,6 @@ CLAUDE.md
 .claude/
 .automation/
 docs/
+
+# 技術検証のスクリプト（手元だけで使う。結果は docs/spike-results.md に残す）
+spikes/
