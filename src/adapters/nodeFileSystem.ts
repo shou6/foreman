@@ -26,9 +26,17 @@ export class NodeFileSystem implements FileSystem {
     let watcher: fsSync.FSWatcher | undefined;
     try {
       watcher = fsSync.watch(dir, { recursive: true }, (_event, filename) => {
-        if (filename !== null && filename !== undefined) {
-          onChange(path.join(dir, filename.toString()));
+        if (filename === null || filename === undefined) {
+          return;
         }
+        const full = path.join(dir, filename.toString());
+        // フォルダの変更は知らせない（中のファイルの変更は別に届く）。消えたパスは判別できないので知らせる
+        fsSync.stat(full, (error, stat) => {
+          if (error === null && stat.isDirectory()) {
+            return;
+          }
+          onChange(full);
+        });
       });
       // 監視の失敗（フォルダの削除など）で拡張機能を落とさない
       watcher.on('error', () => {});

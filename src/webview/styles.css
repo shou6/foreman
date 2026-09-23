@@ -719,3 +719,11 @@ body.dragging .composer {
   color: var(--vscode-descriptionForeground);
   background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
 }
+
+.always-scope {
+  margin-top: 0.5em;
+  font-size: 0.85em;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+  word-break: break-all;
+}

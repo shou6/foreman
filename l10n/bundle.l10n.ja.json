@@ -61,5 +61,6 @@
   "Export Task": "タスクを書き出す",
   "Merging…": "マージ中…",
   "Discarding…": "破棄中…",
-  "Exported to {0}": "{0} に書き出しました"
+  "Exported to {0}": "{0} に書き出しました",
+  "\"Always allow\" would allow": "「常に許可」で許可する内容"
 }

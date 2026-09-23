@@ -41,6 +41,8 @@ export interface PanelStrings {
   export: string;
   merging: string;
   discarding: string;
+  /** 「常に許可」で許可する内容の見出し */
+  alwaysScope: string;
 }
 
 export interface PanelState {

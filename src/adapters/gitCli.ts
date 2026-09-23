@@ -107,7 +107,8 @@ export class GitCli implements Git {
 
   async showHead(dir: string, file: string): Promise<string | undefined> {
     try {
-      return await this.run(dir, 'show', 'HEAD:' + file.replace(/\\/g, '/'));
+      // git show はフォルダだと一覧を返してしまうので、blob（ファイル）だけを読む
+      return await this.run(dir, 'cat-file', 'blob', 'HEAD:' + file.replace(/\\/g, '/'));
     } catch {
       return undefined;
     }

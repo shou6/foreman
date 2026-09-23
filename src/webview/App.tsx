@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
+import { describeSuggestions } from '../domain/suggestions';
 import type { TranscriptItem } from '../domain/transcript';
 import { renderMarkdown } from './markdown';
 import { hunksOf } from '../domain/diff';
@@ -451,6 +452,11 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
           {strings.deny}
         </button>
       </div>
+      {pending.suggestions.length > 0 && (
+        <div class="always-scope">
+          {strings.alwaysScope}: {describeSuggestions(pending.suggestions).join(', ')}
+        </div>
+      )}
     </section>
   );
 }

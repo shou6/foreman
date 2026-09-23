@@ -38,6 +38,7 @@ const STRINGS = {
   export: 'Export',
   merging: 'Merging…',
   discarding: 'Discarding…',
+  alwaysScope: '"Always allow" would allow',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {

@@ -268,6 +268,7 @@ export class TaskPanels implements vscode.Disposable {
         export: vscode.l10n.t('Export'),
         merging: vscode.l10n.t('Merging…'),
         discarding: vscode.l10n.t('Discarding…'),
+        alwaysScope: vscode.l10n.t('"Always allow" would allow'),
       },
     };
   }

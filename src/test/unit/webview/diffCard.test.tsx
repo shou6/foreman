@@ -40,6 +40,7 @@ const STRINGS = {
   export: 'Export',
   merging: 'Merging…',
   discarding: 'Discarding…',
+  alwaysScope: '"Always allow" would allow',
 };
 
 const CHANGES: FileChange[] = [

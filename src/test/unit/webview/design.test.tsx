@@ -31,6 +31,7 @@ const STRINGS = {
   export: 'Export',
   merging: 'Merging…',
   discarding: 'Discarding…',
+  alwaysScope: '"Always allow" would allow',
   statusLabels: {
     running: 'Running',
     waiting: 'Waiting for input',
