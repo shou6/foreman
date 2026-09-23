@@ -24,6 +24,7 @@ const STRINGS = {
   minutes: '{0} min',
   files: '{0} files',
   context: 'Context of this task',
+  today: 'Tokens today (all tasks)',
 };
 
 function state(overrides: Partial<SidebarState> = {}): SidebarState {
@@ -77,6 +78,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
       },
     ],
     activeTaskId: 'w1',
+    today: 0,
     strings: STRINGS,
     ...overrides,
   };
@@ -166,5 +168,22 @@ suite('webview: 左サイドバーのコンテキスト（M11）', () => {
       />
     );
     assert.ok(!html.includes('class="context"'));
+  });
+});
+
+suite('webview: 左サイドバーの下端（今日のトークン）', () => {
+  test('今日のトークンの合計を下端に出す。コンテキストが無くても出す', () => {
+    const html = render(
+      <Sidebar
+        state={state({
+          today: 1250000,
+          strings: { ...STRINGS, today: 'Tokens today (all tasks)' },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('class="footer"'));
+    assert.ok(html.includes('Tokens today (all tasks)'));
+    assert.ok(html.includes('1.3M'));
   });
 });

@@ -55,6 +55,8 @@ export class BoardPanel implements vscode.Disposable {
       this.panel = undefined;
     });
     this.panel = panel;
+    // ピン留めしたタブは常に左端に並ぶ
+    void vscode.commands.executeCommand('workbench.action.pinEditor');
   }
 
   private async handle(message: FromBoard): Promise<void> {

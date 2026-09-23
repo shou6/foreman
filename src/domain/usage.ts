@@ -61,3 +61,28 @@ export function formatTokens(n: number): string {
   }
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
 }
+
+/** 今日（ローカルの日付）に終わったターンの入力と出力のトークンを、全タスクで合計する */
+export function tokensToday(tasks: readonly Pick<Task, 'turns'>[], now: Date): number {
+  const sameDay = (iso: string): boolean => {
+    const d = new Date(iso);
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  };
+  let total = 0;
+  for (const task of tasks) {
+    for (const turn of task.turns) {
+      if (turn.endedAt === undefined || !sameDay(turn.endedAt)) {
+        continue;
+      }
+      const tokens = turnTokens(turn);
+      if (tokens !== undefined) {
+        total += tokens.input + tokens.output;
+      }
+    }
+  }
+  return total;
+}

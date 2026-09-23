@@ -14,46 +14,54 @@ export function Sidebar({ state, post }: SidebarProps) {
   const { strings } = state;
   return (
     <div class="sidebar">
-      <button class="new-task" onClick={() => post({ type: 'newTask' })}>
-        {strings.newTask}
-      </button>
-      {state.groups.length === 0 && <div class="empty">{strings.empty}</div>}
-      {state.groups.map((group) => (
-        <details key={group.key} class="group" data-group={group.key} open={group.key !== 'done'}>
-          <summary class="group-head">
-            <span class="dot" data-status={group.key} />
-            <span class="group-title">{strings.groups[group.key]}</span>
-            <span class="count">{group.items.length}</span>
-          </summary>
-          {group.items.map((item) => (
-            <TaskRow
-              key={item.id}
-              item={item}
-              active={item.id === state.activeTaskId}
-              strings={strings}
-              post={post}
-            />
-          ))}
-        </details>
-      ))}
-      {state.context !== undefined && (
-        <div class="context">
-          <div class="context-head">
-            <span>{strings.context}</span>
-            <span class="context-text">
-              {state.context.window === undefined
-                ? formatTokens(state.context.used)
-                : `${formatTokens(state.context.used)} / ${formatTokens(state.context.window)}`}
+      <div class="list">
+        <button class="new-task" onClick={() => post({ type: 'newTask' })}>
+          {strings.newTask}
+        </button>
+        {state.groups.length === 0 && <div class="empty">{strings.empty}</div>}
+        {state.groups.map((group) => (
+          <details key={group.key} class="group" data-group={group.key} open={group.key !== 'done'}>
+            <summary class="group-head">
+              <span class="dot" data-status={group.key} />
+              <span class="group-title">{strings.groups[group.key]}</span>
+              <span class="count">{group.items.length}</span>
+            </summary>
+            {group.items.map((item) => (
+              <TaskRow
+                key={item.id}
+                item={item}
+                active={item.id === state.activeTaskId}
+                strings={strings}
+                post={post}
+              />
+            ))}
+          </details>
+        ))}
+      </div>
+      <div class="footer">
+        {state.context !== undefined && (
+          <div class="context">
+            <div class="context-head">
+              <span>{strings.context}</span>
+              <span class="context-text">
+                {state.context.window === undefined
+                  ? formatTokens(state.context.used)
+                  : `${formatTokens(state.context.used)} / ${formatTokens(state.context.window)}`}
+              </span>
+            </div>
+            <span class="meter-bar">
+              <span
+                class="meter-fill"
+                style={`width: ${Math.round((state.context.ratio ?? 0) * 100)}%`}
+              />
             </span>
           </div>
-          <span class="meter-bar">
-            <span
-              class="meter-fill"
-              style={`width: ${Math.round((state.context.ratio ?? 0) * 100)}%`}
-            />
-          </span>
+        )}
+        <div class="today">
+          <span>{strings.today}</span>
+          <span class="context-text">{formatTokens(state.today)}</span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

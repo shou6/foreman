@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { contextUsage, formatTokens, turnTokens } from '../../../domain/usage';
+import { contextUsage, formatTokens, tokensToday, turnTokens } from '../../../domain/usage';
 import type { Task, Turn, Usage } from '../../../domain/task';
 
 function usage(over: Partial<Usage> = {}): Usage {
@@ -60,5 +60,30 @@ suite('usage: 表示', () => {
     assert.strictEqual(formatTokens(84000), '84k');
     assert.strictEqual(formatTokens(200000), '200k');
     assert.strictEqual(formatTokens(1250000), '1.3M');
+  });
+});
+
+suite('usage: 今日のトークン（全タスク）', () => {
+  test('今日（ローカルの日付）に終わったターンの入力と出力を全タスクで合計する', () => {
+    const today = new Date(2026, 8, 24, 10, 0, 0);
+    const at = (h: number, d = 24): string => new Date(2026, 8, d, h, 0, 0).toISOString();
+    const u = usage({
+      inputTokens: 100,
+      cacheReadInputTokens: 0,
+      cacheCreationInputTokens: 0,
+      outputTokens: 50,
+    });
+    const tasks = [
+      task([
+        { ...turn(0, u), endedAt: at(9) },
+        { ...turn(1, u), endedAt: at(23, 23) },
+      ]),
+      task([{ ...turn(0, u), endedAt: at(1) }, turn(1)]),
+    ];
+    assert.strictEqual(tokensToday(tasks, today), 300);
+  });
+
+  test('今日のターンが無ければ 0', () => {
+    assert.strictEqual(tokensToday([task([])], new Date(2026, 8, 24)), 0);
   });
 });

@@ -15,6 +15,8 @@ export interface SidebarStrings {
   files: string;
   /** 下端のコンテキストの見出し */
   context: string;
+  /** 下端の今日のトークンの見出し */
+  today: string;
 }
 
 export interface SidebarState {
@@ -23,6 +25,8 @@ export interface SidebarState {
   activeTaskId?: string;
   /** 今見ているタスクのコンテキストの使用量 */
   context?: ContextUsage;
+  /** 今日のトークンの合計（全タスク） */
+  today: number;
   strings: SidebarStrings;
 }
 

@@ -120,5 +120,6 @@
   "No uncommitted changes to attach.": "渡す未コミットの変更はありません。",
   "Attach": "添付",
   "Context": "コンテキスト",
-  "Context of this task": "このタスクのコンテキスト"
+  "Context of this task": "このタスクのコンテキスト",
+  "Tokens today (all tasks)": "今日のトークン（全タスク）"
 }
