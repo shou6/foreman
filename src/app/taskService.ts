@@ -8,6 +8,7 @@ import {
   type Task,
   type TaskEvent,
   type Turn,
+  type Worktree,
 } from '../domain/task';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { TaskStore } from '../ports/taskStore';
@@ -31,6 +32,8 @@ export interface CreateInput {
   permissionMode?: PermissionMode;
   /** 添付したファイルの絶対パス */
   attachments?: string[];
+  /** 使う worktree。渡すと Claude はその場所で動く */
+  worktree?: Worktree;
 }
 
 /** Runner から届いたイベント。表示（transcript）と差分の担当が受け取る */
@@ -117,6 +120,7 @@ export class TaskService {
       id: this.deps.newId(),
       prompt: input.prompt,
       cwd: input.cwd,
+      worktree: input.worktree,
       createdAt: now,
       title: input.title,
       model: input.model,

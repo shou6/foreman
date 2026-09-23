@@ -54,6 +54,17 @@ export interface Turn {
   changes: FileChange[];
 }
 
+/** タスクが使う git worktree（Phase 2）。無ければ作業ディレクトリでそのまま動く */
+export interface Worktree {
+  /** メインの作業ツリー（マージ先） */
+  repo: string;
+  /** worktree のフォルダ */
+  path: string;
+  branch: string;
+  /** 切った元のブランチ */
+  base: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -61,6 +72,7 @@ export interface Task {
   sessionId?: string;
   parentTaskId?: string;
   cwd: string;
+  worktree?: Worktree;
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
@@ -115,6 +127,7 @@ export interface CreateTaskInput {
   id: string;
   prompt: string;
   cwd: string;
+  worktree?: Worktree;
   createdAt: string;
   title?: string;
   model?: string;
@@ -135,7 +148,8 @@ export function createTask(input: CreateTaskInput): Task {
     title,
     status: 'running',
     parentTaskId: input.parentTaskId,
-    cwd: input.cwd,
+    cwd: input.worktree?.path ?? input.cwd,
+    worktree: input.worktree,
     model: input.model,
     permissionMode: input.permissionMode ?? 'default',
     alwaysAllowed: [],

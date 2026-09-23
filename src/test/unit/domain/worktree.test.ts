@@ -19,7 +19,7 @@ suite('worktreeName', () => {
   });
 
   test('日本語だけのタイトルは task にする', () => {
-    assert.strictEqual(worktreeName('認証 API のリファクタ', 'abcdef0123'), 'task-abcdef');
+    assert.strictEqual(worktreeName('認証のリファクタ', 'abcdef0123'), 'task-abcdef');
   });
 });
 
