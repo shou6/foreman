@@ -50,6 +50,14 @@ export function applyEvent(
       }
       return [...items, { kind: 'text', turn, text: event.text }];
     }
+    case 'text-final': {
+      const last = items[items.length - 1];
+      if (last?.kind === 'text' && last.turn === turn) {
+        const kept = last.text.slice(0, Math.max(0, last.text.length - event.streamed));
+        return [...items.slice(0, -1), { ...last, text: kept + event.text }];
+      }
+      return event.text === '' ? [...items] : [...items, { kind: 'text', turn, text: event.text }];
+    }
     case 'tool-call':
       return [
         ...items,

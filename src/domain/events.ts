@@ -9,6 +9,11 @@ export type RunnerEvent =
   | { type: 'init'; sessionId: string; model: string }
   /** Claude の出力の断片（ストリーミング） */
   | { type: 'text'; text: string }
+  /**
+   * 確定した出力。streamed は、前回の確定からこれまでに text で流した文字数。
+   * その分を text に置き換える（API の再試行で断片が重なった時の修正）
+   */
+  | { type: 'text-final'; text: string; streamed: number }
   /** ツールの呼び出し */
   | { type: 'tool-call'; id: string; name: string; input: Record<string, unknown> }
   /** ツールの結果 */

@@ -83,6 +83,15 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
   }
 }
 
+/** assistant メッセージの text ブロックをつないだもの。text ブロックが無ければ undefined */
+function finalTextOf(m: SDKMessage): string | undefined {
+  if (m.type !== 'assistant') {
+    return undefined;
+  }
+  const texts = m.message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []));
+  return texts.length === 0 ? undefined : texts.join('');
+}
+
 /**
  * 「このタスクでは常に許可」で保存した内容を、起動時の SDK のオプションへ写す。
  * setMode は acceptEdits までしか写さない（より緩いモードは Foreman では使わない）
@@ -199,17 +208,28 @@ export class AgentSdkRunner implements AgentRunner {
     });
 
     let lastAssistantUuid: string | undefined;
+    // 前回の確定からこれまでに流した断片の文字数。assistant の text で置き換える
+    let streamed = 0;
     const done = (async () => {
       try {
         for await (const message of query) {
           if (message.type === 'assistant' && (message.parent_tool_use_id ?? null) === null) {
             lastAssistantUuid = message.uuid;
           }
+          const finalText = finalTextOf(message);
+          if (finalText !== undefined) {
+            options.onEvent({ type: 'text-final', text: finalText, streamed });
+            streamed = 0;
+          }
           for (const event of normalizeMessage(message)) {
             if (event.type === 'turn-end') {
               emitTurnEnd(event.ok ? { ...event, lastMessageUuid: lastAssistantUuid } : event);
               lastAssistantUuid = undefined;
+              streamed = 0;
             } else {
+              if (event.type === 'text') {
+                streamed += event.text.length;
+              }
               options.onEvent(event);
             }
           }

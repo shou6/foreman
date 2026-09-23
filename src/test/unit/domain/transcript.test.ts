@@ -97,3 +97,39 @@ suite('transcript', () => {
     assert.deepStrictEqual(items, []);
   });
 });
+
+suite('transcript: text-final（確定した出力で、ストリームの断片を置き換える）', () => {
+  test('再試行などで断片が重なっても、確定した本文に置き換わる', () => {
+    let items: TranscriptItem[] = startTurn([], 0, 'p');
+    items = applyEvent(items, 0, { type: 'text', text: 'ok' });
+    items = applyEvent(items, 0, { type: 'text', text: 'ok' });
+    items = applyEvent(items, 0, { type: 'text-final', text: 'ok', streamed: 4 });
+    assert.deepStrictEqual(items, [
+      { kind: 'prompt', turn: 0, text: 'p' },
+      { kind: 'text', turn: 0, text: 'ok' },
+    ]);
+  });
+
+  test('確定より前の（確定済みの）本文は残す', () => {
+    let items: TranscriptItem[] = startTurn([], 0, 'p');
+    items = applyEvent(items, 0, { type: 'text', text: 'first. ' });
+    items = applyEvent(items, 0, { type: 'text-final', text: 'first. ', streamed: 7 });
+    items = applyEvent(items, 0, { type: 'text', text: 'sec' });
+    items = applyEvent(items, 0, { type: 'text', text: 'sec' });
+    items = applyEvent(items, 0, { type: 'text-final', text: 'sec', streamed: 6 });
+    assert.deepStrictEqual(items[1], { kind: 'text', turn: 0, text: 'first. sec' });
+  });
+
+  test('断片が届いていなければ、確定した本文をそのまま足す', () => {
+    let items: TranscriptItem[] = startTurn([], 0, 'p');
+    items = applyEvent(items, 0, { type: 'text-final', text: 'hello', streamed: 0 });
+    assert.deepStrictEqual(items[1], { kind: 'text', turn: 0, text: 'hello' });
+  });
+
+  test('直前の項目が出力でなければ（ツールの後など）、新しい項目にする', () => {
+    let items: TranscriptItem[] = startTurn([], 0, 'p');
+    items = applyEvent(items, 0, { type: 'tool-call', id: 't1', name: 'Read', input: {} });
+    items = applyEvent(items, 0, { type: 'text-final', text: 'after', streamed: 0 });
+    assert.deepStrictEqual(items[2], { kind: 'text', turn: 0, text: 'after' });
+  });
+});

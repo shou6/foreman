@@ -566,3 +566,84 @@ suite('AgentSdkRunner: M9', () => {
     assert.strictEqual(opts?.forkSession, true);
   });
 });
+
+suite('AgentSdkRunner: 出力の確定', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+  };
+  const delta = (text: string) =>
+    msg({
+      type: 'stream_event',
+      event: { type: 'content_block_delta', delta: { type: 'text_delta', text } },
+    });
+
+  test('assistant の text ブロックが届いたら、それまでに流した断片の長さと一緒に text-final を出す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.push(delta('ok'));
+    fake.push(delta('ok'));
+    fake.push(
+      msg({ type: 'assistant', uuid: 'u1', message: { content: [{ type: 'text', text: 'ok' }] } })
+    );
+    fake.push(delta('more'));
+    fake.push(
+      msg({
+        type: 'assistant',
+        uuid: 'u2',
+        message: {
+          content: [
+            { type: 'text', text: 'more' },
+            { type: 'tool_use', id: 't', name: 'Read', input: {} },
+          ],
+        },
+      })
+    );
+    fake.push(null);
+    await handle.done;
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'text-final'),
+      [
+        { type: 'text-final', text: 'ok', streamed: 4 },
+        { type: 'text-final', text: 'more', streamed: 4 },
+      ]
+    );
+    const order = events.map((e) => e.type);
+    assert.ok(
+      order.indexOf('text-final') < order.indexOf('tool-call'),
+      'text-final は tool-call より前'
+    );
+  });
+
+  test('thinking だけの assistant メッセージでは出さない', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.push(
+      msg({
+        type: 'assistant',
+        uuid: 'u1',
+        message: { content: [{ type: 'thinking', thinking: '' }] },
+      })
+    );
+    fake.push(null);
+    await handle.done;
+    assert.strictEqual(
+      events.some((e) => e.type === 'text-final'),
+      false
+    );
+  });
+});
