@@ -34,6 +34,11 @@ const STRINGS = {
   attachments: 'Attachments',
   remove: 'Remove',
   dropHint: 'Drop files here to attach (hold Shift in the editor area)',
+  pass: 'Pass along',
+  selection: 'Selection',
+  diagnostics: 'Diagnostics',
+  gitDiff: 'git diff',
+  addFile: '+ File',
   worktree: 'worktree',
   merge: 'Merge into {0}',
   discard: 'Discard',
@@ -71,12 +76,20 @@ function state(overrides: Partial<PanelState>): PanelState {
 
 suite('webview: 添付とモデル', () => {
   test('attachments メッセージで添付の一覧が入れ替わる', () => {
-    const s = reduce(state({}), { type: 'attachments', paths: ['a.ts', 'b.md'] });
-    assert.deepStrictEqual(s?.attachments, ['a.ts', 'b.md']);
+    const s = reduce(state({}), {
+      type: 'attachments',
+      attachments: [{ kind: 'file', path: 'a.ts' }],
+    });
+    assert.deepStrictEqual(s?.attachments, [{ kind: 'file', path: 'a.ts' }]);
   });
 
   test('添付があれば入力欄の上にチップとして出す', () => {
-    const html = render(<App state={state({ attachments: ['D:\\w\\a.ts'] })} post={() => {}} />);
+    const html = render(
+      <App
+        state={state({ attachments: [{ kind: 'file', path: 'D:\\w\\a.ts' }] })}
+        post={() => {}}
+      />
+    );
     assert.ok(html.includes('class="attachment'));
     assert.ok(html.includes('a.ts'));
     assert.ok(html.includes('Remove'));
@@ -107,8 +120,8 @@ suite('webview: 添付とモデル', () => {
       { type: 'setModel', model: 'claude-opus-5' },
       { type: 'setModel', model: undefined },
       { type: 'dropped', uris: ['file:///d%3A/w/a.ts'] },
-      { type: 'send', prompt: 'p', attachments: ['D:\\w\\a.ts'] },
-      { type: 'removeAttachment', path: 'D:\\w\\a.ts' },
+      { type: 'send', prompt: 'p', attachments: [{ kind: 'file', path: 'D:\\w\\a.ts' }] },
+      { type: 'removeAttachment', key: 'file:D:\\w\\a.ts' },
     ];
     assert.strictEqual(messages.length, 5);
   });

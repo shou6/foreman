@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { SettingSource } from '../ports/agentRunner';
 import type { NotificationSetting } from '../domain/notifications';
 import type { PermissionMode } from '../domain/task';
 
@@ -19,6 +20,10 @@ export interface Settings {
   autoTitle: boolean;
   /** タイトル付けに使うモデル */
   titleModel: string;
+  /** 通知の出し方。desktop は Local Notifier 拡張機能の inbox に書く */
+  notificationChannel: 'vscode' | 'desktop' | 'both';
+  /** Claude Code の設定の読み込み元。空なら Claude Code の既定 */
+  settingSources: SettingSource[] | undefined;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -41,5 +46,18 @@ export function readSettings(): Settings {
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
     autoTitle: config.get<boolean>('autoTitle', true),
     titleModel: text('titleModel') ?? 'claude-haiku-4-5',
+    notificationChannel: channelOf(config.get<string>('notificationChannel', 'both')),
+    settingSources: sourcesOf(config.get<string[]>('settingSources', ['user', 'project', 'local'])),
   };
+}
+
+function channelOf(value: string): Settings['notificationChannel'] {
+  return value === 'desktop' || value === 'vscode' ? value : 'both';
+}
+
+/** 設定の配列から知っている値だけを残す。全部あれば undefined（Claude Code の既定に任せる） */
+function sourcesOf(values: readonly string[]): SettingSource[] | undefined {
+  const known: SettingSource[] = ['user', 'project', 'local'];
+  const picked = known.filter((k) => values.includes(k));
+  return picked.length === known.length ? undefined : picked;
 }

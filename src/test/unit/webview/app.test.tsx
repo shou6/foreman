@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
-import type { PanelState } from '../../../webview/protocol';
+import type { PanelState, ToExtension } from '../../../webview/protocol';
 
 const STRINGS = {
   send: 'Send',
@@ -33,6 +33,11 @@ const STRINGS = {
   attachments: 'Attachments',
   remove: 'Remove',
   dropHint: 'Drop files here to attach (hold Shift in the editor area)',
+  pass: 'Pass along',
+  selection: 'Selection',
+  diagnostics: 'Diagnostics',
+  gitDiff: 'git diff',
+  addFile: '+ File',
   worktree: 'worktree',
   merge: 'Merge into {0}',
   discard: 'Discard',
@@ -125,5 +130,51 @@ suite('webview App', () => {
       />
     );
     assert.ok(html.includes('API down'));
+  });
+});
+
+suite('webview: 渡すもの（入力欄の添付）', () => {
+  test('選択範囲・診断・git diff・ファイルのボタンを出す', () => {
+    const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
+    assert.ok(html.includes('class="pass-label"'));
+    assert.ok(html.includes('class="pass selection"'));
+    assert.ok(html.includes('class="pass diagnostics"'));
+    assert.ok(html.includes('class="pass git-diff"'));
+    assert.ok(html.includes('class="pass pick-files"'));
+  });
+
+  test('添付は種類ごとの見出しで並び、消せる', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          attachments: [
+            { kind: 'file', path: 'D:\\w\\src\\a.ts' },
+            { kind: 'selection', path: 'src/b.ts', startLine: 22, endLine: 40, text: 'x' },
+            { kind: 'diagnostics', count: 2, text: 'e' },
+            { kind: 'gitDiff', files: 3, text: 'd' },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('a.ts'));
+    assert.ok(html.includes('src/b.ts:22-40'));
+    assert.ok(html.includes('Diagnostics 2'));
+    assert.ok(html.includes('git diff 3'));
+    assert.strictEqual(html.split('class="attachment"').length - 1, 4);
+  });
+
+  test('メッセージの型', () => {
+    const messages: ToExtension[] = [
+      { type: 'attachSelection' },
+      { type: 'attachDiagnostics' },
+      { type: 'attachGitDiff' },
+      { type: 'pickFiles' },
+      { type: 'removeAttachment', key: 'file:a' },
+      { type: 'send', prompt: 'p', attachments: [{ kind: 'file', path: 'a' }] },
+    ];
+    assert.strictEqual(messages.length, 6);
   });
 });

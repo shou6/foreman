@@ -193,6 +193,7 @@ export class AgentSdkRunner implements AgentRunner {
         model: options.model,
         resume: sessionId,
         resumeSessionAt: options.resumeAt,
+        settingSources: options.settingSources,
         forkSession: options.fork === true ? true : undefined,
         pathToClaudeCodeExecutable: claudePath,
         includePartialMessages: true,

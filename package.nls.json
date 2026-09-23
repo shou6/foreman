@@ -24,6 +24,7 @@
   "config.useWorktree": "Run new tasks in a git worktree by default. You can still choose per task.",
   "config.worktreeBranchPrefix": "Prefix for the branch of each task worktree, for example `foreman/`.",
   "command.exportTask": "Export Task as Markdown",
+  "command.attachSelectionToTask": "Foreman: Attach Selection to Task",
   "command.forkTask": "Fork Task",
   "command.approveTask": "Approve Changes",
   "command.startTask": "Start Draft",
@@ -34,5 +35,10 @@
   "config.toolCalls.collapsed": "One summary line per group; click to expand.",
   "config.toolCalls.expanded": "Show every tool call.",
   "config.autoTitle": "Ask a small model for a short task title right after a task is created. Uses one short request per task.",
-  "config.titleModel": "Model used to write task titles."
+  "config.titleModel": "Model used to write task titles.",
+  "config.notificationChannel": "Where to show notifications. `desktop` writes to the inbox of the Local Notifier extension (shou6.vscode-local-notifier) for Windows desktop notifications.",
+  "config.notificationChannel.vscode": "Visual Studio Code notifications only.",
+  "config.notificationChannel.desktop": "Desktop notifications through Local Notifier only.",
+  "config.notificationChannel.both": "Both.",
+  "config.settingSources": "Which Claude Code settings the tasks load: `user` (~/.claude/settings.json), `project` (.claude/settings.json) and `local` (.claude/settings.local.json). Remove `user` to keep your personal hooks and permission rules out of Foreman tasks."
 }

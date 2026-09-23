@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { attachmentKey } from '../domain/attachments';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import { describeSuggestions } from '../domain/suggestions';
 import type { TranscriptItem } from '../domain/transcript';
@@ -6,6 +7,7 @@ import { renderMarkdown } from './markdown';
 import { hunksOf } from '../domain/diff';
 import {
   diffKey,
+  type Attachment,
   type DiffLine,
   type FileChange,
   type PanelState,
@@ -171,23 +173,36 @@ export function App({ state, post }: AppProps) {
         )}
       </main>
       <footer class="composer">
-        {state.attachments.length > 0 && (
-          <div class="attachments">
-            <span class="attachments-label">{state.strings.attachments}</span>
-            {state.attachments.map((path) => (
-              <span class="attachment" key={path} title={path}>
-                {basename(path)}
+        <div class="attachments">
+          <span class="pass-label">{state.strings.pass}</span>
+          {state.attachments.map((a) => {
+            const key = attachmentKey(a);
+            return (
+              <span class="attachment" key={key} title={attachmentTitle(a)}>
+                {attachmentChip(a, state.strings)}
                 <button
                   class="link"
-                  onClick={() => post({ type: 'removeAttachment', path })}
+                  onClick={() => post({ type: 'removeAttachment', key })}
                   title={state.strings.remove}
                 >
                   ×<span class="sr-only">{state.strings.remove}</span>
                 </button>
               </span>
-            ))}
-          </div>
-        )}
+            );
+          })}
+          <button class="pass selection" onClick={() => post({ type: 'attachSelection' })}>
+            {state.strings.selection}
+          </button>
+          <button class="pass diagnostics" onClick={() => post({ type: 'attachDiagnostics' })}>
+            {state.strings.diagnostics}
+          </button>
+          <button class="pass git-diff" onClick={() => post({ type: 'attachGitDiff' })}>
+            + {state.strings.gitDiff}
+          </button>
+          <button class="pass pick-files" onClick={() => post({ type: 'pickFiles' })}>
+            {state.strings.addFile}
+          </button>
+        </div>
         {state.pending !== undefined ? (
           <div class="waiting-note">{state.strings.waiting}</div>
         ) : (
@@ -240,6 +255,24 @@ export function App({ state, post }: AppProps) {
       </footer>
     </div>
   );
+}
+
+/** チップの文字。ファイルは名前だけ、選択範囲は path:行、診断と git diff は件数 */
+function attachmentChip(a: Attachment, strings: PanelStrings): string {
+  switch (a.kind) {
+    case 'file':
+      return basename(a.path);
+    case 'selection':
+      return `${a.path}:${a.startLine}-${a.endLine}`;
+    case 'diagnostics':
+      return `${strings.diagnostics} ${a.count}`;
+    case 'gitDiff':
+      return `${strings.gitDiff} ${a.files}`;
+  }
+}
+
+function attachmentTitle(a: Attachment): string {
+  return a.kind === 'file' ? a.path : a.kind === 'selection' ? a.text : a.text.slice(0, 500);
 }
 
 function basename(path: string): string {

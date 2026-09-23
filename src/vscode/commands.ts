@@ -24,6 +24,10 @@ export interface CommandDeps {
   openBoard: () => void;
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
+  /** エディタの選択範囲を添付の形にする（エディタの右クリック用） */
+  selectionOf: (
+    editor: vscode.TextEditor | undefined
+  ) => import('../domain/attachments').Attachment | undefined;
   /** タスクの作成後に呼ぶ（タイトル付けなど）。待たない */
   afterCreate: (task: import('../domain/task').Task) => void;
 }
@@ -217,6 +221,21 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         void withError(() => worktreeActions.discard(id))();
       }
     }),
+    // エディタの右クリック「選択範囲をタスクに添付」（FR-VIEW-12）。右クリックの時点ではエディタがアクティブ
+    vscode.commands.registerCommand('foreman.attachSelectionToTask', () => {
+      const item = deps.selectionOf(vscode.window.activeTextEditor);
+      void withError(async () => {
+        if (item === undefined) {
+          return;
+        }
+        const taskId = await pickTask();
+        if (taskId === undefined) {
+          return;
+        }
+        await panels.open(taskId);
+        panels.attach(taskId, [item]);
+      })();
+    }),
     // エクスプローラーとタブの右クリック「タスクに添付」（FR-VIEW-5）
     vscode.commands.registerCommand(
       'foreman.attachToTask',
@@ -235,7 +254,10 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
             return;
           }
           await panels.open(taskId);
-          panels.attach(taskId, files);
+          panels.attach(
+            taskId,
+            files.map((path) => ({ kind: 'file', path }))
+          );
         })();
       }
     )

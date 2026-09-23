@@ -24,6 +24,8 @@ export interface Git {
   ignored(dir: string, paths: readonly string[]): Promise<string[]>;
   /** HEAD にあるファイルの内容（dir からの相対パス）。無ければ undefined */
   showHead(dir: string, path: string): Promise<string | undefined>;
+  /** dir の未コミットの差分（追跡外は含まない）。無ければ空 */
+  diff(dir: string): Promise<string>;
   /** フォルダが消えている worktree の登録を外す */
   prune(repo: string): Promise<void>;
   /** .git/info/exclude に pattern を足す（既にあれば何もしない） */

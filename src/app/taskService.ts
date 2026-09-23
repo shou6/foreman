@@ -1,4 +1,4 @@
-import { promptWithAttachments } from '../domain/attachments';
+import { promptWithAttachments, type Attachment } from '../domain/attachments';
 import { resumePrompt } from '../domain/resumePrompt';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import {
@@ -13,7 +13,7 @@ import {
   type Worktree,
 } from '../domain/task';
 import { titleFromPrompt } from '../domain/taskTitle';
-import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
+import type { AgentRunner, RunHandle, SettingSource, StartOptions } from '../ports/agentRunner';
 import type { TaskStore } from '../ports/taskStore';
 
 export interface TaskServiceDeps {
@@ -25,6 +25,8 @@ export interface TaskServiceDeps {
   now: () => string;
   /** ツールの承認をユーザーに求める。画面側が実装する */
   approve: (taskId: string, request: PermissionRequest) => Promise<PermissionDecision>;
+  /** Claude Code の設定の読み込み元（設定 foreman.settingSources）。省略時は Claude Code の既定 */
+  settingSources?: () => SettingSource[] | undefined;
 }
 
 export interface CreateInput {
@@ -36,7 +38,7 @@ export interface CreateInput {
   model?: string;
   permissionMode?: PermissionMode;
   /** 添付したファイルの絶対パス */
-  attachments?: string[];
+  attachments?: Attachment[];
   /** 使う worktree。渡すと Claude はその場所で動く */
   worktree?: Worktree;
 }
@@ -180,7 +182,7 @@ export class TaskService {
   /** 下書きを開始する。worktree を渡すとその場所で動く */
   async start(
     id: string,
-    options: { worktree?: Worktree; attachments?: string[] } = {}
+    options: { worktree?: Worktree; attachments?: Attachment[] } = {}
   ): Promise<Task> {
     const attachments = options.attachments ?? [];
     const { task, prompt } = await this.serialize(id, async () => {
@@ -247,7 +249,7 @@ export class TaskService {
   }
 
   /** 完了・失敗・中断したタスクへ追加の指示を送る */
-  async send(id: string, prompt: string, attachments: string[] = []): Promise<void> {
+  async send(id: string, prompt: string, attachments: Attachment[] = []): Promise<void> {
     await this.mustLoad(id);
     if (this.pendingPermission.has(id)) {
       throw new Error(`Task "${id}" is waiting for an approval; answer it first`);
@@ -274,7 +276,7 @@ export class TaskService {
   }
 
   /** 中断したタスクを同じセッションで再開し、新しいターンを始める */
-  async resume(id: string, prompt: string, attachments: string[] = []): Promise<void> {
+  async resume(id: string, prompt: string, attachments: Attachment[] = []): Promise<void> {
     const { task, sessionId, previous } = await this.serialize(id, async () => {
       const current = await this.mustLoad(id);
       if (current.sessionId === undefined) {
@@ -418,6 +420,7 @@ export class TaskService {
       model: task.model,
       permissionMode: task.permissionMode,
       alwaysAllowed: task.alwaysAllowed,
+      settingSources: this.deps.settingSources?.(),
       onPermissionRequest: (request) => this.handlePermission(task.id, request),
       onEvent: (event) => {
         const notification: TaskEventNotification = {
@@ -565,7 +568,7 @@ export class TaskService {
     return { ...task, status, turns };
   }
 
-  private withTurn(task: Task, prompt: string, attachments: string[], startedAt: string): Task {
+  private withTurn(task: Task, prompt: string, attachments: Attachment[], startedAt: string): Task {
     const turn: Turn = {
       index: task.turns.length,
       prompt,

@@ -31,7 +31,7 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         diffs: { ...state.diffs, [diffKey(message.turn, message.path)]: message.lines },
       };
     case 'attachments':
-      return { ...state, attachments: message.paths };
+      return { ...state, attachments: message.attachments };
     case 'finishing':
       return { ...state, finishing: message.kind };
     case 'turn-start':

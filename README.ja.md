@@ -15,7 +15,7 @@ Foreman は、PC にインストール済みでログイン済みの `claude` CL
 - **エディタのタブに開くタスク画面**：出力の逐次表示、ツールの呼び出し、追加の指示（Ctrl+Enter）、モデルの切り替え。コードの横に並べて開ける
 - **タスク画面での承認**：ツールの呼び出しごとに許可・拒否を選び、理由を添えられる。「このタスクでは常に許可」もできる。Claude からの質問は選択肢で答える
 - **Git に頼らない差分カード**：各ターンで、変更されたファイルと行数を出す。インラインの差分と VS Code の差分エディタで確かめ、ファイル単位で戻せる。Git リポジトリでないフォルダでも動く
-- **添付**：ファイルを右クリックして「Foreman: タスクに添付」を選ぶか、タスク画面へドロップする（エディタ領域からは Shift を押しながらドラッグ）
+- **渡すもの**：エディタの選択範囲、問題パネルのエラーと警告、未コミットの `git diff`、ダイアログで選んだファイルを指示に添える。ファイルの右クリック「Foreman: タスクに添付」と、タスク画面へのドロップ（エディタ領域からは Shift を押しながらドラッグ）も使える
 - **通知とステータスバー**：入力待ちと完了が分かる。ステータスバーに実行中と入力待ちの件数が出る
 - **保存**：タスク、履歴、差分カードは再起動後も残る。中断したタスクはセッションを保ち、次の指示で続きが動く
 - **git worktree**：タスクを専用の worktree とブランチで動かし、元のブランチへマージするか破棄する。worktree はリポジトリ内の `.foreman/worktrees` に置く
@@ -44,6 +44,8 @@ Foreman は認証情報を読まず、保存もしない。ローカルの `clau
 | `foreman.autoTitle` / `foreman.titleModel` | 最初の指示から小さなモデルにタスク名を付けさせる |
 | `foreman.toolCalls` | タスク画面でツールの呼び出しを開いて見せるか、たたむか |
 | `foreman.taskViewWidth` | タスク画面の本文の最大の幅（`em`） |
+| `foreman.notificationChannel` | `both`（既定）、`vscode`、`desktop` のいずれか。デスクトップ通知は [Local Notifier](https://marketplace.visualstudio.com/items?itemName=shou6.vscode-local-notifier) 拡張機能を通す。Foreman と一緒にインストールされる（Windows のみ） |
+| `foreman.settingSources` | タスクが読む Claude Code の設定。`user`、`project`、`local`。`user` を外すと個人の hooks が Foreman のタスクに効かなくなる |
 
 ## 仕組み
 

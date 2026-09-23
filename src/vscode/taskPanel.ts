@@ -8,6 +8,7 @@ import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
+import { attachmentKey, uniqueAttachments, type Attachment } from '../domain/attachments';
 import { canMerge, isTurnOpen } from '../domain/task';
 import { randomNonce } from './nonce';
 import { statusLabel } from './statusLabel';
@@ -31,6 +32,13 @@ export interface TaskPanelDeps {
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
   /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
+  /** 「渡すもの」の材料 */
+  sources: {
+    selection(): Attachment | undefined;
+    diagnostics(): Attachment | undefined;
+    gitDiff(cwd: string): Promise<Attachment | undefined>;
+    pickFiles(): Promise<Attachment[]>;
+  };
   checkpoint: {
     rewind(taskId: string, turn: number): Promise<void>;
     fork(taskId: string, turn: number): Promise<void>;
@@ -41,7 +49,7 @@ export interface TaskPanelDeps {
 export class TaskPanels implements vscode.Disposable {
   private readonly panels = new Map<string, vscode.WebviewPanel>();
   /** 次の指示に添付するファイル（タスクごと） */
-  private readonly attachments = new Map<string, string[]>();
+  private readonly attachments = new Map<string, Attachment[]>();
   private readonly subscriptions: vscode.Disposable[] = [];
   /** 前面に出ているタスク画面のタスク。右サイドバーが追う */
   private active: string | undefined;
@@ -137,11 +145,11 @@ export class TaskPanels implements vscode.Disposable {
   }
 
   /** ファイルを次の指示の添付に足す（FR-VIEW-5） */
-  attach(taskId: string, files: string[]): void {
+  attach(taskId: string, items: Attachment[]): void {
     const current = this.attachments.get(taskId) ?? [];
-    const next = [...new Set([...current, ...files])];
+    const next = uniqueAttachments([...current, ...items]);
     this.attachments.set(taskId, next);
-    this.post(taskId, { type: 'attachments', paths: next });
+    this.post(taskId, { type: 'attachments', attachments: next });
   }
 
   dispose(): void {
@@ -165,7 +173,7 @@ export class TaskPanels implements vscode.Disposable {
         }
         case 'send':
           this.attachments.delete(taskId);
-          this.post(taskId, { type: 'attachments', paths: [] });
+          this.post(taskId, { type: 'attachments', attachments: [] });
           await this.deps.service.send(taskId, message.prompt, message.attachments);
           return;
         case 'interrupt':
@@ -198,8 +206,33 @@ export class TaskPanels implements vscode.Disposable {
             message.uris
               .map((u) => vscode.Uri.parse(u))
               .filter((u) => u.scheme === 'file')
-              .map((u) => u.fsPath)
+              .map((u) => ({ kind: 'file', path: u.fsPath }))
           );
+          return;
+        case 'attachSelection': {
+          const item = this.deps.sources.selection();
+          if (item !== undefined) {
+            this.attach(taskId, [item]);
+          }
+          return;
+        }
+        case 'attachDiagnostics': {
+          const item = this.deps.sources.diagnostics();
+          if (item !== undefined) {
+            this.attach(taskId, [item]);
+          }
+          return;
+        }
+        case 'attachGitDiff': {
+          const task = await this.deps.service.load(taskId);
+          const item = task === undefined ? undefined : await this.deps.sources.gitDiff(task.cwd);
+          if (item !== undefined) {
+            this.attach(taskId, [item]);
+          }
+          return;
+        }
+        case 'pickFiles':
+          this.attach(taskId, await this.deps.sources.pickFiles());
           return;
         case 'merge':
         case 'discard':
@@ -238,9 +271,11 @@ export class TaskPanels implements vscode.Disposable {
           return;
         }
         case 'removeAttachment': {
-          const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
+          const next = (this.attachments.get(taskId) ?? []).filter(
+            (a) => attachmentKey(a) !== message.key
+          );
           this.attachments.set(taskId, next);
-          this.post(taskId, { type: 'attachments', paths: next });
+          this.post(taskId, { type: 'attachments', attachments: next });
           return;
         }
       }
@@ -314,6 +349,11 @@ export class TaskPanels implements vscode.Disposable {
         defaultModel: vscode.l10n.t('Default'),
         attachments: vscode.l10n.t('Attachments'),
         remove: vscode.l10n.t('Remove'),
+        pass: vscode.l10n.t('Pass along'),
+        selection: vscode.l10n.t('Selection'),
+        diagnostics: vscode.l10n.t('Diagnostics'),
+        gitDiff: vscode.l10n.t('git diff'),
+        addFile: vscode.l10n.t('+ File'),
         dropHint: vscode.l10n.t(
           'Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.'
         ),

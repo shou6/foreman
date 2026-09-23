@@ -24,6 +24,11 @@ const STRINGS = {
   attachments: 'Attachments',
   remove: 'Remove',
   dropHint: 'Drop files here',
+  pass: 'Pass along',
+  selection: 'Selection',
+  diagnostics: 'Diagnostics',
+  gitDiff: 'git diff',
+  addFile: '+ File',
   statusLabels: {
     draft: 'Draft',
     running: 'Running',

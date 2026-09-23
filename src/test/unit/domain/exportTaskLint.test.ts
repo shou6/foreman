@@ -15,7 +15,7 @@ const TASK: Task = {
     {
       index: 0,
       prompt: 'first\nsecond line',
-      attachments: ['D:\\repo\\a.ts'],
+      attachments: [{ kind: 'file', path: 'D:\\repo\\a.ts' }],
       startedAt: 't',
       endedAt: 't',
       result: { ok: true },

@@ -20,15 +20,19 @@ suite('TaskService: 添付とモデル', () => {
   test('添付つきの指示は、ターンに添付を残し、Runner にはパスを列挙した指示を送る', async () => {
     const runner = new FakeAgentRunner();
     const service = build(runner);
-    await service.create({ prompt: 'p', cwd: CWD, attachments: ['D:\\work\\a.ts'] });
+    await service.create({
+      prompt: 'p',
+      cwd: CWD,
+      attachments: [{ kind: 'file', path: 'D:\\work\\a.ts' }],
+    });
     assert.strictEqual(runner.last.options.prompt, 'p\n\nAttached files:\n- D:\\work\\a.ts');
     runner.last.emit({ type: 'turn-end', ok: true });
     await settle();
-    await service.send('task-1', 'more', ['D:\\work\\b.ts']);
+    await service.send('task-1', 'more', [{ kind: 'file', path: 'D:\\work\\b.ts' }]);
     assert.deepStrictEqual(runner.last.sent, ['more\n\nAttached files:\n- D:\\work\\b.ts']);
     const task = await service.load('task-1');
-    assert.deepStrictEqual(task?.turns[0]?.attachments, ['D:\\work\\a.ts']);
-    assert.deepStrictEqual(task?.turns[1]?.attachments, ['D:\\work\\b.ts']);
+    assert.deepStrictEqual(task?.turns[0]?.attachments, [{ kind: 'file', path: 'D:\\work\\a.ts' }]);
+    assert.deepStrictEqual(task?.turns[1]?.attachments, [{ kind: 'file', path: 'D:\\work\\b.ts' }]);
     assert.strictEqual(task?.turns[1]?.prompt, 'more');
   });
 

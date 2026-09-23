@@ -108,5 +108,17 @@
   "{0}: all changes": "{0}: すべての変更",
   "Revert all": "すべて戻す",
   "{0} file(s) could not be reverted because their previous content is unknown: {1}": "変更前の内容が不明な {0} 件のファイルは戻せませんでした: {1}",
-  "Approve the changes before merging. Nothing to merge yet if there are no changes.": "マージの前に変更を承認してください。変更が無ければマージするものはありません。"
+  "Approve the changes before merging. Nothing to merge yet if there are no changes.": "マージの前に変更を承認してください。変更が無ければマージするものはありません。",
+  "Pass along": "渡すもの",
+  "Selection": "選択範囲",
+  "Diagnostics": "診断",
+  "git diff": "git diff",
+  "+ File": "+ ファイル",
+  "Open a file and select the code to attach.": "ファイルを開き、渡すコードを選択してください。",
+  "No errors or warnings to attach.": "渡すエラーや警告はありません。",
+  "This task does not run in a Git repository.": "このタスクは Git リポジトリの中で動いていません。",
+  "No uncommitted changes to attach.": "渡す未コミットの変更はありません。",
+  "Attach": "添付",
+  "Desktop notification failed: {0}": "デスクトップ通知に失敗しました: {0}",
+  "Install the Local Notifier extension ({0}).": "Local Notifier 拡張機能（{0}）をインストールしてください。"
 }

@@ -1,11 +1,12 @@
 import type { PendingRequest } from '../app/approvalService';
+import type { Attachment } from '../domain/attachments';
 import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
-export type { DiffLine, FileChange, PendingRequest, TranscriptDelta };
+export type { Attachment, DiffLine, FileChange, PendingRequest, TranscriptDelta };
 
 /** 画面に出す文字列。翻訳は拡張機能側で済ませて渡す（Webview からは vscode.l10n を使えない） */
 export interface PanelStrings {
@@ -30,6 +31,12 @@ export interface PanelStrings {
   attachments: string;
   remove: string;
   dropHint: string;
+  /** 「渡すもの」の行の見出しとボタン */
+  pass: string;
+  selection: string;
+  diagnostics: string;
+  gitDiff: string;
+  addFile: string;
   /** 状態の表示名 */
   statusLabels: Record<TaskStatus, string>;
   worktree: string;
@@ -76,8 +83,8 @@ export interface PanelState {
   changes: Record<number, FileChange[]>;
   /** "<turn>:<path>" → インライン差分の行 */
   diffs: Record<string, DiffLine[]>;
-  /** 次の指示に添付するファイル（絶対パス） */
-  attachments: string[];
+  /** 次の指示に添えるもの */
+  attachments: Attachment[];
   /** 本文の最大の幅（em）。0 なら画面いっぱい */
   maxWidthEm: number;
   /** タスクが使う worktree。無ければ undefined */
@@ -105,14 +112,14 @@ export type ToWebview =
   | { type: 'pending'; pending: PendingRequest | undefined }
   | { type: 'changes'; turn: number; changes: FileChange[] }
   | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
-  | { type: 'attachments'; paths: string[] }
+  | { type: 'attachments'; attachments: Attachment[] }
   | { type: 'finishing'; kind: 'merge' | 'discard' | undefined }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
 export type ToExtension =
   | { type: 'ready' }
-  | { type: 'send'; prompt: string; attachments: string[] }
+  | { type: 'send'; prompt: string; attachments: Attachment[] }
   | { type: 'interrupt' }
   | { type: 'decision'; requestId: string; decision: PermissionDecision }
   | { type: 'showDiff'; turn: number; path: string }
@@ -121,7 +128,12 @@ export type ToExtension =
   | { type: 'setModel'; model: string | undefined }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
-  | { type: 'removeAttachment'; path: string }
+  | { type: 'removeAttachment'; key: string }
+  /** 「渡すもの」: エディタの選択範囲、診断、git diff、ファイルの選択 */
+  | { type: 'attachSelection' }
+  | { type: 'attachDiagnostics' }
+  | { type: 'attachGitDiff' }
+  | { type: 'pickFiles' }
   /** worktree の変更を元のブランチへマージする / 捨てる */
   | { type: 'merge' }
   | { type: 'discard' }

@@ -114,6 +114,10 @@ export class GitCli implements Git {
     }
   }
 
+  async diff(dir: string): Promise<string> {
+    return this.run(dir, 'diff', '--no-color', '--no-ext-diff');
+  }
+
   async prune(repo: string): Promise<void> {
     await this.run(repo, 'worktree', 'prune');
   }

@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { normalizeAttachments } from '../domain/attachments';
 import type { Task } from '../domain/task';
 import type { TaskStore } from '../ports/taskStore';
 
@@ -52,7 +53,15 @@ export class FsTaskStore implements TaskStore {
 
   private async read(file: string): Promise<Task | undefined> {
     try {
-      return JSON.parse(await fs.readFile(file, 'utf8')) as Task;
+      const task = JSON.parse(await fs.readFile(file, 'utf8')) as Task;
+      // 古い保存形式では添付がパスの文字列だった
+      return {
+        ...task,
+        turns: task.turns.map((turn) => ({
+          ...turn,
+          attachments: normalizeAttachments(turn.attachments ?? []),
+        })),
+      };
     } catch {
       return undefined;
     }

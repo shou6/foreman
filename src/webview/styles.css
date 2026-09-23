@@ -792,3 +792,24 @@ body.dragging .composer {
 .diff-card-head .approve.primary:hover {
   background: var(--vscode-button-hoverBackground);
 }
+
+/* 渡すもの（入力欄の添付） */
+.pass-label {
+  color: var(--vscode-descriptionForeground);
+}
+
+.pass {
+  padding: 0.05em 0.6em;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 0.8em;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.pass:hover {
+  border-color: var(--vscode-focusBorder);
+  color: var(--vscode-foreground);
+}

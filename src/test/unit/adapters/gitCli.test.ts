@@ -142,3 +142,16 @@ suite('GitCli.showHead', function () {
     assert.strictEqual(await git.showHead(repo, 'missing.txt'), undefined);
   });
 });
+
+suite('GitCli.diff', function () {
+  this.timeout(30_000);
+  test('未コミットの差分を返す。変更が無ければ空', async () => {
+    const repo = makeRepo();
+    const git = new GitCli();
+    assert.strictEqual(await git.diff(repo), '');
+    fs.writeFileSync(path.join(repo, 'a.txt'), 'a\nb\n');
+    const out = await git.diff(repo);
+    assert.ok(out.includes('diff --git a/a.txt b/a.txt'));
+    assert.ok(out.includes('+b'));
+  });
+});

@@ -1,4 +1,5 @@
 import type { Task } from './task';
+import type { Attachment } from './attachments';
 import type { TranscriptItem } from './transcript';
 
 /** ツールの出力をエクスポートに含める上限（文字数） */
@@ -37,7 +38,9 @@ export function exportTaskMarkdown(task: Task, items: readonly TranscriptItem[])
         (turn.endedAt !== undefined ? ` / Ended: ${turn.endedAt}` : '')
     );
     if (turn.attachments.length > 0) {
-      lines.push(`- Attachments: ${turn.attachments.map((a) => `\`${a}\``).join(', ')}`);
+      lines.push(
+        `- Attachments: ${turn.attachments.map((a) => `\`${attachmentLabel(a)}\``).join(', ')}`
+      );
     }
     lines.push('');
     lines.push(quote(turn.prompt), '');
@@ -181,4 +184,18 @@ function summarize(input: Record<string, unknown>): string {
   }
   const json = JSON.stringify(input);
   return json.length > 80 ? json.slice(0, 80) + '…' : json;
+}
+
+/** 添付を 1 語で表す（書き出し用） */
+function attachmentLabel(a: Attachment): string {
+  switch (a.kind) {
+    case 'file':
+      return a.path;
+    case 'selection':
+      return `${a.path}:${a.startLine}-${a.endLine}`;
+    case 'diagnostics':
+      return `diagnostics (${a.count})`;
+    case 'gitDiff':
+      return `git diff (${a.files} files)`;
+  }
 }

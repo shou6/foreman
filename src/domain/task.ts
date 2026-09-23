@@ -1,3 +1,4 @@
+import type { Attachment } from './attachments';
 import { titleFromPrompt } from './taskTitle';
 
 /**
@@ -56,7 +57,7 @@ export interface FileChange {
 export interface Turn {
   index: number;
   prompt: string;
-  attachments: string[];
+  attachments: Attachment[];
   startedAt: string;
   endedAt?: string;
   result?: TurnResult;

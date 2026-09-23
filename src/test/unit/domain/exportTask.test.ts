@@ -23,7 +23,7 @@ const TASK: Task = {
     {
       index: 0,
       prompt: 'Add a test for hello',
-      attachments: ['D:\\repo\\src\\hello.ts'],
+      attachments: [{ kind: 'file', path: 'D:\\repo\\src\\hello.ts' }],
       startedAt: '2026-09-24T10:00:00.000Z',
       endedAt: '2026-09-24T10:01:30.000Z',
       result: {

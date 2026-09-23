@@ -24,6 +24,8 @@ import { StatusBar } from './vscode/statusBar';
 import { TaskPanels } from './vscode/taskPanel';
 import { SNAPSHOT_SCHEME } from './vscode/snapshotUri';
 import { SidebarView, SIDEBAR_VIEW_ID } from './vscode/sidebarView';
+import { AttachmentSources } from './vscode/attachmentSources';
+import { inboxDirOf, writeToInbox } from './adapters/localNotifierInbox';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
@@ -32,6 +34,8 @@ import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
+const LOCAL_NOTIFIER_ID = 'shou6.vscode-local-notifier';
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel('Foreman');
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
@@ -53,6 +57,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     newId: () => randomUUID(),
     now: () => new Date().toISOString(),
     approve: (taskId, request) => approvals.request(taskId, request),
+    settingSources: () => readSettings().settingSources,
   });
   // 待っている間に止まった・失敗した要求は片付ける
   service.onDidChange((task) => {
@@ -132,6 +137,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     openPanel: async (taskId) => panelsRef?.open(taskId),
     afterStart: (task) => void autoTitleRef?.onCreated(task),
   });
+  const sources = new AttachmentSources(git);
+  context.subscriptions.push(sources);
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
@@ -144,6 +151,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
     approve: (taskId) => review.approve(taskId),
+    sources,
     checkpoint: {
       rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
       fork: (taskId, turn) => checkpoints.fork(taskId, turn),
@@ -217,7 +225,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     new Notifications(
       service,
       (taskId) => void panels.open(taskId),
-      () => readSettings().notifications
+      () => readSettings().notifications,
+      () => readSettings().notificationChannel,
+      async (notification) => {
+        if (vscode.extensions.getExtension(LOCAL_NOTIFIER_ID) === undefined) {
+          throw new Error(
+            vscode.l10n.t('Install the Local Notifier extension ({0}).', LOCAL_NOTIFIER_ID)
+          );
+        }
+        const dir = inboxDirOf({
+          configured: vscode.workspace
+            .getConfiguration('localNotifier')
+            .get<string>('inboxPath', ''),
+          globalStorage: context.globalStorageUri.fsPath,
+          sep: path.sep,
+        });
+        await writeToInbox(
+          dir,
+          {
+            ...notification,
+            project: vscode.workspace.workspaceFolders?.[0]?.name,
+            source: 'Foreman',
+          },
+          { now: Date.now(), pid: process.pid }
+        );
+      }
     ),
     sidebar,
     vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
@@ -259,6 +291,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     newId: () => randomUUID(),
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
     afterCreate: (task) => void autoTitle.onCreated(task),
+    selectionOf: (editor) => sources.selection(editor),
   });
 
   // タスクの無い worktree（前回の異常終了で残ったものなど）を片付ける
