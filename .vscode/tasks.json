@@ -4,6 +4,17 @@
   "version": "2.0.0",
   "tasks": [
     {
+      // F5 のデバッガーが拡張機能ホストに接続できない環境向け（CLAUDE.md の「開発中の注意」）。
+      // ビルドしてから、デバッガーなしで開発用ウィンドウを開く
+      "label": "Run Extension (no debug)",
+      "type": "shell",
+      "command": "npm run compile && code --extensionDevelopmentPath=\"${workspaceFolder}\"",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
       "label": "watch",
       "dependsOn": ["npm: watch:tsc", "npm: watch:esbuild"],
       "presentation": {

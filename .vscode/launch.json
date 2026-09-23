@@ -6,7 +6,9 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
+      // F5 はこの環境ではデバッガーが接続できない（CLAUDE.md の「開発中の注意」）。
+      // Ctrl+F5（デバッグなしで実行）か、タスク「Run Extension (no debug)」を使う
+      "name": "Run Extension (use Ctrl+F5: debugger cannot attach here)",
       "type": "extensionHost",
       "request": "launch",
       "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
