@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import type { ApprovalService } from '../app/approvalService';
 import type { TaskService } from '../app/taskService';
 import type { Transcripts } from '../app/transcripts';
+import type { PermissionDecision } from '../domain/events';
 import type { Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 
@@ -12,7 +14,8 @@ export class TaskPanels implements vscode.Disposable {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly service: TaskService,
-    private readonly transcripts: Transcripts
+    private readonly transcripts: Transcripts,
+    private readonly approvals: ApprovalService
   ) {
     this.subscriptions.push(
       { dispose: transcripts.onDidAppend((taskId, delta) => this.post(taskId, delta)) },
@@ -24,6 +27,11 @@ export class TaskPanels implements vscode.Disposable {
             title: task.title,
             model: task.model,
           })
+        ),
+      },
+      {
+        dispose: approvals.onDidChange((taskId, pending) =>
+          this.post(taskId, { type: 'pending', pending })
         ),
       },
       { dispose: service.onDidDelete((taskId) => this.panels.get(taskId)?.dispose()) }
@@ -83,6 +91,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'interrupt':
           await this.service.stop(taskId);
           return;
+        case 'decision':
+          this.approvals.decide(taskId, message.requestId, withDefaultReason(message.decision));
+          return;
       }
     } catch (error) {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
@@ -96,10 +107,17 @@ export class TaskPanels implements vscode.Disposable {
       status: task.status,
       model: task.model,
       items: this.transcripts.get(task.id),
+      pending: this.approvals.pending(task.id),
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
         running: vscode.l10n.t('Running…'),
+        allow: vscode.l10n.t('Allow'),
+        allowAlways: vscode.l10n.t('Always allow in this task'),
+        deny: vscode.l10n.t('Deny'),
+        denyReason: vscode.l10n.t('Reason (optional)'),
+        answer: vscode.l10n.t('Answer'),
+        waiting: vscode.l10n.t('Waiting for your input'),
       },
     };
   }
@@ -137,6 +155,14 @@ export class TaskPanels implements vscode.Disposable {
       '</html>',
     ].join('\n');
   }
+}
+
+/** 拒否の理由が空なら、既定の文言を Claude に返す */
+function withDefaultReason(decision: PermissionDecision): PermissionDecision {
+  if (decision.behavior === 'deny' && decision.message.trim() === '') {
+    return { behavior: 'deny', message: vscode.l10n.t('Denied by the user in Foreman.') };
+  }
+  return decision;
 }
 
 function randomNonce(): string {

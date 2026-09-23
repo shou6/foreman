@@ -28,6 +28,7 @@ export interface PermissionRequest {
 }
 
 export type PermissionDecision =
-  | { behavior: 'allow' }
+  /** 許可。updatedInput は質問への答えなど、入力を差し替えて許可する時に使う */
+  | { behavior: 'allow'; updatedInput?: Record<string, unknown> }
   | { behavior: 'allow-always'; permissions: Record<string, unknown>[] }
   | { behavior: 'deny'; message: string };

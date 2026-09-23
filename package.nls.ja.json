@@ -9,6 +9,10 @@
   "command.deleteTask": "タスクを削除",
   "config.claudePath": "`claude` の実行ファイルの場所。空なら `PATH` と `~/.local/bin` から探す。",
   "config.defaultModel": "新しいタスクで使うモデル（例：`claude-sonnet-5`）。空なら Claude Code の既定に従う。",
+  "config.notifications": "通知を出すタスクの出来事。",
+  "config.notifications.all": "入力待ち、完了、失敗。",
+  "config.notifications.waiting": "入力待ちの時だけ。",
+  "config.notifications.none": "出さない。",
   "config.defaultPermissionMode": "新しいタスクでのツール実行の承認方式。",
   "config.defaultPermissionMode.default": "ツールの実行のたびに確認する（Claude Code の既定）。",
   "config.defaultPermissionMode.acceptEdits": "ファイルの編集は自動で許可し、それ以外は確認する。"

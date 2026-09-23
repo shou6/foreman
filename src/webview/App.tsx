@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
+import { answersToInput, questionsOf, type Question } from '../domain/question';
 import type { TranscriptItem } from '../domain/transcript';
-import type { PanelState, ToExtension } from './protocol';
+import type { PanelState, PanelStrings, PendingRequest, ToExtension } from './protocol';
 
 export interface AppProps {
   state: PanelState | undefined;
@@ -35,22 +36,34 @@ export function App({ state, post }: AppProps) {
         {state.items.map((item, i) => (
           <Item key={i} item={item} />
         ))}
+        {state.pending !== undefined && (
+          <Approval
+            key={state.pending.id}
+            pending={state.pending}
+            strings={state.strings}
+            post={post}
+          />
+        )}
         {state.status === 'running' && <div class="item running">{state.strings.running}</div>}
       </main>
       <footer class="composer">
-        <textarea
-          class="prompt-input"
-          rows={3}
-          value={draft}
-          disabled={busy}
-          onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-        />
+        {state.pending !== undefined ? (
+          <div class="waiting-note">{state.strings.waiting}</div>
+        ) : (
+          <textarea
+            class="prompt-input"
+            rows={3}
+            value={draft}
+            disabled={busy}
+            onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+          />
+        )}
         {busy ? (
           <button class="action stop" onClick={() => post({ type: 'interrupt' })}>
             {state.strings.stop}
@@ -86,6 +99,154 @@ function Item({ item }: { item: TranscriptItem }) {
         <div class={item.interrupted ? 'item interrupted' : 'item error'}>{item.reason}</div>
       );
   }
+}
+
+interface ApprovalProps {
+  pending: PendingRequest;
+  strings: PanelStrings;
+  post: (message: ToExtension) => void;
+}
+
+/** 承認の要求。Claude からの質問なら選択肢のカード、それ以外はツールの承認カード */
+function Approval({ pending, strings, post }: ApprovalProps) {
+  const questions = questionsOf(pending);
+  return questions !== undefined ? (
+    <QuestionCard pending={pending} questions={questions} strings={strings} post={post} />
+  ) : (
+    <ToolCard pending={pending} strings={strings} post={post} />
+  );
+}
+
+function ToolCard({ pending, strings, post }: ApprovalProps) {
+  const [reason, setReason] = useState('');
+  const decide = (decision: ToExtension & { type: 'decision' }): void => post(decision);
+  return (
+    <section class="approval">
+      <div class="approval-head">
+        <span class="tool-name">{pending.toolName}</span>
+        <span class="tool-target">{summarize(pending.input)}</span>
+      </div>
+      <details class="approval-input">
+        <summary>input</summary>
+        <pre>{JSON.stringify(pending.input, null, 2)}</pre>
+      </details>
+      <textarea
+        class="deny-reason"
+        rows={2}
+        placeholder={strings.denyReason}
+        value={reason}
+        onInput={(e) => setReason((e.target as HTMLTextAreaElement).value)}
+      />
+      <div class="approval-actions">
+        <button
+          class="action allow"
+          onClick={() =>
+            decide({ type: 'decision', requestId: pending.id, decision: { behavior: 'allow' } })
+          }
+        >
+          {strings.allow}
+        </button>
+        {pending.suggestions.length > 0 && (
+          <button
+            class="action allow-always"
+            onClick={() =>
+              decide({
+                type: 'decision',
+                requestId: pending.id,
+                decision: { behavior: 'allow-always', permissions: pending.suggestions },
+              })
+            }
+          >
+            {strings.allowAlways}
+          </button>
+        )}
+        <button
+          class="action deny"
+          onClick={() =>
+            decide({
+              type: 'decision',
+              requestId: pending.id,
+              decision: { behavior: 'deny', message: reason.trim() },
+            })
+          }
+        >
+          {strings.deny}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function QuestionCard({
+  pending,
+  questions,
+  strings,
+  post,
+}: ApprovalProps & { questions: Question[] }) {
+  const [selected, setSelected] = useState<Record<string, string[]>>({});
+  const toggle = (q: Question, label: string): void => {
+    setSelected((current) => {
+      const now = current[q.question] ?? [];
+      if (!q.multiSelect) {
+        return { ...current, [q.question]: [label] };
+      }
+      return {
+        ...current,
+        [q.question]: now.includes(label) ? now.filter((l) => l !== label) : [...now, label],
+      };
+    });
+  };
+  const complete = questions.every((q) => (selected[q.question]?.length ?? 0) > 0);
+  return (
+    <section class="question">
+      {questions.map((q) => (
+        <fieldset key={q.question} class="question-group">
+          <legend>
+            {q.header !== '' && <span class="question-header">{q.header}</span>}
+            {q.question}
+          </legend>
+          {q.options.map((option) => (
+            <label key={option.label} class="question-option">
+              <input
+                type={q.multiSelect ? 'checkbox' : 'radio'}
+                name={q.question}
+                checked={(selected[q.question] ?? []).includes(option.label)}
+                onChange={() => toggle(q, option.label)}
+              />
+              <span class="option-label">{option.label}</span>
+              {option.description !== '' && (
+                <span class="option-description">{option.description}</span>
+              )}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      <div class="approval-actions">
+        <button
+          class="action allow"
+          disabled={!complete}
+          onClick={() =>
+            post({
+              type: 'decision',
+              requestId: pending.id,
+              decision: {
+                behavior: 'allow',
+                updatedInput: answersToInput(
+                  pending.input,
+                  questions.map((q) => ({
+                    question: q.question,
+                    selected: selected[q.question] ?? [],
+                  }))
+                ),
+              },
+            })
+          }
+        >
+          {strings.answer}
+        </button>
+      </div>
+    </section>
+  );
 }
 
 /** ツールの入力から、対象が分かる 1 行を作る */

@@ -164,3 +164,104 @@ body {
   color: var(--vscode-button-secondaryForeground);
   background: var(--vscode-button-secondaryBackground);
 }
+
+/* 承認カードと質問カード */
+.approval,
+.question {
+  margin: 0.75em 0;
+  padding: 0.75em;
+  border: 1px solid var(--vscode-editorWarning-foreground);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+}
+
+.approval-head {
+  font-family: var(--vscode-editor-font-family);
+  margin-bottom: 0.5em;
+}
+
+.approval-input summary {
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+}
+
+.approval-input pre {
+  margin: 0.25em 0;
+  padding: 0.5em;
+  max-height: 16em;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.deny-reason {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.5em 0;
+  padding: 0.4em;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+
+.action.deny,
+.action.allow-always {
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.question-group {
+  margin: 0 0 0.75em;
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.question-group legend {
+  font-weight: 600;
+}
+
+.question-header {
+  margin-right: 0.5em;
+  padding: 0 0.4em;
+  border-radius: 0.75em;
+  font-size: 0.8em;
+  font-weight: normal;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.question-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0.25em 0;
+  cursor: pointer;
+}
+
+.option-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.waiting-note {
+  flex: 1;
+  align-self: center;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}

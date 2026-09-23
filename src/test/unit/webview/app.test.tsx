@@ -3,7 +3,17 @@ import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState } from '../../../webview/protocol';
 
-const STRINGS = { send: 'Send', stop: 'Stop', running: 'Running…' };
+const STRINGS = {
+  send: 'Send',
+  stop: 'Stop',
+  running: 'Running…',
+  allow: 'Allow',
+  allowAlways: 'Always allow in this task',
+  deny: 'Deny',
+  denyReason: 'Reason (optional)',
+  answer: 'Answer',
+  waiting: 'Waiting for your input',
+};
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {

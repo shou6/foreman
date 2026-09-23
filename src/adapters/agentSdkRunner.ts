@@ -124,6 +124,12 @@ export class AgentSdkRunner implements AgentRunner {
   }
 
   private run(sessionId: string | undefined, options: StartOptions): RunHandle {
+    let claudePath: string;
+    try {
+      claudePath = this.deps.claudePath();
+    } catch (error) {
+      return failedHandle(options, messageOf(error));
+    }
     const prompts = new PromptStream();
     prompts.push(options.prompt);
     const perms = sdkOptionsFromAlwaysAllowed(options.permissionMode, options.alwaysAllowed);
@@ -146,7 +152,7 @@ export class AgentSdkRunner implements AgentRunner {
       const decision = await options.onPermissionRequest(request);
       switch (decision.behavior) {
         case 'allow':
-          return { behavior: 'allow', updatedInput: input };
+          return { behavior: 'allow', updatedInput: decision.updatedInput ?? input };
         case 'allow-always':
           return {
             behavior: 'allow',
@@ -177,7 +183,7 @@ export class AgentSdkRunner implements AgentRunner {
         cwd: options.cwd,
         model: options.model,
         resume: sessionId,
-        pathToClaudeCodeExecutable: this.deps.claudePath(),
+        pathToClaudeCodeExecutable: claudePath,
         includePartialMessages: true,
         permissionMode: perms.permissionMode as SdkPermissionMode,
         allowedTools: perms.allowedTools,
@@ -307,4 +313,17 @@ function reasonOf(m: SDKMessage & { type: 'result' }): string {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** 起動できなかった時のハンドル。失敗の turn-end を非同期に 1 回出し、すぐに終わる */
+function failedHandle(options: StartOptions, reason: string): RunHandle {
+  queueMicrotask(() =>
+    options.onEvent({ type: 'turn-end', ok: false, interrupted: false, reason })
+  );
+  return {
+    send: () => {},
+    interrupt: async () => {},
+    close: () => {},
+    done: Promise.resolve(),
+  };
 }

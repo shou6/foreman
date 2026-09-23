@@ -6,10 +6,11 @@ import * as vscode from 'vscode';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
 import { resolveClaudePath } from './adapters/claudePath';
 import { InMemoryTaskStore } from './adapters/inMemoryTaskStore';
+import { ApprovalService } from './app/approvalService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
-import { askPermission } from './vscode/approvals';
 import { registerCommands } from './vscode/commands';
+import { Notifications } from './vscode/notifications';
 import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
 import { TaskPanels } from './vscode/taskPanel';
@@ -25,25 +26,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     claudePath: () => locateClaude(),
     log: (line) => output.append(line),
   });
-  const store = new InMemoryTaskStore();
+  const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
-    store,
+    store: new InMemoryTaskStore(),
     newId: () => randomUUID(),
     now: () => new Date().toISOString(),
-    approve: async (taskId, request) => {
-      const task = await store.load(taskId);
-      return askPermission(task?.title ?? taskId, request);
-    },
+    approve: (taskId, request) => approvals.request(taskId, request),
+  });
+  // 待っている間に止まった・失敗した要求は片付ける
+  service.onDidChange((task) => {
+    if (task.status !== 'waiting' && task.status !== 'running') {
+      approvals.cancel(task.id);
+    }
   });
   const transcripts = new Transcripts(service);
-  const panels = new TaskPanels(context.extensionUri, service, transcripts);
+  const panels = new TaskPanels(context.extensionUri, service, transcripts, approvals);
   const tree = new TaskTreeProvider(service);
 
   context.subscriptions.push(
     output,
     panels,
     new StatusBar(service),
+    new Notifications(
+      service,
+      (taskId) => void panels.open(taskId),
+      () => readSettings().notifications
+    ),
     vscode.window.registerTreeDataProvider('foreman.tasks', tree),
     { dispose: () => service.dispose() }
   );

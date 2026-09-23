@@ -145,6 +145,21 @@
           "default": "",
           "markdownDescription": "%config.defaultModel%"
         },
+        "foreman.notifications": {
+          "type": "string",
+          "enum": [
+            "all",
+            "waiting",
+            "none"
+          ],
+          "enumDescriptions": [
+            "%config.notifications.all%",
+            "%config.notifications.waiting%",
+            "%config.notifications.none%"
+          ],
+          "default": "all",
+          "description": "%config.notifications%"
+        },
         "foreman.defaultPermissionMode": {
           "type": "string",
           "enum": [

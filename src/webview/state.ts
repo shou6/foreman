@@ -12,6 +12,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
   switch (message.type) {
     case 'task':
       return { ...state, status: message.status, title: message.title, model: message.model };
+    case 'pending':
+      return { ...state, pending: message.pending };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':
