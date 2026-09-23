@@ -24,6 +24,9 @@ const STRINGS = {
   attachments: 'Attachments',
   remove: 'Remove',
   dropHint: 'Drop files here',
+  worktree: 'worktree',
+  merge: 'Merge into {0}',
+  discard: 'Discard',
   statusLabels: {
     running: 'Running',
     waiting: 'Waiting for input',

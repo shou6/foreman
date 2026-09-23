@@ -32,6 +32,9 @@ const STRINGS = {
   attachments: 'Attachments',
   remove: 'Remove',
   dropHint: 'Drop files here to attach (hold Shift in the editor area)',
+  worktree: 'worktree',
+  merge: 'Merge into {0}',
+  discard: 'Discard',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
