@@ -105,3 +105,58 @@ suite('Transcripts: 永続化', () => {
     assert.strictEqual(store.deltas.has('task-1'), false);
   });
 });
+
+suite('Transcripts: 会話の巻き戻し', () => {
+  test('ターンが減ると履歴も切り詰め、truncate を差分として伝える。次の指示は続きのターンとして並ぶ', async () => {
+    const { service, runner, transcripts } = build();
+    const deltas: TranscriptDelta[] = [];
+    await service.create({ prompt: 'first', cwd: 'D:\\work' });
+    runner.last.emit({ type: 'init', sessionId: 'sess-1', model: 'm' });
+    runner.last.emit({ type: 'text', text: 'a' });
+    runner.last.emit({ type: 'turn-end', ok: true, lastMessageUuid: 'u0' });
+    await settle();
+    await service.send('task-1', 'second');
+    runner.last.emit({ type: 'text', text: 'b' });
+    runner.last.emit({ type: 'turn-end', ok: true, lastMessageUuid: 'u1' });
+    await settle();
+    transcripts.onDidAppend((_taskId, delta) => deltas.push(delta));
+
+    await service.rewindConversation('task-1', 0);
+    assert.deepStrictEqual(transcripts.get('task-1'), [
+      { kind: 'prompt', turn: 0, text: 'first' },
+      { kind: 'text', turn: 0, text: 'a' },
+      { kind: 'turn-end', turn: 0, ok: true },
+    ]);
+    assert.deepStrictEqual(deltas, [{ type: 'truncate', afterTurn: 0 }]);
+
+    await service.send('task-1', 'third');
+    const items = transcripts.get('task-1');
+    assert.deepStrictEqual(items[items.length - 1], { kind: 'prompt', turn: 1, text: 'third' });
+  });
+
+  test('truncate は保存先にも残り、読み戻しても切り詰めた履歴になる', async () => {
+    const store = new InMemoryTranscriptStore();
+    const runner = new FakeAgentRunner();
+    const service = new TaskService({
+      runner,
+      store: new InMemoryTaskStore(),
+      newId: () => 'task-1',
+      now: () => '2026-09-23T10:00:00.000Z',
+      approve: async () => ({ behavior: 'allow' }),
+    });
+    new Transcripts(service, store);
+    await service.create({ prompt: 'first', cwd: 'D:\\work' });
+    runner.last.emit({ type: 'turn-end', ok: true, lastMessageUuid: 'u0' });
+    await settle();
+    await service.send('task-1', 'second');
+    runner.last.emit({ type: 'turn-end', ok: true, lastMessageUuid: 'u1' });
+    await settle();
+    await service.rewindConversation('task-1', 0);
+
+    const reloaded = new Transcripts(service, store, await store.loadAll());
+    assert.deepStrictEqual(reloaded.get('task-1'), [
+      { kind: 'prompt', turn: 0, text: 'first' },
+      { kind: 'turn-end', turn: 0, ok: true },
+    ]);
+  });
+});

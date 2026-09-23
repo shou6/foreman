@@ -1,4 +1,4 @@
-import { applyEvent, startTurn } from '../domain/transcript';
+import { applyEvent, startTurn, truncateAfter } from '../domain/transcript';
 import { diffKey, type PanelState, type ToWebview } from './protocol';
 
 /** 拡張機能からのメッセージを画面の状態に反映する。state が届くまでは何もしない */
@@ -36,5 +36,18 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':
       return { ...state, items: applyEvent(state.items, message.turn, message.event) };
+    case 'truncate': {
+      const keep = (turn: number): boolean => turn <= message.afterTurn;
+      return {
+        ...state,
+        items: truncateAfter(state.items, message.afterTurn),
+        changes: Object.fromEntries(
+          Object.entries(state.changes).filter(([turn]) => keep(Number(turn)))
+        ),
+        diffs: Object.fromEntries(
+          Object.entries(state.diffs).filter(([key]) => keep(Number(key.split(':')[0])))
+        ),
+      };
+    }
   }
 }

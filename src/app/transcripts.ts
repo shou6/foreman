@@ -1,12 +1,14 @@
 import type { RunnerEvent } from '../domain/events';
-import { applyEvent, startTurn, type TranscriptItem } from '../domain/transcript';
+import { applyEvent, startTurn, truncateAfter, type TranscriptItem } from '../domain/transcript';
 import type { TranscriptStore } from '../ports/transcriptStore';
 import type { TaskService } from './taskService';
 
 /** 履歴に追加された分。Webview へそのまま送り、保存先にも追記する */
 export type TranscriptDelta =
   | { type: 'turn-start'; turn: number; prompt: string }
-  | { type: 'event'; turn: number; event: RunnerEvent };
+  | { type: 'event'; turn: number; event: RunnerEvent }
+  /** 会話を戻した。afterTurn より後の項目を消す */
+  | { type: 'truncate'; afterTurn: number };
 
 type AppendListener = (taskId: string, delta: TranscriptDelta) => void;
 
@@ -29,9 +31,15 @@ export class Transcripts {
       }
     }
     service.onDidChange((task) => {
+      // ターンが減っていれば会話が戻されたので、履歴も切り詰める
+      let current = this.items.get(task.id) ?? [];
+      let prompts = current.filter((item) => item.kind === 'prompt').length;
+      if (prompts > task.turns.length) {
+        this.append(task.id, { type: 'truncate', afterTurn: task.turns.length - 1 });
+        current = this.items.get(task.id) ?? [];
+        prompts = current.filter((item) => item.kind === 'prompt').length;
+      }
       // ターンが増えていれば、その指示を履歴に足す
-      const current = this.items.get(task.id) ?? [];
-      const prompts = current.filter((item) => item.kind === 'prompt').length;
       for (let turn = prompts; turn < task.turns.length; turn++) {
         this.append(task.id, { type: 'turn-start', turn, prompt: task.turns[turn]?.prompt ?? '' });
       }
@@ -64,7 +72,12 @@ export class Transcripts {
 }
 
 function apply(items: TranscriptItem[], delta: TranscriptDelta): TranscriptItem[] {
-  return delta.type === 'turn-start'
-    ? startTurn(items, delta.turn, delta.prompt)
-    : applyEvent(items, delta.turn, delta.event);
+  switch (delta.type) {
+    case 'turn-start':
+      return startTurn(items, delta.turn, delta.prompt);
+    case 'event':
+      return applyEvent(items, delta.turn, delta.event);
+    case 'truncate':
+      return truncateAfter(items, delta.afterTurn);
+  }
 }

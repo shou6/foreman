@@ -88,3 +88,39 @@ suite('webview reduce', () => {
     assert.deepStrictEqual(state?.items, []);
   });
 });
+
+suite('reduce: truncate', () => {
+  test('指定のターンより後の履歴、変更、差分を消す', () => {
+    const base = reduce(undefined, {
+      type: 'state',
+      state: {
+        taskId: 't',
+        title: 'T',
+        status: 'done',
+        items: [
+          { kind: 'prompt', turn: 0, text: 'a' },
+          { kind: 'turn-end', turn: 0, ok: true },
+          { kind: 'prompt', turn: 1, text: 'b' },
+          { kind: 'turn-end', turn: 1, ok: true },
+        ],
+        changes: {
+          0: [{ path: 'x', kind: 'modified', source: 'watcher', reverted: false }],
+          1: [{ path: 'y', kind: 'modified', source: 'watcher', reverted: false }],
+        },
+        diffs: { '0:x': [], '1:y': [] },
+        attachments: [],
+        models: [],
+        maxWidthEm: 72,
+        toolCallsExpanded: false,
+        strings: STRINGS,
+      },
+    });
+    const next = reduce(base, { type: 'truncate', afterTurn: 0 });
+    assert.deepStrictEqual(next?.items, [
+      { kind: 'prompt', turn: 0, text: 'a' },
+      { kind: 'turn-end', turn: 0, ok: true },
+    ]);
+    assert.deepStrictEqual(Object.keys(next?.changes ?? {}), ['0']);
+    assert.deepStrictEqual(Object.keys(next?.diffs ?? {}), ['0:x']);
+  });
+});

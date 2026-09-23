@@ -28,6 +28,14 @@ export function startTurn(
   return [...items, { kind: 'prompt', turn, text: prompt }];
 }
 
+/** 指定のターンより後の項目を消す（会話の巻き戻し）。元の配列は変えない */
+export function truncateAfter(
+  items: readonly TranscriptItem[],
+  afterTurn: number
+): TranscriptItem[] {
+  return items.filter((item) => item.turn <= afterTurn);
+}
+
 /** Runner のイベントを履歴に反映する。元の配列は変えない */
 export function applyEvent(
   items: readonly TranscriptItem[],
