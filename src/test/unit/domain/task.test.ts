@@ -54,8 +54,7 @@ suite('transition', () => {
   test('許されない遷移のエラーには、状態とイベントが入る', () => {
     assert.throws(
       () => transition('done', 'answered'),
-      (e: unknown) =>
-        e instanceof TaskStateError && e.status === 'done' && e.event === 'answered'
+      (e: unknown) => e instanceof TaskStateError && e.status === 'done' && e.event === 'answered'
     );
   });
 });
