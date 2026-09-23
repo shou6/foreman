@@ -5,21 +5,28 @@ import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
 import { resolveClaudePath } from './adapters/claudePath';
+import { FsSnapshotStore } from './adapters/fsSnapshotStore';
 import { InMemoryTaskStore } from './adapters/inMemoryTaskStore';
+import { NodeFileSystem } from './adapters/nodeFileSystem';
 import { ApprovalService } from './app/approvalService';
+import { DiffService } from './app/diffService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
 import { registerCommands } from './vscode/commands';
 import { Notifications } from './vscode/notifications';
 import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
-import { TaskPanels } from './vscode/taskPanel';
+import { SNAPSHOT_SCHEME, TaskPanels } from './vscode/taskPanel';
 import { TaskTreeProvider } from './vscode/taskTreeView';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel('Foreman');
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
+
+  // ワークスペースごとの保存先。フォルダを開いていない時は拡張機能全体の保存先
+  const storage = context.storageUri ?? context.globalStorageUri;
+  const snapshots = new FsSnapshotStore(path.join(storage.fsPath, 'snapshots'));
 
   const runner = new AgentSdkRunner({
     query: sdk.query,
@@ -41,7 +48,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
   const transcripts = new Transcripts(service);
-  const panels = new TaskPanels(context.extensionUri, service, transcripts, approvals);
+  const diffs = new DiffService({ service, fs: new NodeFileSystem(), snapshots, sep: path.sep });
+  const panels = new TaskPanels({
+    extensionUri: context.extensionUri,
+    service,
+    transcripts,
+    approvals,
+    diffs,
+  });
   const tree = new TaskTreeProvider(service);
 
   context.subscriptions.push(
@@ -54,6 +68,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       () => readSettings().notifications
     ),
     vscode.window.registerTreeDataProvider('foreman.tasks', tree),
+    // 差分エディタの左側（変更前）をスナップショットから出す
+    vscode.workspace.registerTextDocumentContentProvider(SNAPSHOT_SCHEME, {
+      provideTextDocumentContent: async (uri) =>
+        uri.query === '' ? '' : ((await snapshots.load(uri.query)) ?? ''),
+    }),
     { dispose: () => service.dispose() }
   );
   registerCommands(context, { service, panels, settings: readSettings });

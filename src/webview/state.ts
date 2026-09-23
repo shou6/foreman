@@ -1,5 +1,5 @@
 import { applyEvent, startTurn } from '../domain/transcript';
-import type { PanelState, ToWebview } from './protocol';
+import { diffKey, type PanelState, type ToWebview } from './protocol';
 
 /** 拡張機能からのメッセージを画面の状態に反映する。state が届くまでは何もしない */
 export function reduce(state: PanelState | undefined, message: ToWebview): PanelState | undefined {
@@ -14,6 +14,13 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       return { ...state, status: message.status, title: message.title, model: message.model };
     case 'pending':
       return { ...state, pending: message.pending };
+    case 'changes':
+      return { ...state, changes: { ...state.changes, [message.turn]: message.changes } };
+    case 'diff':
+      return {
+        ...state,
+        diffs: { ...state.diffs, [diffKey(message.turn, message.path)]: message.lines },
+      };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':

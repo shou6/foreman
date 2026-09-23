@@ -265,3 +265,107 @@ body {
   color: var(--vscode-descriptionForeground);
   font-style: italic;
 }
+
+/* 差分カード */
+.diff-card {
+  margin: 0.75em 0;
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+}
+
+.diff-card-head {
+  font-weight: 600;
+  margin-bottom: 0.25em;
+}
+
+.diff-file-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+  flex-wrap: wrap;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.diff-file-name {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.diff-file[data-kind='created'] .diff-file-name::before {
+  content: 'A ';
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.diff-file[data-kind='deleted'] .diff-file-name::before {
+  content: 'D ';
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.diff-file[data-kind='modified'] .diff-file-name::before {
+  content: 'M ';
+  color: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.diff-counts .added {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+  margin-right: 0.5em;
+}
+
+.diff-counts .removed {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.diff-counts .unknown,
+.reverted {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.diff-file-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75em;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.diff-lines {
+  margin: 0.25em 0 0.5em;
+  padding: 0.25em 0;
+  max-height: 30em;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.diff-line {
+  padding: 0 0.5em;
+  white-space: pre;
+}
+
+.diff-line[data-kind='add'] {
+  background: var(--vscode-diffEditor-insertedLineBackground);
+}
+
+.diff-line[data-kind='del'] {
+  background: var(--vscode-diffEditor-removedLineBackground);
+}

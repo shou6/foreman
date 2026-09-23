@@ -26,5 +26,11 @@
   "Delete": "削除",
   "Delete task \"{0}\"?": "タスク「{0}」を削除しますか？",
   "foreman.claudePath points to a missing file: {0}": "foreman.claudePath のファイルが見つかりません: {0}",
-  "Claude Code CLI was not found. Install it and log in, or set foreman.claudePath.": "Claude Code の CLI が見つかりません。インストールしてログインするか、foreman.claudePath を設定してください。"
+  "Claude Code CLI was not found. Install it and log in, or set foreman.claudePath.": "Claude Code の CLI が見つかりません。インストールしてログインするか、foreman.claudePath を設定してください。",
+  "Changes": "変更",
+  "Open in diff editor": "差分エディタで開く",
+  "Revert": "戻す",
+  "Reverted": "戻した",
+  "Previous content unknown": "変更前は不明",
+  "{0} (before ↔ current)": "{0}（変更前 ↔ 現在）"
 }

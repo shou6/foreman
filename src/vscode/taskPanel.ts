@@ -1,33 +1,47 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
+import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
 import type { Transcripts } from '../app/transcripts';
 import type { PermissionDecision } from '../domain/events';
-import type { Task } from '../domain/task';
+import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
+
+/** スナップショットを差分エディタに出すための URI スキーム */
+export const SNAPSHOT_SCHEME = 'foreman-snapshot';
+
+export interface TaskPanelDeps {
+  extensionUri: vscode.Uri;
+  service: TaskService;
+  transcripts: Transcripts;
+  approvals: ApprovalService;
+  diffs: DiffService;
+}
 
 /** タスク画面（WebviewPanel）。タスクごとに 1 つだけ開き、既に開いていれば前面に出す */
 export class TaskPanels implements vscode.Disposable {
   private readonly panels = new Map<string, vscode.WebviewPanel>();
   private readonly subscriptions: vscode.Disposable[] = [];
 
-  constructor(
-    private readonly extensionUri: vscode.Uri,
-    private readonly service: TaskService,
-    private readonly transcripts: Transcripts,
-    private readonly approvals: ApprovalService
-  ) {
+  constructor(private readonly deps: TaskPanelDeps) {
+    const { service, transcripts, approvals } = deps;
     this.subscriptions.push(
       { dispose: transcripts.onDidAppend((taskId, delta) => this.post(taskId, delta)) },
       {
-        dispose: service.onDidChange((task) =>
+        dispose: service.onDidChange((task) => {
           this.post(task.id, {
             type: 'task',
             status: task.status,
             title: task.title,
             model: task.model,
-          })
-        ),
+          });
+          for (const turn of task.turns) {
+            if (turn.changes.length > 0) {
+              this.post(task.id, { type: 'changes', turn: turn.index, changes: turn.changes });
+            }
+          }
+        }),
       },
       {
         dispose: approvals.onDidChange((taskId, pending) =>
@@ -44,7 +58,7 @@ export class TaskPanels implements vscode.Disposable {
       existing.reveal();
       return;
     }
-    const task = await this.service.load(taskId);
+    const task = await this.deps.service.load(taskId);
     if (task === undefined) {
       return;
     }
@@ -54,7 +68,7 @@ export class TaskPanels implements vscode.Disposable {
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
-        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist')],
+        localResourceRoots: [vscode.Uri.joinPath(this.deps.extensionUri, 'dist')],
       }
     );
     panel.iconPath = new vscode.ThemeIcon('tasklist');
@@ -79,20 +93,35 @@ export class TaskPanels implements vscode.Disposable {
     try {
       switch (message.type) {
         case 'ready': {
-          const task = await this.service.load(taskId);
+          const task = await this.deps.service.load(taskId);
           if (task !== undefined) {
             this.post(taskId, { type: 'state', state: this.stateOf(task) });
           }
           return;
         }
         case 'send':
-          await this.service.send(taskId, message.prompt);
+          await this.deps.service.send(taskId, message.prompt);
           return;
         case 'interrupt':
-          await this.service.stop(taskId);
+          await this.deps.service.stop(taskId);
           return;
         case 'decision':
-          this.approvals.decide(taskId, message.requestId, withDefaultReason(message.decision));
+          this.deps.approvals.decide(
+            taskId,
+            message.requestId,
+            withDefaultReason(message.decision)
+          );
+          return;
+        case 'showDiff': {
+          const { lines } = await this.deps.diffs.diffOf(taskId, message.turn, message.path);
+          this.post(taskId, { type: 'diff', turn: message.turn, path: message.path, lines });
+          return;
+        }
+        case 'openDiff':
+          await this.openDiffEditor(taskId, message.turn, message.path);
+          return;
+        case 'revert':
+          await this.deps.diffs.revert(taskId, message.turn, message.path);
           return;
       }
     } catch (error) {
@@ -100,14 +129,42 @@ export class TaskPanels implements vscode.Disposable {
     }
   }
 
+  /** VS Code の差分エディタで開く（FR-DIFF-4）。左が変更前、右が今のファイル */
+  private async openDiffEditor(taskId: string, turn: number, file: string): Promise<void> {
+    const task = await this.deps.service.load(taskId);
+    const change = task?.turns[turn]?.changes.find((c) => c.path === file);
+    if (task === undefined || change === undefined) {
+      return;
+    }
+    const left = snapshotUri(file, change.before);
+    const right =
+      change.kind === 'deleted'
+        ? snapshotUri(file, undefined)
+        : vscode.Uri.file(path.join(task.cwd, file));
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      left,
+      right,
+      vscode.l10n.t('{0} (before ↔ current)', file)
+    );
+  }
+
   private stateOf(task: Task): PanelState {
+    const changes: Record<number, FileChange[]> = {};
+    for (const turn of task.turns) {
+      if (turn.changes.length > 0) {
+        changes[turn.index] = turn.changes;
+      }
+    }
     return {
       taskId: task.id,
       title: task.title,
       status: task.status,
       model: task.model,
-      items: this.transcripts.get(task.id),
-      pending: this.approvals.pending(task.id),
+      items: this.deps.transcripts.get(task.id),
+      pending: this.deps.approvals.pending(task.id),
+      changes,
+      diffs: {},
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
@@ -118,6 +175,11 @@ export class TaskPanels implements vscode.Disposable {
         denyReason: vscode.l10n.t('Reason (optional)'),
         answer: vscode.l10n.t('Answer'),
         waiting: vscode.l10n.t('Waiting for your input'),
+        changes: vscode.l10n.t('Changes'),
+        openDiff: vscode.l10n.t('Open in diff editor'),
+        revert: vscode.l10n.t('Revert'),
+        reverted: vscode.l10n.t('Reverted'),
+        unknownBefore: vscode.l10n.t('Previous content unknown'),
       },
     };
   }
@@ -134,10 +196,10 @@ export class TaskPanels implements vscode.Disposable {
 
   private html(webview: vscode.Webview): string {
     const script = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview.js')
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'webview.js')
     );
     const style = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview.css')
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'webview.css')
     );
     const nonce = randomNonce();
     return [
@@ -155,6 +217,15 @@ export class TaskPanels implements vscode.Disposable {
       '</html>',
     ].join('\n');
   }
+}
+
+/** スナップショットの URI。hash が無ければ空の内容（新規作成の前、削除の後） */
+function snapshotUri(file: string, hash: string | undefined): vscode.Uri {
+  return vscode.Uri.from({
+    scheme: SNAPSHOT_SCHEME,
+    path: '/' + file.replace(/\\/g, '/'),
+    query: hash ?? '',
+  });
 }
 
 /** 拒否の理由が空なら、既定の文言を Claude に返す */

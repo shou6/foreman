@@ -118,7 +118,7 @@ suite('webview: 差分カード', () => {
       />
     );
     assert.ok(html.includes('class="diff-line" data-kind="del"'));
-    assert.ok(html.includes('old &lt;b&gt;'));
+    assert.ok(html.includes('old &lt;b') && !html.includes('<b>'));
     assert.ok(html.includes('class="diff-line" data-kind="add"'));
   });
 

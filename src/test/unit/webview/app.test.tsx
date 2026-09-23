@@ -13,6 +13,11 @@ const STRINGS = {
   denyReason: 'Reason (optional)',
   answer: 'Answer',
   waiting: 'Waiting for your input',
+  changes: 'Changes',
+  openDiff: 'Open in diff editor',
+  revert: 'Revert',
+  reverted: 'Reverted',
+  unknownBefore: 'Previous content unknown',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -21,6 +26,8 @@ function state(overrides: Partial<PanelState>): PanelState {
     title: 'README',
     status: 'running',
     items: [],
+    changes: {},
+    diffs: {},
     strings: STRINGS,
     ...overrides,
   };

@@ -1,7 +1,15 @@
 import { useState } from 'preact/hooks';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import type { TranscriptItem } from '../domain/transcript';
-import type { PanelState, PanelStrings, PendingRequest, ToExtension } from './protocol';
+import {
+  diffKey,
+  type DiffLine,
+  type FileChange,
+  type PanelState,
+  type PanelStrings,
+  type PendingRequest,
+  type ToExtension,
+} from './protocol';
 
 export interface AppProps {
   state: PanelState | undefined;
@@ -34,7 +42,19 @@ export function App({ state, post }: AppProps) {
       </header>
       <main class="transcript">
         {state.items.map((item, i) => (
-          <Item key={i} item={item} />
+          <>
+            <Item key={i} item={item} />
+            {item.kind === 'turn-end' && (state.changes[item.turn]?.length ?? 0) > 0 && (
+              <DiffCard
+                key={`changes-${item.turn}`}
+                turn={item.turn}
+                changes={state.changes[item.turn] ?? []}
+                diffs={state.diffs}
+                strings={state.strings}
+                post={post}
+              />
+            )}
+          </>
         ))}
         {state.pending !== undefined && (
           <Approval
@@ -99,6 +119,85 @@ function Item({ item }: { item: TranscriptItem }) {
         <div class={item.interrupted ? 'item interrupted' : 'item error'}>{item.reason}</div>
       );
   }
+}
+
+interface DiffCardProps {
+  turn: number;
+  changes: FileChange[];
+  diffs: Record<string, DiffLine[]>;
+  strings: PanelStrings;
+  post: (message: ToExtension) => void;
+}
+
+/** ターンの差分カード（FR-DIFF-1〜7）。ファイルを開くとインラインの差分を拡張機能に求める */
+function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  return (
+    <section class="diff-card">
+      <div class="diff-card-head">{strings.changes}</div>
+      {changes.map((change) => {
+        const key = diffKey(turn, change.path);
+        const lines = diffs[key];
+        const canRevert =
+          !change.reverted && (change.kind === 'created' || change.before !== undefined);
+        return (
+          <div class="diff-file" data-kind={change.kind} key={change.path}>
+            <div class="diff-file-row">
+              <button
+                class="diff-file-name"
+                onClick={() => {
+                  const next = !(open[key] ?? lines !== undefined);
+                  setOpen({ ...open, [key]: next });
+                  if (next && lines === undefined) {
+                    post({ type: 'showDiff', turn, path: change.path });
+                  }
+                }}
+              >
+                {change.path}
+              </button>
+              <span class="diff-counts">
+                {change.added !== undefined && <span class="added">+{change.added}</span>}
+                {change.removed !== undefined && <span class="removed">-{change.removed}</span>}
+                {change.before === undefined && change.kind !== 'created' && (
+                  <span class="unknown">{strings.unknownBefore}</span>
+                )}
+              </span>
+              <span class="diff-file-actions">
+                <button
+                  class="link"
+                  onClick={() => post({ type: 'openDiff', turn, path: change.path })}
+                >
+                  {strings.openDiff}
+                </button>
+                {change.reverted ? (
+                  <span class="reverted">{strings.reverted}</span>
+                ) : (
+                  canRevert && (
+                    <button
+                      class="link"
+                      onClick={() => post({ type: 'revert', turn, path: change.path })}
+                    >
+                      {strings.revert}
+                    </button>
+                  )
+                )}
+              </span>
+            </div>
+            {lines !== undefined && (open[key] ?? true) && (
+              <pre class="diff-lines">
+                {lines.map((line, i) => (
+                  <div class="diff-line" data-kind={line.kind} key={i}>
+                    {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
+                    {line.text}
+                  </div>
+                ))}
+              </pre>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  );
 }
 
 interface ApprovalProps {

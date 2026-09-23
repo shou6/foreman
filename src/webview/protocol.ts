@@ -1,10 +1,11 @@
 import type { PendingRequest } from '../app/approvalService';
 import type { TranscriptDelta } from '../app/transcripts';
+import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
-import type { TaskStatus } from '../domain/task';
+import type { FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
-export type { PendingRequest, TranscriptDelta };
+export type { DiffLine, FileChange, PendingRequest, TranscriptDelta };
 
 /** 画面に出す文字列。翻訳は拡張機能側で済ませて渡す（Webview からは vscode.l10n を使えない） */
 export interface PanelStrings {
@@ -17,6 +18,11 @@ export interface PanelStrings {
   denyReason: string;
   answer: string;
   waiting: string;
+  changes: string;
+  openDiff: string;
+  revert: string;
+  reverted: string;
+  unknownBefore: string;
 }
 
 export interface PanelState {
@@ -27,6 +33,10 @@ export interface PanelState {
   items: TranscriptItem[];
   /** 承認待ちの要求。無ければ undefined */
   pending?: PendingRequest;
+  /** ターンの番号 → そのターンの変更 */
+  changes: Record<number, FileChange[]>;
+  /** "<turn>:<path>" → インライン差分の行 */
+  diffs: Record<string, DiffLine[]>;
   strings: PanelStrings;
 }
 
@@ -35,6 +45,8 @@ export type ToWebview =
   | { type: 'state'; state: PanelState }
   | { type: 'task'; status: TaskStatus; title: string; model?: string }
   | { type: 'pending'; pending: PendingRequest | undefined }
+  | { type: 'changes'; turn: number; changes: FileChange[] }
+  | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
@@ -42,4 +54,11 @@ export type ToExtension =
   | { type: 'ready' }
   | { type: 'send'; prompt: string }
   | { type: 'interrupt' }
-  | { type: 'decision'; requestId: string; decision: PermissionDecision };
+  | { type: 'decision'; requestId: string; decision: PermissionDecision }
+  | { type: 'showDiff'; turn: number; path: string }
+  | { type: 'openDiff'; turn: number; path: string }
+  | { type: 'revert'; turn: number; path: string };
+
+export function diffKey(turn: number, path: string): string {
+  return `${turn}:${path}`;
+}
