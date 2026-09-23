@@ -40,7 +40,7 @@ export function App({ state, post }: AppProps) {
       <header class="head">
         <h1 class="title">{state.title}</h1>
         <span class="status" data-status={state.status}>
-          {state.status}
+          {state.strings.statusLabels[state.status]}
         </span>
         <label class="model-select">
           <span class="model-label">{state.strings.model}</span>

@@ -1,4 +1,5 @@
 import { promptWithAttachments } from '../domain/attachments';
+import { resumePrompt } from '../domain/resumePrompt';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import {
   createTask,
@@ -54,7 +55,7 @@ export class TaskService {
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<EventListener>();
   private readonly queues = new Map<string, Promise<unknown>>();
-  private readonly deleteListeners = new Set<(taskId: string) => void>();
+  private readonly deleteListeners = new Set<(taskId: string, task: Task) => void>();
 
   constructor(private readonly deps: TaskServiceDeps) {}
 
@@ -68,7 +69,7 @@ export class TaskService {
     return () => this.eventListeners.delete(listener);
   }
 
-  onDidDelete(listener: (taskId: string) => void): () => void {
+  onDidDelete(listener: (taskId: string, task: Task) => void): () => void {
     this.deleteListeners.add(listener);
     return () => this.deleteListeners.delete(listener);
   }
@@ -160,7 +161,7 @@ export class TaskService {
 
   /** 中断したタスクを同じセッションで再開し、新しいターンを始める */
   async resume(id: string, prompt: string, attachments: string[] = []): Promise<void> {
-    const { task, sessionId } = await this.serialize(id, async () => {
+    const { task, sessionId, previous } = await this.serialize(id, async () => {
       const current = await this.mustLoad(id);
       if (current.sessionId === undefined) {
         throw new Error(`Task "${id}" has no session to resume`);
@@ -174,13 +175,13 @@ export class TaskService {
           this.deps.now()
         )
       );
-      return { task: next, sessionId: current.sessionId };
+      return { task: next, sessionId: current.sessionId, previous: current };
     });
     this.attach(
       task,
       this.deps.runner.resume(
         sessionId,
-        this.startOptions(task, promptWithAttachments(prompt, attachments))
+        this.startOptions(task, promptWithAttachments(resumePrompt(previous, prompt), attachments))
       )
     );
   }
@@ -201,7 +202,7 @@ export class TaskService {
   }
 
   async delete(id: string): Promise<void> {
-    await this.mustLoad(id);
+    const deleting = await this.mustLoad(id);
     const handle = this.handles.get(id);
     if (handle !== undefined) {
       await handle.interrupt();
@@ -211,7 +212,7 @@ export class TaskService {
     // 中断のイベントの処理より後に消す
     await this.serialize(id, () => this.deps.store.delete(id));
     for (const listener of this.deleteListeners) {
-      listener(id);
+      listener(id, deleting);
     }
   }
 

@@ -259,7 +259,8 @@ suite('TaskService: 追加の指示、停止、再開、削除', () => {
     await h.service.resume('task-1', '続きをお願い');
     assert.strictEqual(h.runner.resumes.length, 1);
     assert.strictEqual(h.runner.resumes[0]?.sessionId, 'sess-1');
-    assert.strictEqual(h.runner.last.options.prompt, '続きをお願い');
+    // 中断した指示を添えて送る（resumePrompt）ので、末尾がユーザーの指示になる
+    assert.ok(h.runner.last.options.prompt.endsWith('\n\n続きをお願い'));
     const task = await h.store.load('task-1');
     assert.strictEqual(task?.status, 'running');
     assert.strictEqual(task?.turns.length, 2);

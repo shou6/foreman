@@ -1,7 +1,6 @@
 {
   "Running": "実行中",
   "Waiting for input": "入力待ち",
-  "Done": "完了",
   "Failed": "失敗",
   "Interrupted": "中断",
   "Open Task": "タスクを開く",
@@ -39,5 +38,6 @@
   "Remove": "外す",
   "Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.": "追加の指示を入力（Ctrl+Enter で送信）。ファイルをここへドロップすると添付できます。エディタ領域からは Shift を押しながらドラッグしてください。",
   "No tasks to attach to. Create a task first.": "添付先のタスクがありません。先にタスクを作ってください。",
-  "Attach to which task?": "どのタスクに添付しますか？"
+  "Attach to which task?": "どのタスクに添付しますか？",
+  "Replied": "返答済み"
 }

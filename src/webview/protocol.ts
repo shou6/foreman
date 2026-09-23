@@ -28,6 +28,8 @@ export interface PanelStrings {
   attachments: string;
   remove: string;
   dropHint: string;
+  /** 状態の表示名 */
+  statusLabels: Record<TaskStatus, string>;
 }
 
 export interface PanelState {

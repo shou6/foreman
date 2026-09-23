@@ -7,6 +7,7 @@ import type { Transcripts } from '../app/transcripts';
 import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
+import { statusLabel } from './taskTreeView';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
 export const SNAPSHOT_SCHEME = 'foreman-snapshot';
@@ -229,6 +230,13 @@ export class TaskPanels implements vscode.Disposable {
         dropHint: vscode.l10n.t(
           'Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.'
         ),
+        statusLabels: {
+          running: statusLabel('running'),
+          waiting: statusLabel('waiting'),
+          done: statusLabel('done'),
+          failed: statusLabel('failed'),
+          interrupted: statusLabel('interrupted'),
+        },
       },
     };
   }

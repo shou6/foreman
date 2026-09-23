@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { SnapshotStore } from '../ports/snapshotStore';
 
+const HASH = /^[0-9a-f]{64}$/;
+
 /** スナップショットを <dir>/<sha256> に保存する。同じ内容は 1 つだけ持つ（NFR-4） */
 export class FsSnapshotStore implements SnapshotStore {
   constructor(private readonly dir: string) {}
@@ -35,13 +37,27 @@ export class FsSnapshotStore implements SnapshotStore {
   }
 
   async load(hash: string): Promise<string | undefined> {
-    if (!/^[0-9a-f]{64}$/.test(hash)) {
+    if (!HASH.test(hash)) {
       return undefined;
     }
     try {
       return await fs.readFile(path.join(this.dir, hash), 'utf8');
     } catch {
       return undefined;
+    }
+  }
+
+  async list(): Promise<string[]> {
+    try {
+      return (await fs.readdir(this.dir)).filter((name) => HASH.test(name));
+    } catch {
+      return [];
+    }
+  }
+
+  async delete(hash: string): Promise<void> {
+    if (HASH.test(hash)) {
+      await fs.rm(path.join(this.dir, hash), { force: true });
     }
   }
 }

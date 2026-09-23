@@ -49,10 +49,11 @@ export class DiffService {
         this.enqueue(taskId, () => this.finalize(taskId));
       }
     });
-    deps.service.onDidDelete((taskId) => {
+    deps.service.onDidDelete((taskId, task) => {
       this.active.get(taskId)?.stopWatching();
       this.active.delete(taskId);
       this.startedTurn.delete(taskId);
+      void this.cleanup(task);
     });
   }
 
@@ -87,6 +88,21 @@ export class DiffService {
           : tt
       ),
     }));
+  }
+
+  /** 消したタスクのスナップショットのうち、ほかのタスクから参照されないものを消す（NFR-4） */
+  private async cleanup(deleted: Task): Promise<void> {
+    const referenced = new Set<string>();
+    for (const task of await this.deps.service.list()) {
+      for (const hash of hashesOf(task)) {
+        referenced.add(hash);
+      }
+    }
+    for (const hash of hashesOf(deleted)) {
+      if (!referenced.has(hash)) {
+        await this.deps.snapshots.delete(hash);
+      }
+    }
   }
 
   /** インライン差分の材料（FR-DIFF-3） */
@@ -248,4 +264,11 @@ export class DiffService {
     const fold = (s: string): string => (this.deps.sep === '\\' ? s.toLowerCase() : s);
     return fold(path).startsWith(fold(prefix)) ? path.slice(prefix.length) : path;
   }
+}
+
+/** タスクが参照しているスナップショットのハッシュ */
+function hashesOf(task: Task): string[] {
+  return task.turns.flatMap((turn) =>
+    turn.changes.flatMap((c) => [c.before, c.after].filter((h): h is string => h !== undefined))
+  );
 }
