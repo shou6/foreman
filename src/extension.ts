@@ -117,6 +117,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       return autoTitleRef;
     },
+    settings: readSettings,
     newId: () => randomUUID(),
     openPanel: async (taskId) => panelsRef?.open(taskId),
   });

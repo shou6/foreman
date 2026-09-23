@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
+import { chooseWorktree } from './chooseWorktree';
 import type { Worktree } from '../domain/task';
 import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
@@ -62,28 +63,6 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
   };
 
   /** Git リポジトリなら worktree を使うか聞く。使うなら作って返す。中止なら null */
-  const chooseWorktree = async (
-    folder: string,
-    prompt: string,
-    taskId: string
-  ): Promise<Worktree | undefined | null> => {
-    const repo = await worktrees.repoRoot(folder);
-    if (repo === undefined) {
-      return undefined;
-    }
-    const yes = vscode.l10n.t('Yes, in a worktree');
-    const no = vscode.l10n.t('No, in the workspace folder');
-    const preferred = deps.settings().useWorktree ? [yes, no] : [no, yes];
-    const choice = await vscode.window.showQuickPick(preferred, {
-      title: vscode.l10n.t('Run this task in a git worktree?'),
-      ignoreFocusOut: true,
-    });
-    if (choice === undefined) {
-      return null;
-    }
-    return choice === yes ? worktrees.create(repo, prompt, taskId) : undefined;
-  };
-
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'foreman.newTask',
@@ -104,7 +83,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           return;
         }
         const taskId = deps.newId();
-        const worktree = await chooseWorktree(folder.uri.fsPath, prompt.trim(), taskId);
+        const worktree = await chooseWorktree(
+          worktrees,
+          deps.settings().useWorktree,
+          folder.uri.fsPath,
+          prompt.trim(),
+          taskId
+        );
         if (worktree === null) {
           return;
         }

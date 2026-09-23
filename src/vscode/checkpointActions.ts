@@ -4,12 +4,15 @@ import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import type { Task, Worktree } from '../domain/task';
+import { chooseWorktree } from './chooseWorktree';
+import type { Settings } from './settings';
 
 export interface CheckpointDeps {
   service: TaskService;
   diffs: DiffService;
   worktrees: WorktreeService;
   autoTitle: AutoTitle;
+  settings: () => Settings;
   newId: () => string;
   openPanel: (taskId: string) => Promise<void>;
 }
@@ -81,6 +84,9 @@ export class CheckpointActions {
     }
     const id = this.deps.newId();
     const worktree = await this.worktreeFor(parent, prompt.trim(), id);
+    if (worktree === null) {
+      return;
+    }
     const child = await this.deps.service.fork(taskId, {
       id,
       prompt: prompt.trim(),
@@ -92,13 +98,20 @@ export class CheckpointActions {
     void this.deps.autoTitle.onCreated(child);
   }
 
+  /** 親が worktree ならその枝から切る。そうでなければ新しいタスクと同じく聞く。取り消しは null */
   private async worktreeFor(
     parent: Task,
     title: string,
     id: string
-  ): Promise<Worktree | undefined> {
+  ): Promise<Worktree | undefined | null> {
     if (parent.worktree === undefined) {
-      return undefined;
+      return chooseWorktree(
+        this.deps.worktrees,
+        this.deps.settings().useWorktree,
+        parent.cwd,
+        title,
+        id
+      );
     }
     // 親の変更をコミットしてから枝を切ると、作業中のファイルの状態が引き継がれる
     await this.deps.worktrees.commitWork(parent.worktree, parent.title);
