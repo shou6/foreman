@@ -48,7 +48,7 @@ suite('TaskService: チェックポイント', () => {
     await h.service.rewindConversation('task-1', 0);
     let task = await h.service.load('task-1');
     assert.strictEqual(task?.turns.length, 1);
-    assert.strictEqual(task?.status, 'done');
+    assert.strictEqual(task?.status, 'waiting', '次の指示を待つ');
     assert.strictEqual(h.runner.last.closed, true, '動いていたセッションは閉じる');
 
     await h.service.send('task-1', 'third');

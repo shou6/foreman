@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from './task';
+import { isTurnOpen, type Task, type TaskStatus } from './task';
 
 /** ボードの列（要件定義書 5.1）。失敗と中断は「実行中」の列にバッジで出す */
 export type BoardColumnKey = 'draft' | 'running' | 'waiting' | 'review' | 'done';
@@ -15,6 +15,8 @@ export interface BoardCard {
   id: string;
   title: string;
   status: TaskStatus;
+  /** Claude が動いている（最後のターンが終わっていない） */
+  turnOpen: boolean;
   /** 失敗・中断のバッジ */
   badge?: 'failed' | 'interrupted';
   model?: string;
@@ -45,12 +47,13 @@ export function columnOf(status: TaskStatus): BoardColumnKey {
 /** 列をまたぐ移動で行う操作。許さない移動は undefined */
 export function moveAllowed(
   from: BoardColumnKey,
-  to: BoardColumnKey
+  to: BoardColumnKey,
+  turnOpen = false
 ): 'start' | 'approve' | undefined {
   if (from === 'draft' && to === 'running') {
     return 'start';
   }
-  if (from === 'review' && to === 'done') {
+  if ((from === 'review' || (from === 'waiting' && !turnOpen)) && to === 'done') {
     return 'approve';
   }
   return undefined;
@@ -62,6 +65,7 @@ export function cardOf(task: Task): BoardCard {
     id: task.id,
     title: task.title,
     status: task.status,
+    turnOpen: isTurnOpen(task),
     badge: task.status === 'failed' || task.status === 'interrupted' ? task.status : undefined,
     model: task.activeModel ?? task.model,
     branch: task.worktree?.branch,

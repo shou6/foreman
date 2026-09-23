@@ -14,7 +14,7 @@ export function Details({ state, post }: DetailsProps) {
   if (task === undefined) {
     return <div class="details empty">{strings.noTask}</div>;
   }
-  const busy = task.status === 'running' || task.status === 'waiting';
+  const busy = task.turnOpen;
   return (
     <div class="details">
       <header class="details-head">

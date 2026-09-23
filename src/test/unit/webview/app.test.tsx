@@ -45,6 +45,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -52,6 +53,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'running',
+    turnOpen: true,
     items: [],
     changes: {},
     diffs: {},
@@ -99,9 +101,15 @@ suite('webview App', () => {
 
   test('実行中は Stop、それ以外は Send のボタンを出す', () => {
     assert.ok(
-      render(<App state={state({ status: 'running' })} post={() => {}} />).includes('Stop')
+      render(<App state={state({ status: 'running', turnOpen: true })} post={() => {}} />).includes(
+        'Stop'
+      )
     );
-    assert.ok(render(<App state={state({ status: 'done' })} post={() => {}} />).includes('Send'));
+    assert.ok(
+      render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />).includes(
+        'Send'
+      )
+    );
   });
 
   test('失敗したターンは理由を出す', () => {

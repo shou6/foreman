@@ -48,7 +48,7 @@ suite('TaskService.close', () => {
     await new Promise((resolve) => setImmediate(resolve));
     await service.close('task-1');
     assert.strictEqual(runner.last.closed, true);
-    assert.strictEqual((await service.load('task-1'))?.status, 'done');
+    assert.strictEqual((await service.load('task-1'))?.status, 'waiting');
     // 閉じた後の追加の指示は resume で続く
     await assert.rejects(service.send('task-1', 'more'), /session/);
     assert.strictEqual(runner.resumes.length, 0, 'session_id が無いので再開できず失敗する');

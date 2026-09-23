@@ -46,6 +46,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -53,6 +54,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'waiting',
+    turnOpen: true,
     items: [],
     changes: {},
     diffs: {},

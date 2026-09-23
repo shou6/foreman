@@ -36,6 +36,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
   statusLabels: {
     draft: 'Draft',
     running: 'Running',
@@ -52,6 +53,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'done',
+    turnOpen: false,
     items: [],
     changes: {},
     diffs: {},

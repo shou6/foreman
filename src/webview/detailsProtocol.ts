@@ -36,6 +36,7 @@ export interface DetailsTask {
   id: string;
   title: string;
   status: TaskStatus;
+  turnOpen: boolean;
   turns: DetailsTurn[];
 }
 

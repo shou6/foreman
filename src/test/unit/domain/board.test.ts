@@ -106,3 +106,22 @@ suite('board: 列をまたぐ移動', () => {
     assert.strictEqual(moveAllowed('draft', 'draft'), undefined);
   });
 });
+
+suite('board: 返答待ちのタスクの完了', () => {
+  test('ターンが終わって次の指示を待っているタスクは「完了」へ移せる。動いている間は移せない', () => {
+    assert.strictEqual(moveAllowed('waiting', 'done', false), 'approve');
+    assert.strictEqual(moveAllowed('waiting', 'done', true), undefined);
+  });
+
+  test('カードに turnOpen が入る', () => {
+    const [card] =
+      boardOf([
+        task('a', 'waiting', {
+          turns: [
+            { index: 0, prompt: 'p', attachments: [], startedAt: '', endedAt: 't', changes: [] },
+          ],
+        }),
+      ]).find((c) => c.key === 'waiting')?.cards ?? [];
+    assert.strictEqual(card?.turnOpen, false);
+  });
+});

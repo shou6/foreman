@@ -1,6 +1,11 @@
 import { titleFromPrompt } from './taskTitle';
 
-/** タスクの状態（要件定義書 6.1、5.1 のボードの列）。draft は未開始、review は変更を伴うターンが終わって確認待ち */
+/**
+ * タスクの状態（要件定義書 6.1、5.1 のボードの列）。
+ * draft は未開始。waiting は承認・質問・次の指示のいずれかをユーザーに待っている。
+ * review は変更を伴うターンが終わって確認待ち。done はユーザーが承認（完了に）したもの。
+ * Claude がターンを終えただけでは完了にしない
+ */
 export type TaskStatus =
   'draft' | 'running' | 'waiting' | 'review' | 'done' | 'failed' | 'interrupted';
 
@@ -112,13 +117,16 @@ const TRANSITIONS: Record<TaskStatus, Partial<Record<TaskEvent, TaskStatus>>> = 
   running: {
     'permission-requested': 'waiting',
     'question-asked': 'waiting',
-    'turn-completed': 'done',
+    'turn-completed': 'waiting',
     error: 'failed',
     stop: 'interrupted',
     'host-exit': 'interrupted',
   },
   waiting: {
     answered: 'running',
+    prompt: 'running',
+    approve: 'done',
+    'changes-recorded': 'review',
     error: 'failed',
     stop: 'interrupted',
     'host-exit': 'interrupted',
@@ -174,4 +182,16 @@ export function createTask(input: CreateTaskInput): Task {
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
   };
+}
+
+/**
+ * Claude がまだ動いている（最後のターンが終わっていない）。
+ * waiting でもターンが終わっていれば、次の指示を待っているだけで動いてはいない
+ */
+export function isTurnOpen(task: Pick<Task, 'status' | 'turns'>): boolean {
+  if (task.status !== 'running' && task.status !== 'waiting') {
+    return false;
+  }
+  const last = task.turns[task.turns.length - 1];
+  return last === undefined || last.endedAt === undefined;
 }

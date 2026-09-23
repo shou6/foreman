@@ -230,7 +230,7 @@
       "view/item/context": [
         {
           "command": "foreman.stopTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(running|waiting)/",
+          "when": "view == foreman.tasks && viewItem =~ / open/",
           "group": "inline@1"
         },
         {
@@ -240,7 +240,7 @@
         },
         {
           "command": "foreman.approveTask",
-          "when": "view == foreman.tasks && viewItem =~ /^review/",
+          "when": "view == foreman.tasks && viewItem =~ /^(review|waiting idle)/",
           "group": "inline@1"
         },
         {
@@ -255,12 +255,12 @@
         },
         {
           "command": "foreman.mergeTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted) worktree$/",
+          "when": "view == foreman.tasks && viewItem =~ / idle.* worktree$|^(review|done|failed|interrupted).* worktree$/",
           "group": "worktree@1"
         },
         {
           "command": "foreman.discardTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted) worktree$/",
+          "when": "view == foreman.tasks && viewItem =~ / idle.* worktree$|^(review|done|failed|interrupted).* worktree$/",
           "group": "worktree@2"
         },
         {
@@ -270,7 +270,7 @@
         },
         {
           "command": "foreman.forkTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted)/",
+          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted|waiting idle)/",
           "group": "export@2"
         }
       ],

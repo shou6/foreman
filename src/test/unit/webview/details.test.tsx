@@ -31,6 +31,7 @@ function state(overrides: Partial<DetailsState> = {}): DetailsState {
       id: 't1',
       title: 'Fix README',
       status: 'review',
+      turnOpen: false,
       turns: [
         {
           index: 0,
@@ -77,7 +78,10 @@ suite('webview: 右サイドバー（このタスクの変更とチェックポ�
 
   test('実行中はチェックポイントの操作を押せない', () => {
     const html = render(
-      <Details state={state({ task: { ...state().task!, status: 'running' } })} post={() => {}} />
+      <Details
+        state={state({ task: { ...state().task!, status: 'running', turnOpen: true } })}
+        post={() => {}}
+      />
     );
     assert.ok(/<button[^>]*class="link rewind"[^>]*disabled/.test(html));
   });

@@ -45,6 +45,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -52,6 +53,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'done',
+    turnOpen: false,
     items: [
       { kind: 'prompt', turn: 0, text: 'p' },
       { kind: 'turn-end', turn: 0, ok: true },
@@ -95,7 +97,9 @@ suite('webview: チェックポイント', () => {
   });
 
   test('実行中は押せない', () => {
-    const html = render(<App state={state({ status: 'running' })} post={() => {}} />);
+    const html = render(
+      <App state={state({ status: 'running', turnOpen: true })} post={() => {}} />
+    );
     assert.ok(/<button[^>]*class="link rewind"[^>]*disabled/.test(html));
   });
 

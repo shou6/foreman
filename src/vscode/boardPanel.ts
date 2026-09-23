@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import { boardOf, columnOf, moveAllowed, type BoardColumnKey } from '../domain/board';
+import { isTurnOpen } from '../domain/task';
 import type { BoardState, FromBoard, ToBoard } from '../webview/boardProtocol';
 import { randomNonce } from './nonce';
 
@@ -94,7 +95,7 @@ export class BoardPanel implements vscode.Disposable {
     if (task === undefined) {
       return;
     }
-    const action = moveAllowed(columnOf(task.status), to);
+    const action = moveAllowed(columnOf(task.status), to, isTurnOpen(task));
     if (action === 'start') {
       await this.deps.start(taskId);
     } else if (action === 'approve') {
@@ -126,6 +127,7 @@ export class BoardPanel implements vscode.Disposable {
         newDraft: vscode.l10n.t('New draft'),
         start: vscode.l10n.t('Start'),
         approve: vscode.l10n.t('Approve'),
+        markDone: vscode.l10n.t('Mark as done'),
         stop: vscode.l10n.t('Stop'),
         edit: vscode.l10n.t('Edit'),
         fork: vscode.l10n.t('Fork'),

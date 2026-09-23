@@ -3,6 +3,7 @@ import { resumePrompt } from '../domain/resumePrompt';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import {
   createTask,
+  isTurnOpen,
   transition,
   type FileChange,
   type PermissionMode,
@@ -58,6 +59,8 @@ type EventListener = (notification: TaskEventNotification) => void;
  */
 export class TaskService {
   private readonly handles = new Map<string, RunHandle>();
+  /** 承認の要求に答えていないタスク */
+  private readonly pendingPermission = new Set<string>();
   private readonly currentTurn = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<EventListener>();
@@ -95,7 +98,7 @@ export class TaskService {
    */
   async recover(): Promise<void> {
     for (const task of await this.deps.store.list()) {
-      if (task.status === 'running' || task.status === 'waiting') {
+      if (isTurnOpen(task)) {
         const reason = 'VS Code was closed';
         const event: RunnerEvent = { type: 'turn-end', ok: false, interrupted: true, reason };
         await this.commit(this.endTurn(task, 'host-exit', { ok: false, reason }));
@@ -209,19 +212,28 @@ export class TaskService {
   recordChanges(id: string, turn: number, changes: FileChange[]): Promise<void> {
     return this.update(id, (task) => {
       const turns = task.turns.map((t, i) => (i === turn ? { ...t, changes } : t));
+      const last = task.turns[task.turns.length - 1];
       const status =
-        task.status === 'done' && changes.length > 0 && turn === task.turns.length - 1
+        (task.status === 'done' || task.status === 'waiting') &&
+        changes.length > 0 &&
+        turn === task.turns.length - 1 &&
+        last?.endedAt !== undefined
           ? transition(task.status, 'changes-recorded')
           : task.status;
       return { ...task, turns, status };
     });
   }
 
-  /** レビュー待ちの変更を確認済みにする */
+  /** 完了にする。レビュー待ちの変更を確認済みにするか、返答を待っているタスクを閉じる */
   async approve(id: string): Promise<void> {
     await this.update(id, (task) => {
-      if (task.status !== 'review') {
-        throw new Error(`Task "${id}" is not waiting for review`);
+      if (task.status === 'waiting' && this.pendingPermission.has(id)) {
+        throw new Error(`Task "${id}" is waiting for an approval; answer it first`);
+      }
+      if (task.status !== 'review' && task.status !== 'waiting') {
+        throw new Error(
+          `Task "${id}" is ${task.status}; only review or waiting tasks can be completed`
+        );
       }
       return { ...task, status: transition(task.status, 'approve') };
     });
@@ -237,6 +249,9 @@ export class TaskService {
   /** 完了・失敗・中断したタスクへ追加の指示を送る */
   async send(id: string, prompt: string, attachments: string[] = []): Promise<void> {
     await this.mustLoad(id);
+    if (this.pendingPermission.has(id)) {
+      throw new Error(`Task "${id}" is waiting for an approval; answer it first`);
+    }
     const handle = this.handles.get(id);
     if (handle === undefined) {
       // プロセスが終わっている（VS Code の再起動など）ので、セッションを再開する
@@ -296,7 +311,7 @@ export class TaskService {
    */
   async rewindConversation(id: string, turn: number): Promise<void> {
     const task = await this.mustLoad(id);
-    if (task.status === 'running' || task.status === 'waiting') {
+    if (isTurnOpen(task) || this.pendingPermission.has(id)) {
       throw new Error(`Task "${id}" is running; stop it before rewinding`);
     }
     const target = task.turns[turn];
@@ -306,7 +321,7 @@ export class TaskService {
     await this.close(id);
     await this.update(id, (t) => ({
       ...t,
-      status: 'done',
+      status: 'waiting',
       turns: t.turns.slice(0, turn + 1),
       resumeAt: target.lastMessageUuid,
     }));
@@ -431,7 +446,7 @@ export class TaskService {
     }
     this.handles.delete(id);
     return this.update(id, (task) =>
-      task.status === 'running' || task.status === 'waiting'
+      isTurnOpen(task)
         ? this.endTurn(task, 'host-exit', { ok: false, reason: 'process exited' })
         : undefined
     );
@@ -446,7 +461,13 @@ export class TaskService {
         ? { ...task, status: transition(task.status, 'permission-requested') }
         : undefined
     );
-    const decision = await this.deps.approve(id, request);
+    this.pendingPermission.add(id);
+    let decision: PermissionDecision;
+    try {
+      decision = await this.deps.approve(id, request);
+    } finally {
+      this.pendingPermission.delete(id);
+    }
     await this.update(id, (task) => ({
       ...task,
       // 待っている間に止められていれば、状態はそのまま
@@ -536,9 +557,9 @@ export class TaskService {
         : turn
     );
     const completed = transition(task.status, event);
-    // 変更を伴うターンはレビュー待ちにする（要件定義書 5.1）
+    // 変更を伴うターンはレビュー待ちにする（要件定義書 5.1）。変更が無ければ次の指示待ち
     const status =
-      completed === 'done' && (turns[turns.length - 1]?.changes.length ?? 0) > 0
+      event === 'turn-completed' && (turns[turns.length - 1]?.changes.length ?? 0) > 0
         ? transition(completed, 'changes-recorded')
         : completed;
     return { ...task, status, turns };

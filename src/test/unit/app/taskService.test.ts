@@ -105,7 +105,7 @@ suite('TaskService.create', () => {
 });
 
 suite('TaskService: ターンの終了', () => {
-  test('正常に終わると完了になり、ターンに結果と終了時刻が入る', async () => {
+  test('正常に終わると入力待ち（次の指示待ち）になり、ターンに結果と終了時刻が入る', async () => {
     const h = harness();
     await h.service.create(CREATE);
     h.runner.last.emit({
@@ -121,7 +121,7 @@ suite('TaskService: ターンの終了', () => {
     });
     await settle();
     const task = await h.store.load('task-1');
-    assert.strictEqual(task?.status, 'done');
+    assert.strictEqual(task?.status, 'waiting');
     assert.deepStrictEqual(task?.turns[0]?.result, {
       ok: true,
       usage: {
@@ -133,7 +133,7 @@ suite('TaskService: ターンの終了', () => {
       },
     });
     assert.strictEqual(task?.turns[0]?.endedAt, '2026-09-23T10:00:00.000Z');
-    assert.deepStrictEqual(h.changes.at(-1), { id: 'task-1', status: 'done' });
+    assert.deepStrictEqual(h.changes.at(-1), { id: 'task-1', status: 'waiting' });
   });
 
   test('エラーで終わると失敗になり、理由が残る', async () => {
@@ -162,14 +162,14 @@ suite('TaskService: ターンの終了', () => {
     assert.strictEqual((await h.store.load('task-1'))?.status, 'interrupted');
   });
 
-  test('完了の後にプロセスが終わっても、完了のまま', async () => {
+  test('ターンが終わった後にプロセスが終わっても、状態はそのまま（中断にしない）', async () => {
     const h = harness();
     await h.service.create(CREATE);
     h.runner.last.emit({ type: 'turn-end', ok: true });
     await settle();
     h.runner.last.finish();
     await settle();
-    assert.strictEqual((await h.store.load('task-1'))?.status, 'done');
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'waiting');
   });
 });
 
@@ -216,7 +216,7 @@ suite('TaskService: 承認', () => {
 });
 
 suite('TaskService: 追加の指示、停止、再開、削除', () => {
-  test('完了したタスクへ追加の指示を送ると、新しいターンで実行中に戻る', async () => {
+  test('返答を待っているタスクへ追加の指示を送ると、新しいターンで実行中に戻る', async () => {
     const h = harness();
     await h.service.create(CREATE);
     h.runner.last.emit({ type: 'turn-end', ok: true });
@@ -317,7 +317,7 @@ suite('TaskService: 追加の指示、停止、再開、削除', () => {
 });
 
 suite('TaskService: 起動時の復旧', () => {
-  test('保存先に実行中や入力待ちのまま残っているタスクは、中断に直す', async () => {
+  test('保存先に実行中や、ターンの途中で入力待ちのまま残っているタスクは、中断に直す', async () => {
     const store = new InMemoryTaskStore();
     const stale = (id: string, status: TaskStatus): Task => ({
       id,
@@ -347,5 +347,59 @@ suite('TaskService: 起動時の復旧', () => {
     assert.strictEqual((await store.load('b'))?.status, 'interrupted');
     assert.strictEqual((await store.load('c'))?.status, 'done');
     assert.strictEqual((await store.load('a'))?.updatedAt, '2026-09-23T10:00:00.000Z');
+  });
+});
+
+suite('TaskService: 完了の定義（ユーザーが決める）', () => {
+  test('ターンが終わって次の指示を待っているタスクは、起動時の復旧で中断にしない', async () => {
+    const h = harness();
+    await h.service.create(CREATE);
+    h.runner.last.emit({ type: 'init', sessionId: 's', model: 'm' });
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await h.service.recover();
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'waiting');
+  });
+
+  test('次の指示を待っているタスクを「完了にする」と完了になる', async () => {
+    const h = harness();
+    await h.service.create(CREATE);
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await h.service.approve('task-1');
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'done');
+  });
+
+  test('承認の要求に答えていない間は、追加の指示を送れない', async () => {
+    const h = harness();
+    await h.service.create(CREATE);
+    const pending = h.runner.last.requestPermission({
+      toolName: 'Bash',
+      input: {},
+      suggestions: [],
+    });
+    await settle();
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'waiting');
+    await assert.rejects(h.service.send('task-1', 'more'), /approval/);
+    h.decide({ behavior: 'allow' });
+    await pending;
+  });
+
+  test('承認に答えた後は実行中に戻り、ターンの終了で入力待ちになる', async () => {
+    const h = harness();
+    await h.service.create(CREATE);
+    const pending = h.runner.last.requestPermission({
+      toolName: 'Bash',
+      input: {},
+      suggestions: [],
+    });
+    await settle();
+    h.decide({ behavior: 'allow' });
+    await pending;
+    await settle();
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'running');
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'waiting');
   });
 });

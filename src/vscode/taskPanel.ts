@@ -8,6 +8,7 @@ import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
+import { isTurnOpen } from '../domain/task';
 import { randomNonce } from './nonce';
 import { statusLabel } from './taskTreeView';
 
@@ -61,6 +62,7 @@ export class TaskPanels implements vscode.Disposable {
           this.post(task.id, {
             type: 'task',
             status: task.status,
+            turnOpen: isTurnOpen(task),
             title: task.title,
             model: task.model,
             activeModel: task.activeModel,
@@ -270,6 +272,7 @@ export class TaskPanels implements vscode.Disposable {
       taskId: task.id,
       title: task.title,
       status: task.status,
+      turnOpen: isTurnOpen(task),
       model: task.model,
       activeModel: task.activeModel,
       models: MODEL_PRESETS,
@@ -325,6 +328,7 @@ export class TaskPanels implements vscode.Disposable {
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
         approve: vscode.l10n.t('Approve'),
+        markDone: vscode.l10n.t('Mark as done'),
       },
     };
   }

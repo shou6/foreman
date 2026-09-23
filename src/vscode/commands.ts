@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import { chooseWorktree } from './chooseWorktree';
-import type { Worktree } from '../domain/task';
+import { isTurnOpen, type Worktree } from '../domain/task';
 import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
 import { statusLabel, type TreeNode } from './taskTreeView';
@@ -144,7 +144,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         if (choice !== yes) {
           return;
         }
-        if (task.status === 'running' || task.status === 'waiting') {
+        if (isTurnOpen(task)) {
           await service.stop(id);
         }
         if (await worktreeActions.beforeDelete(id)) {

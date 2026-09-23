@@ -94,5 +94,6 @@
   "Open a task to see its changes here.": "タスクを開くと、ここに変更が出ます。",
   "Changes": "変更",
   "Checkpoints": "チェックポイント",
-  "No changes yet": "変更はまだありません"
+  "No changes yet": "変更はまだありません",
+  "Mark as done": "完了にする"
 }

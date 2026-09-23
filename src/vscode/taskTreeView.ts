@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
-import type { Task, TaskStatus } from '../domain/task';
+import { isTurnOpen, type Task, type TaskStatus } from '../domain/task';
 
 export type TreeNode =
   { kind: 'group'; status: TaskStatus; tasks: Task[] } | { kind: 'task'; task: Task };
@@ -84,7 +84,11 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     item.iconPath = new vscode.ThemeIcon(ICONS[task.status]);
     item.description = task.worktree === undefined ? task.model : task.worktree.branch;
     item.tooltip = task.turns[task.turns.length - 1]?.prompt;
-    item.contextValue = task.worktree === undefined ? task.status : `${task.status} worktree`;
+    const flags = [task.status, isTurnOpen(task) ? 'open' : 'idle'];
+    if (task.worktree !== undefined) {
+      flags.push('worktree');
+    }
+    item.contextValue = flags.join(' ');
     item.command = {
       command: 'foreman.openTask',
       title: vscode.l10n.t('Open Task'),

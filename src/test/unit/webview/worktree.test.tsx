@@ -45,6 +45,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -52,6 +53,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'done',
+    turnOpen: false,
     items: [],
     changes: {},
     diffs: {},
@@ -86,7 +88,11 @@ suite('webview: worktree', () => {
   test('実行中はマージと破棄を押せない', () => {
     const html = render(
       <App
-        state={state({ status: 'running', worktree: { branch: 'foreman/x', base: 'main' } })}
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          worktree: { branch: 'foreman/x', base: 'main' },
+        })}
         post={() => {}}
       />
     );

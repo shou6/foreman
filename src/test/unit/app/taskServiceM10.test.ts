@@ -96,15 +96,15 @@ suite('TaskService: レビュー待ち（M10）', () => {
     assert.strictEqual((await h.service.load('task-1'))?.status, 'review');
   });
 
-  test('変更の無いターンの終了は完了のまま', async () => {
+  test('変更の無いターンの終了は入力待ち（次の指示待ち）', async () => {
     const h = build();
     await h.service.create({ prompt: 'p', cwd: 'D:\\w' });
     h.runner.last.emit({ type: 'turn-end', ok: true });
     await settle();
-    assert.strictEqual((await h.service.load('task-1'))?.status, 'done');
+    assert.strictEqual((await h.service.load('task-1'))?.status, 'waiting');
   });
 
-  test('完了の後に変更が記録されたら、レビュー待ちに進む（差分の記録が遅れて届く場合）', async () => {
+  test('ターンの終了の後に変更が記録されたら、レビュー待ちに進む（差分の記録が遅れて届く場合）', async () => {
     const h = build();
     await h.service.create({ prompt: 'p', cwd: 'D:\\w' });
     h.runner.last.emit({ type: 'turn-end', ok: true });
@@ -123,10 +123,10 @@ suite('TaskService: レビュー待ち（M10）', () => {
     h.runner.last.emit({ type: 'turn-end', ok: true });
     await settle();
     await h.service.recordChanges('task-1', 0, []);
-    assert.strictEqual((await h.service.load('task-1'))?.status, 'done');
+    assert.strictEqual((await h.service.load('task-1'))?.status, 'waiting');
   });
 
-  test('承認すると完了になる。レビュー待ち以外は承認できない', async () => {
+  test('承認すると完了になる。実行中は承認できない', async () => {
     const h = build();
     await h.service.create({ prompt: 'p', cwd: 'D:\\w' });
     h.runner.last.emit({ type: 'turn-end', ok: true });
@@ -136,7 +136,8 @@ suite('TaskService: レビュー待ち（M10）', () => {
     ]);
     await h.service.approve('task-1');
     assert.strictEqual((await h.service.load('task-1'))?.status, 'done');
-    await assert.rejects(h.service.approve('task-1'), /review/);
+    await h.service.create({ prompt: 'q', cwd: 'D:\\w' });
+    await assert.rejects(h.service.approve('task-2'), /running/);
   });
 
   test('レビュー待ちのタスクへ追加の指示を送ると実行中に戻る', async () => {

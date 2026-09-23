@@ -149,9 +149,14 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
             </button>
           </>
         )}
-        {(card.status === 'running' || card.status === 'waiting') && (
+        {card.turnOpen && (
           <button class="action stop" onClick={(e) => act(e, { type: 'stop', id: card.id })}>
             {strings.stop}
+          </button>
+        )}
+        {column === 'waiting' && !card.turnOpen && (
+          <button class="action approve" onClick={(e) => act(e, { type: 'approve', id: card.id })}>
+            {strings.markDone}
           </button>
         )}
         {column === 'review' && (

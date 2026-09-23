@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
-import type { Task } from '../domain/task';
+import { isTurnOpen, type Task } from '../domain/task';
 import type { DetailsState, FromDetails, ToDetails } from '../webview/detailsProtocol';
 import { randomNonce } from './nonce';
 import { statusLabel } from './taskTreeView';
@@ -149,6 +149,7 @@ export function detailsOf(task: Task): DetailsState['task'] {
     id: task.id,
     title: task.title,
     status: task.status,
+    turnOpen: isTurnOpen(task),
     turns: task.turns.map((turn) => ({
       index: turn.index,
       prompt: turn.prompt,

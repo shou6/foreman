@@ -48,7 +48,8 @@ export function App({ state, post }: AppProps) {
   if (state === undefined) {
     return null;
   }
-  const busy = state.status === 'running' || state.status === 'waiting';
+  // 動いている間と、承認・質問に答えていない間は次の指示を送れない
+  const busy = state.turnOpen || state.pending !== undefined;
   const submit = (): void => {
     const prompt = draft.trim();
     if (prompt === '') {
@@ -85,13 +86,14 @@ export function App({ state, post }: AppProps) {
         <button class="ghost export" onClick={() => post({ type: 'export' })}>
           {state.strings.export}
         </button>
-        {state.status === 'review' && (
+        {(state.status === 'review' ||
+          (state.status === 'waiting' && !state.turnOpen && state.pending === undefined)) && (
           <button
             class="ghost approve"
             disabled={state.finishing !== undefined}
             onClick={() => post({ type: 'approve' })}
           >
-            {state.strings.approve}
+            {state.status === 'review' ? state.strings.approve : state.strings.markDone}
           </button>
         )}
         {state.worktree !== undefined && (
@@ -165,7 +167,9 @@ export function App({ state, post }: AppProps) {
             post={post}
           />
         )}
-        {state.status === 'running' && <div class="item running">{state.strings.running}</div>}
+        {state.turnOpen && state.pending === undefined && (
+          <div class="item running">{state.strings.running}</div>
+        )}
       </main>
       <footer class="composer">
         {state.attachments.length > 0 && (

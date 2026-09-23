@@ -9,6 +9,8 @@ export interface BoardStrings {
   newDraft: string;
   start: string;
   approve: string;
+  /** 返答を待っているタスクを完了にする */
+  markDone: string;
   stop: string;
   edit: string;
   fork: string;

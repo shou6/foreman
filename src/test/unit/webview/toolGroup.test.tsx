@@ -45,6 +45,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approve: 'Approve',
+  markDone: 'Mark as done',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -52,6 +53,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     taskId: 'task-1',
     title: 'README',
     status: 'done',
+    turnOpen: false,
     items: [
       { kind: 'prompt', turn: 0, text: 'p' },
       { kind: 'tool', turn: 0, id: '1', name: 'Read', input: { file_path: 'a.ts' }, status: 'ok' },
@@ -89,6 +91,7 @@ suite('webview: ツールの呼び出しのたたみ', () => {
       <App
         state={state({
           status: 'running',
+          turnOpen: true,
           items: [
             { kind: 'prompt', turn: 0, text: 'p' },
             { kind: 'tool', turn: 0, id: '1', name: 'Read', input: {}, status: 'running' },

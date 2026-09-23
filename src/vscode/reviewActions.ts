@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
-import type { Task, Worktree } from '../domain/task';
+import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
 import type { Settings } from './settings';
 import type { WorktreeActions } from './worktreeActions';
@@ -25,7 +25,7 @@ export class ReviewActions {
     if (task === undefined) {
       return;
     }
-    if (task.status !== 'review') {
+    if (task.status !== 'review' && !(task.status === 'waiting' && !isTurnOpen(task))) {
       void vscode.window.showInformationMessage(
         vscode.l10n.t('Task "{0}" has no changes waiting for review.', task.title)
       );

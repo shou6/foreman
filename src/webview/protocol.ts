@@ -49,12 +49,16 @@ export interface PanelStrings {
   forkHere: string;
   /** レビュー待ちの変更を確認済みにする */
   approve: string;
+  /** 返答を待っているタスクを完了にする */
+  markDone: string;
 }
 
 export interface PanelState {
   taskId: string;
   title: string;
   status: TaskStatus;
+  /** Claude が動いている（最後のターンが終わっていない）。waiting でも終わっていれば false */
+  turnOpen: boolean;
   /** タスクに指定したモデル。無ければ Claude Code の既定 */
   model?: string;
   /** SDK が報告した、実際に動いているモデル */
@@ -87,6 +91,7 @@ export type ToWebview =
   | {
       type: 'task';
       status: TaskStatus;
+      turnOpen: boolean;
       title: string;
       model?: string;
       activeModel?: string;

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
+import { isTurnOpen } from '../domain/task';
 
 /**
  * worktree のマージ・破棄・タスク削除時の後始末。確認の対話を含むので vscode 層に置く。
@@ -20,7 +21,7 @@ export class WorktreeActions {
       );
       return;
     }
-    if (task.status === 'running' || task.status === 'waiting') {
+    if (isTurnOpen(task)) {
       void vscode.window.showWarningMessage(
         vscode.l10n.t('Stop the task before merging or discarding its worktree.')
       );
@@ -59,7 +60,7 @@ export class WorktreeActions {
     if (task === undefined || task.worktree === undefined) {
       return;
     }
-    if (task.status === 'running' || task.status === 'waiting') {
+    if (isTurnOpen(task)) {
       void vscode.window.showWarningMessage(
         vscode.l10n.t('Stop the task before merging or discarding its worktree.')
       );

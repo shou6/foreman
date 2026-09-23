@@ -12,7 +12,7 @@ suite('transition', () => {
     ['running', 'permission-requested', 'waiting'],
     ['running', 'question-asked', 'waiting'],
     ['waiting', 'answered', 'running'],
-    ['running', 'turn-completed', 'done'],
+    ['running', 'turn-completed', 'waiting'],
     ['running', 'error', 'failed'],
     ['waiting', 'error', 'failed'],
     ['running', 'stop', 'interrupted'],
@@ -113,6 +113,9 @@ suite('createTask', () => {
 suite('transition: 下書きとレビュー待ち（M10）', () => {
   const allowed: [TaskStatus, TaskEvent, TaskStatus][] = [
     ['draft', 'start', 'running'],
+    ['waiting', 'changes-recorded', 'review'],
+    ['waiting', 'prompt', 'running'],
+    ['waiting', 'approve', 'done'],
     ['done', 'changes-recorded', 'review'],
     ['review', 'approve', 'done'],
     ['review', 'prompt', 'running'],

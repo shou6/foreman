@@ -3,7 +3,7 @@ import type { AutoTitle } from '../app/autoTitle';
 import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
-import type { Task, Worktree } from '../domain/task';
+import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
 import type { Settings } from './settings';
 
@@ -27,7 +27,7 @@ export class CheckpointActions {
     if (task === undefined) {
       return;
     }
-    if (task.status === 'running' || task.status === 'waiting') {
+    if (isTurnOpen(task)) {
       void vscode.window.showWarningMessage(vscode.l10n.t('Stop the task before rewinding.'));
       return;
     }
