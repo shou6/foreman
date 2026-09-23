@@ -5,6 +5,7 @@ import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../../.
 export class FakeRunHandle implements RunHandle {
   readonly sent: string[] = [];
   interrupted = false;
+  closed = false;
   private resolveDone!: () => void;
   readonly done: Promise<void>;
 
@@ -21,6 +22,11 @@ export class FakeRunHandle implements RunHandle {
   async interrupt(): Promise<void> {
     this.interrupted = true;
     this.emit({ type: 'turn-end', ok: false, interrupted: true, reason: 'interrupted' });
+  }
+
+  close(): void {
+    this.closed = true;
+    this.resolveDone();
   }
 
   /** Runner からイベントが届いたことにする */

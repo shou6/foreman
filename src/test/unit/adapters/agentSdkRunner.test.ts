@@ -14,7 +14,9 @@ const msg = (m: Record<string, unknown>): SdkMessage => m as unknown as SdkMessa
 suite('normalizeMessage', () => {
   test('system/init → init', () => {
     assert.deepStrictEqual(
-      normalizeMessage(msg({ type: 'system', subtype: 'init', session_id: 's1', model: 'claude-opus-5' })),
+      normalizeMessage(
+        msg({ type: 'system', subtype: 'init', session_id: 's1', model: 'claude-opus-5' })
+      ),
       [{ type: 'init', sessionId: 's1', model: 'claude-opus-5' }]
     );
   });
@@ -195,7 +197,11 @@ interface FakeQuery {
   interrupts: number;
   /** 台本を進める。null で終了、Error で例外 */
   push: (m: SdkMessage | null | Error) => void;
-  canUseTool: (name: string, input: Record<string, unknown>, suggestions: unknown[]) => Promise<unknown>;
+  canUseTool: (
+    name: string,
+    input: Record<string, unknown>,
+    suggestions: unknown[]
+  ) => Promise<unknown>;
   /** 送られた指示（prompt の AsyncIterable を読む） */
   prompts: string[];
 }
@@ -221,7 +227,10 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     if (opts?.canUseTool) {
       const cb = opts.canUseTool;
       fake.canUseTool = (name, input, suggestions) =>
-        cb(name, input, { signal: new AbortController().signal, suggestions: suggestions as never });
+        cb(name, input, {
+          signal: new AbortController().signal,
+          suggestions,
+        } as Parameters<typeof cb>[2]);
     }
     // 指示の読み取り。テストの都合で読んだものを記録するだけ
     void (async () => {

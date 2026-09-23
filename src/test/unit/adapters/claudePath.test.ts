@@ -15,7 +15,10 @@ function env(overrides: Partial<ClaudePathEnv> & { existing: string[] }): Claude
 suite('resolveClaudePath', () => {
   test('設定があり、そのファイルが存在すれば、それを使う', () => {
     const e = env({ configured: 'D:\\tools\\claude.exe', existing: ['D:/tools/claude.exe'] });
-    assert.deepStrictEqual(resolveClaudePath(e), { path: 'D:\\tools\\claude.exe', source: 'setting' });
+    assert.deepStrictEqual(resolveClaudePath(e), {
+      path: 'D:\\tools\\claude.exe',
+      source: 'setting',
+    });
   });
 
   test('設定があっても存在しなければ、設定が誤りだと分かる形で返す', () => {

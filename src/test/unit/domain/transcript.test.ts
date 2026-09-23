@@ -84,10 +84,7 @@ suite('transcript', () => {
   });
 
   test('init と file-edit は表示に出さない', () => {
-    assert.deepStrictEqual(
-      applyEvent([], 0, { type: 'init', sessionId: 's', model: 'm' }),
-      []
-    );
+    assert.deepStrictEqual(applyEvent([], 0, { type: 'init', sessionId: 's', model: 'm' }), []);
     assert.deepStrictEqual(
       applyEvent([], 0, { type: 'file-edit', phase: 'before', path: 'a.txt' }),
       []

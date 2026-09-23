@@ -29,7 +29,16 @@ export interface CreateInput {
   permissionMode?: PermissionMode;
 }
 
+/** Runner から届いたイベント。表示（transcript）と差分の担当が受け取る */
+export interface TaskEventNotification {
+  taskId: string;
+  /** イベントが属するターンの番号 */
+  turn: number;
+  event: RunnerEvent;
+}
+
 type Listener = (task: Task) => void;
+type EventListener = (notification: TaskEventNotification) => void;
 
 /**
  * タスクの作成・起動・再開・停止・削除。
@@ -38,7 +47,9 @@ type Listener = (task: Task) => void;
  */
 export class TaskService {
   private readonly handles = new Map<string, RunHandle>();
+  private readonly currentTurn = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
+  private readonly eventListeners = new Set<EventListener>();
   private readonly queues = new Map<string, Promise<unknown>>();
 
   constructor(private readonly deps: TaskServiceDeps) {}
@@ -48,8 +59,17 @@ export class TaskService {
     return () => this.listeners.delete(listener);
   }
 
+  onDidReceiveEvent(listener: EventListener): () => void {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
   list(): Promise<Task[]> {
     return this.deps.store.list();
+  }
+
+  load(id: string): Promise<Task | undefined> {
+    return this.deps.store.load(id);
   }
 
   /** 起動時に呼ぶ。前回の終了で実行中や入力待ちのまま残ったタスクを中断に直す */
@@ -58,6 +78,13 @@ export class TaskService {
       if (task.status === 'running' || task.status === 'waiting') {
         await this.commit({ ...task, status: transition(task.status, 'host-exit') });
       }
+    }
+  }
+
+  /** 終了時に呼ぶ。動いているセッションの入力を閉じ、プロセスを終わらせる */
+  dispose(): void {
+    for (const handle of this.handles.values()) {
+      handle.close();
     }
   }
 
@@ -88,9 +115,9 @@ export class TaskService {
       await this.resume(id, prompt);
       return;
     }
-    await this.serialize(id, async () => {
+    const next = await this.serialize(id, async () => {
       const task = await this.mustLoad(id);
-      await this.commit(
+      return this.commit(
         this.withTurn(
           { ...task, status: transition(task.status, 'prompt') },
           prompt,
@@ -98,6 +125,7 @@ export class TaskService {
         )
       );
     });
+    this.currentTurn.set(id, next.turns.length - 1);
     handle.send(prompt);
   }
 
@@ -134,6 +162,7 @@ export class TaskService {
     const handle = this.handles.get(id);
     if (handle !== undefined) {
       await handle.interrupt();
+      handle.close();
       this.handles.delete(id);
     }
     // 中断のイベントの処理より後に消す
@@ -149,6 +178,14 @@ export class TaskService {
       alwaysAllowed: task.alwaysAllowed,
       onPermissionRequest: (request) => this.handlePermission(task.id, request),
       onEvent: (event) => {
+        const notification: TaskEventNotification = {
+          taskId: task.id,
+          turn: this.currentTurn.get(task.id) ?? 0,
+          event,
+        };
+        for (const listener of this.eventListeners) {
+          listener(notification);
+        }
         void this.handleEvent(task.id, event);
       },
     };
@@ -156,6 +193,7 @@ export class TaskService {
 
   private attach(task: Task, handle: RunHandle): void {
     this.handles.set(task.id, handle);
+    this.currentTurn.set(task.id, task.turns.length - 1);
     void handle.done.then(() => this.handleExit(task.id, handle));
   }
 
@@ -213,7 +251,7 @@ export class TaskService {
               });
         });
       default:
-        // text / tool-call / tool-result / file-edit は表示と差分の担当（M2、M4）
+        // text / tool-call / tool-result / file-edit は onDidReceiveEvent で表示と差分の担当へ
         return Promise.resolve();
     }
   }
