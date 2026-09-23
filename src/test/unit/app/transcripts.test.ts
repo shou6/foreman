@@ -3,6 +3,7 @@ import { TaskService } from '../../../app/taskService';
 import { Transcripts, type TranscriptDelta } from '../../../app/transcripts';
 import { InMemoryTaskStore } from '../../../adapters/inMemoryTaskStore';
 import { FakeAgentRunner } from '../../support/fakes/fakeAgentRunner';
+import { InMemoryTranscriptStore } from '../../support/fakes/inMemoryTranscriptStore';
 
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
@@ -67,5 +68,40 @@ suite('Transcripts', () => {
     await service.delete('task-1');
     await settle();
     assert.deepStrictEqual(transcripts.get('task-1'), []);
+  });
+});
+
+suite('Transcripts: 永続化', () => {
+  test('保存先に追記し、起動時に読み戻して同じ履歴になる', async () => {
+    const runner = new FakeAgentRunner();
+    const service = new TaskService({
+      runner,
+      store: new InMemoryTaskStore(),
+      newId: () => 'task-1',
+      now: () => '2026-09-23T10:00:00.000Z',
+      approve: async () => ({ behavior: 'allow' }),
+    });
+    const store = new InMemoryTranscriptStore();
+    const transcripts = new Transcripts(service, store);
+    await service.create({ prompt: 'p', cwd: 'D:\\work' });
+    runner.last.emit({ type: 'text', text: 'hi' });
+    await settle();
+
+    const restored = new Transcripts(service, store, await store.loadAll());
+    assert.deepStrictEqual(restored.get('task-1'), transcripts.get('task-1'));
+    assert.deepStrictEqual(restored.get('task-1'), [
+      { kind: 'prompt', turn: 0, text: 'p' },
+      { kind: 'text', turn: 0, text: 'hi' },
+    ]);
+  });
+
+  test('削除すると保存先からも消す', async () => {
+    const { service } = build();
+    const store = new InMemoryTranscriptStore();
+    new Transcripts(service, store);
+    await service.create({ prompt: 'p', cwd: 'D:\\work' });
+    await service.delete('task-1');
+    await settle();
+    assert.strictEqual(store.deltas.has('task-1'), false);
   });
 });
