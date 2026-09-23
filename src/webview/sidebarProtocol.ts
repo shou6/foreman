@@ -1,4 +1,5 @@
 import type { SidebarBadge, SidebarGroup, SidebarGroupKey, SidebarItem } from '../domain/sidebar';
+import type { ContextUsage } from '../domain/usage';
 
 export type { SidebarBadge, SidebarGroup, SidebarGroupKey, SidebarItem };
 
@@ -12,12 +13,16 @@ export interface SidebarStrings {
   minutes: string;
   /** {0} にファイル数 */
   files: string;
+  /** 下端のコンテキストの見出し */
+  context: string;
 }
 
 export interface SidebarState {
   groups: SidebarGroup[];
   /** 今見ているタスク（前面のタスク画面） */
   activeTaskId?: string;
+  /** 今見ているタスクのコンテキストの使用量 */
+  context?: ContextUsage;
   strings: SidebarStrings;
 }
 

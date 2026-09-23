@@ -813,3 +813,49 @@ body.dragging .composer {
   border-color: var(--vscode-focusBorder);
   color: var(--vscode-foreground);
 }
+
+/* コンテキストのメーター */
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family);
+}
+
+.meter-bar {
+  display: inline-block;
+  width: 6em;
+  height: 0.5em;
+  border-radius: 0.25em;
+  background: var(--vscode-progressBar-background, var(--vscode-badge-background));
+  opacity: 0.35;
+  overflow: hidden;
+  position: relative;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--vscode-progressBar-background, var(--vscode-textLink-foreground));
+}
+
+.meter[data-level] .meter-bar {
+  opacity: 1;
+  background: var(--vscode-widget-border, var(--vscode-panel-border));
+}
+
+.meter[data-level='mid'] .meter-fill {
+  background: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.meter[data-level='high'] .meter-fill {
+  background: var(--vscode-editorError-foreground, #f14c4c);
+}
+
+.turn-tokens {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}

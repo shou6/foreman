@@ -188,3 +188,36 @@ body {
   color: inherit;
   opacity: 0.8;
 }
+
+/* 下端: 今見ているタスクのコンテキスト */
+.context {
+  margin: 10px 12px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border));
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.context-text {
+  font-family: var(--vscode-editor-font-family);
+}
+
+.meter-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--vscode-widget-border, var(--vscode-panel-border));
+  overflow: hidden;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--vscode-progressBar-background, var(--vscode-textLink-foreground));
+}

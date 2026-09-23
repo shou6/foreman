@@ -1,5 +1,6 @@
 import type { PendingRequest } from '../app/approvalService';
 import type { Attachment } from '../domain/attachments';
+import type { ContextUsage, TurnTokens } from '../domain/usage';
 import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
@@ -60,6 +61,8 @@ export interface PanelStrings {
   markDone: string;
   /** ターンの変更をすべて戻す */
   revertAll: string;
+  /** コンテキストのメーターの見出し */
+  contextUsage: string;
 }
 
 export interface PanelState {
@@ -70,6 +73,10 @@ export interface PanelState {
   turnOpen: boolean;
   /** worktree をマージできる（承認済みで、戻していない変更がある） */
   mergeable: boolean;
+  /** コンテキストの使用量。結果のあるターンが無ければ undefined */
+  usage?: ContextUsage;
+  /** ターンの番号 → そのターンのトークン数 */
+  tokens?: Record<number, TurnTokens>;
   /** タスクに指定したモデル。無ければ Claude Code の既定 */
   model?: string;
   /** SDK が報告した、実際に動いているモデル */
@@ -104,6 +111,8 @@ export type ToWebview =
       status: TaskStatus;
       turnOpen: boolean;
       mergeable: boolean;
+      usage?: ContextUsage;
+      tokens?: Record<number, TurnTokens>;
       title: string;
       model?: string;
       activeModel?: string;

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { TaskService } from '../app/taskService';
 import { sidebarOf } from '../domain/sidebar';
+import { contextUsage } from '../domain/usage';
 import type { FromSidebar, SidebarState, ToSidebar } from '../webview/sidebarProtocol';
 import { randomNonce } from './nonce';
 import { statusLabel } from './statusLabel';
@@ -73,9 +74,12 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
     const pendingApproval = new Set(
       tasks.filter((task) => this.deps.approvals.pending(task.id) !== undefined).map((t) => t.id)
     );
+    const activeTaskId = this.deps.activeTaskId();
+    const active = tasks.find((task) => task.id === activeTaskId);
     const state: SidebarState = {
       groups: sidebarOf(tasks, { now: this.deps.now(), pendingApproval }),
-      activeTaskId: this.deps.activeTaskId(),
+      activeTaskId,
+      context: active === undefined ? undefined : contextUsage(active),
       strings: {
         newTask: vscode.l10n.t('New task'),
         empty: vscode.l10n.t('No tasks yet. Create one to get started.'),
@@ -96,6 +100,7 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
         },
         minutes: vscode.l10n.t('{0} min', '{0}'),
         files: vscode.l10n.t('{0} files', '{0}'),
+        context: vscode.l10n.t('Context of this task'),
       },
     };
     const message: ToSidebar = { type: 'state', state };

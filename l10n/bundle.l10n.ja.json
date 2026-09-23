@@ -120,5 +120,7 @@
   "No uncommitted changes to attach.": "渡す未コミットの変更はありません。",
   "Attach": "添付",
   "Desktop notification failed: {0}": "デスクトップ通知に失敗しました: {0}",
-  "Install the Local Notifier extension ({0}).": "Local Notifier 拡張機能（{0}）をインストールしてください。"
+  "Install the Local Notifier extension ({0}).": "Local Notifier 拡張機能（{0}）をインストールしてください。",
+  "Context": "コンテキスト",
+  "Context of this task": "このタスクのコンテキスト"
 }

@@ -1,16 +1,28 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
+import { contextUsage, formatTokens } from '../domain/usage';
 
 /** ステータスバーに、実行中と入力待ちの件数を出す。クリックでタスクの一覧を開く */
 export class StatusBar implements vscode.Disposable {
   private readonly item: vscode.StatusBarItem;
   private readonly subscriptions: (() => void)[] = [];
 
-  constructor(private readonly service: TaskService) {
+  constructor(
+    private readonly service: TaskService,
+    private readonly active: {
+      id: () => string | undefined;
+      onDidChange: (l: () => void) => vscode.Disposable;
+    } = {
+      id: () => undefined,
+      onDidChange: () => ({ dispose: () => {} }),
+    }
+  ) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
     this.item.name = 'Foreman';
     this.item.command = 'workbench.view.extension.foreman';
+    const activeSubscription = active.onDidChange(() => void this.refresh());
     this.subscriptions.push(
+      () => activeSubscription.dispose(),
       service.onDidChange(() => void this.refresh()),
       service.onDidDelete(() => void this.refresh())
     );
@@ -21,11 +33,26 @@ export class StatusBar implements vscode.Disposable {
     const tasks = await this.service.list();
     const running = tasks.filter((t) => t.status === 'running').length;
     const waiting = tasks.filter((t) => t.status === 'waiting').length;
-    if (running === 0 && waiting === 0) {
+    const active = tasks.find((t) => t.id === this.active.id());
+    if (running === 0 && waiting === 0 && active === undefined) {
       this.item.hide();
       return;
     }
     const parts: string[] = [];
+    if (active !== undefined) {
+      const model = active.activeModel ?? active.model;
+      const usage = contextUsage(active);
+      const context =
+        usage === undefined
+          ? undefined
+          : usage.ratio === undefined
+            ? formatTokens(usage.used)
+            : `${Math.round(usage.ratio * 100)}%`;
+      const detail = [model, context].filter((v) => v !== undefined).join(' ');
+      if (detail !== '') {
+        parts.push(`$(tasklist) ${detail}`);
+      }
+    }
     if (running > 0) {
       parts.push(vscode.l10n.t('$(sync~spin) {0} running', String(running)));
     }

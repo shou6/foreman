@@ -23,6 +23,7 @@ const STRINGS = {
   },
   minutes: '{0} min',
   files: '{0} files',
+  context: 'Context of this task',
 };
 
 function state(overrides: Partial<SidebarState> = {}): SidebarState {
@@ -138,5 +139,32 @@ suite('webview: 左サイドバーの一覧', () => {
       { type: 'newTask' },
     ];
     assert.strictEqual(messages.length, 3);
+  });
+});
+
+suite('webview: 左サイドバーのコンテキスト（M11）', () => {
+  test('今見ているタスクの使用量を下端に出す', () => {
+    const html = render(
+      <Sidebar
+        state={state({
+          context: { used: 84000, window: 200000, ratio: 0.42 },
+          strings: { ...STRINGS, context: 'Context of this task' },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('Context of this task'));
+    assert.ok(html.includes('84k / 200k'));
+    assert.ok(/class="meter-fill"[^>]*style="width: 42%/.test(html));
+  });
+
+  test('見ているタスクが無ければ出さない', () => {
+    const html = render(
+      <Sidebar
+        state={state({ strings: { ...STRINGS, context: 'Context of this task' } })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!html.includes('class="context"'));
   });
 });

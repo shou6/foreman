@@ -10,6 +10,7 @@ import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
 import { attachmentKey, uniqueAttachments, type Attachment } from '../domain/attachments';
 import { canMerge, isTurnOpen } from '../domain/task';
+import { contextUsage, turnTokens, type TurnTokens } from '../domain/usage';
 import { randomNonce } from './nonce';
 import { statusLabel } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
@@ -72,6 +73,8 @@ export class TaskPanels implements vscode.Disposable {
             status: task.status,
             turnOpen: isTurnOpen(task),
             mergeable: canMerge(task),
+            usage: contextUsage(task),
+            tokens: tokensOf(task),
             title: task.title,
             model: task.model,
             activeModel: task.activeModel,
@@ -318,6 +321,8 @@ export class TaskPanels implements vscode.Disposable {
       status: task.status,
       turnOpen: isTurnOpen(task),
       mergeable: canMerge(task),
+      usage: contextUsage(task),
+      tokens: tokensOf(task),
       model: task.model,
       activeModel: task.activeModel,
       models: MODEL_PRESETS,
@@ -380,6 +385,7 @@ export class TaskPanels implements vscode.Disposable {
         approve: vscode.l10n.t('Approve'),
         markDone: vscode.l10n.t('Mark as done'),
         revertAll: vscode.l10n.t('Revert all'),
+        contextUsage: vscode.l10n.t('Context'),
       },
     };
   }
@@ -425,4 +431,16 @@ function withDefaultReason(decision: PermissionDecision): PermissionDecision {
     return { behavior: 'deny', message: vscode.l10n.t('Denied by the user in Foreman.') };
   }
   return decision;
+}
+
+/** ターンの番号 → トークン数。結果の無いターンは含めない */
+function tokensOf(task: Task): Record<number, TurnTokens> {
+  const tokens: Record<number, TurnTokens> = {};
+  for (const turn of task.turns) {
+    const t = turnTokens(turn);
+    if (t !== undefined) {
+      tokens[turn.index] = t;
+    }
+  }
+  return tokens;
 }

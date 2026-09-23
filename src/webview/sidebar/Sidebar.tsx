@@ -1,3 +1,4 @@
+import { formatTokens } from '../../domain/usage';
 import type { FromSidebar, SidebarItem, SidebarState } from '../sidebarProtocol';
 
 interface SidebarProps {
@@ -35,6 +36,24 @@ export function Sidebar({ state, post }: SidebarProps) {
           ))}
         </details>
       ))}
+      {state.context !== undefined && (
+        <div class="context">
+          <div class="context-head">
+            <span>{strings.context}</span>
+            <span class="context-text">
+              {state.context.window === undefined
+                ? formatTokens(state.context.used)
+                : `${formatTokens(state.context.used)} / ${formatTokens(state.context.window)}`}
+            </span>
+          </div>
+          <span class="meter-bar">
+            <span
+              class="meter-fill"
+              style={`width: ${Math.round((state.context.ratio ?? 0) * 100)}%`}
+            />
+          </span>
+        </div>
+      )}
     </div>
   );
 }

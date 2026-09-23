@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { attachmentKey } from '../domain/attachments';
+import { formatTokens, type ContextUsage } from '../domain/usage';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import { describeSuggestions } from '../domain/suggestions';
 import type { TranscriptItem } from '../domain/transcript';
@@ -85,6 +86,9 @@ export function App({ state, post }: AppProps) {
             {state.worktree.branch}
           </span>
         )}
+        {state.usage !== undefined && (
+          <Meter usage={state.usage} label={state.strings.contextUsage} />
+        )}
         <span class="head-spacer" />
         <button class="ghost export" onClick={() => post({ type: 'export' })}>
           {state.strings.export}
@@ -131,6 +135,12 @@ export function App({ state, post }: AppProps) {
                 <span class="checkpoint-turn">
                   {state.strings.turn.replace('{0}', String(block.turn + 1))}
                 </span>
+                {state.tokens?.[block.turn] !== undefined && (
+                  <span class="turn-tokens" title="input / output tokens">
+                    ↑{formatTokens(state.tokens[block.turn]?.input ?? 0)} ↓
+                    {formatTokens(state.tokens[block.turn]?.output ?? 0)}
+                  </span>
+                )}
                 <button
                   class="link rewind"
                   disabled={busy}
@@ -254,6 +264,29 @@ export function App({ state, post }: AppProps) {
         </div>
       </footer>
     </div>
+  );
+}
+
+/** コンテキストのメーター（FR-VIEW-8）。窓の大きさが分からなければ使用量だけ */
+function Meter({ usage, label }: { usage: ContextUsage; label: string }) {
+  const percent = usage.ratio === undefined ? undefined : Math.round(usage.ratio * 100);
+  const text =
+    usage.window === undefined
+      ? formatTokens(usage.used)
+      : `${formatTokens(usage.used)} / ${formatTokens(usage.window)}`;
+  return (
+    <span
+      class="meter"
+      title={percent === undefined ? `${label}: ${text}` : `${label}: ${text} (${percent}%)`}
+      data-level={
+        percent === undefined ? undefined : percent >= 90 ? 'high' : percent >= 70 ? 'mid' : 'low'
+      }
+    >
+      <span class="meter-bar">
+        <span class="meter-fill" style={`width: ${percent ?? 0}%`} />
+      </span>
+      <span class="meter-text">{text}</span>
+    </span>
   );
 }
 

@@ -17,6 +17,7 @@ Foreman uses the `claude` CLI that is already installed and logged in on your ma
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file with one click. This works in folders that are not Git repositories.
 - **Pass along**: attach the editor selection, the errors and warnings from Problems, the uncommitted `git diff`, or files from a picker. You can also right-click a file and choose "Foreman: Attach to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
 - **Notifications and status bar**: know when a task needs you or has finished. The status bar counts running and waiting tasks.
+- **Context meter**: the task view, the sidebar and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens.
 - **Persistence**: tasks, history and diff cards survive a restart. An interrupted task keeps its session, so your next prompt continues it.
 - **Git worktrees**: run a task in its own worktree and branch, then merge into the branch you started from or discard it. Worktrees live in `.foreman/worktrees` inside the repository.
 - **Checkpoints and forks**: every finished turn is a checkpoint. Rewind the files, or the files and the conversation, to that point. Fork a new task from any checkpoint; a worktree task forks from its own branch.
@@ -59,7 +60,7 @@ Foreman talks to Claude Code through the official Claude Agent SDK. Each task ma
 
 ## Roadmap
 
-- Token usage per turn and a context meter
+- A Context panel that shows what is sent to Claude, and prompt presets
 - Context panel, prompt presets and one-click attachment of diagnostics and `git diff`
 
 ## License

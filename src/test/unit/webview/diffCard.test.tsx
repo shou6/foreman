@@ -52,6 +52,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   revertAll: 'Revert all',
+  contextUsage: 'Context',
   approve: 'Approve',
   markDone: 'Mark as done',
 };

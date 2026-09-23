@@ -221,7 +221,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     output,
     panels,
     board,
-    new StatusBar(service),
+    new StatusBar(service, {
+      id: () => panels.activeTaskId,
+      onDidChange: (listener) => panels.onDidChangeActive(listener),
+    }),
     new Notifications(
       service,
       (taskId) => void panels.open(taskId),

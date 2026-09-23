@@ -50,6 +50,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   revertAll: 'Revert all',
+  contextUsage: 'Context',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -147,5 +148,44 @@ suite('webview: 承認（レビュー待ち）', () => {
   test('approve と revertAll のメッセージの型がある', () => {
     const messages: ToExtension[] = [{ type: 'approve' }, { type: 'revertAll', turn: 1 }];
     assert.strictEqual(messages.length, 2);
+  });
+});
+
+suite('webview: コンテキストのメーター（M11）', () => {
+  test('使用量があれば見出しにメーターと「84k / 200k」を出す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          usage: { used: 84000, window: 200000, ratio: 0.42 },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/class="meter"[^>]*title="[^"]*42%/.test(html));
+    assert.ok(html.includes('84k / 200k'));
+    assert.ok(/class="meter-fill"[^>]*style="width: 42%/.test(html));
+  });
+
+  test('使用量が無ければメーターを出さない', () => {
+    const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
+    assert.ok(!html.includes('class="meter"'));
+  });
+
+  test('ターンの区切りにトークン数を出す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          tokens: { 1: { input: 84000, output: 500 } },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('84k'));
+    assert.ok(html.includes('500'));
+    assert.ok(/class="checkpoint"[\s\S]*class="turn-tokens"/.test(html));
   });
 });

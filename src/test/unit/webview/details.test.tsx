@@ -14,6 +14,7 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   revertAll: 'Revert all',
+  contextUsage: 'Context',
   noChanges: 'No changes yet',
   finish: 'Finish the task',
   finishHint: 'Review the whole diff before merging the worktree into {0}.',
