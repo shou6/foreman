@@ -94,7 +94,7 @@ suite('webview: ツールの呼び出しのたたみ', () => {
     assert.ok(/<details[^>]*class="tool-group[^"]*"[^>]*\bopen\b/.test(html));
   });
 
-  test('実行中のツールがあるグループは、たたみの設定でも開く', () => {
+  test('実行中のツールがあっても、たたみの設定なら開かない（開閉が繰り返されないように）', () => {
     const html = render(
       <App
         state={state({
@@ -109,7 +109,7 @@ suite('webview: ツールの呼び出しのたたみ', () => {
         post={() => {}}
       />
     );
-    assert.ok(/<details[^>]*class="tool-group[^"]*"[^>]*\bopen\b/.test(html));
+    assert.ok(/<details[^>]*class="tool-group[^"]*"(?![^>]*open)/.test(html), 'たたまれたまま');
   });
 
   test('見出しにエクスポートのボタンがあり、export のメッセージの型がある', () => {

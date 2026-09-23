@@ -349,8 +349,9 @@ function BlockView({
       const failed = block.tools.filter((t) => t.status === 'error').length;
       const running = block.tools.some((t) => t.status === 'running');
       const names = [...new Set(block.tools.map((t) => t.name))].join(', ');
+      // 設定どおりに開閉する。実行中でも勝手に開かない（開閉の繰り返しが目障りなため）
       return (
-        <details class="tool-group item" open={expanded || running}>
+        <details class="tool-group item" open={expanded}>
           <summary class="group-summary">
             <span class="tool-count">
               {strings.toolCalls.replace('{0}', String(block.tools.length))}
