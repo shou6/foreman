@@ -54,3 +54,22 @@ suite('TaskService.close', () => {
     assert.strictEqual(runner.resumes.length, 0, 'session_id が無いので再開できず失敗する');
   });
 });
+
+suite('WorktreeService.cleanupOrphans: 登録の無いフォルダ', () => {
+  test('.foreman/worktrees の下に残ったフォルダも消し、登録を整理する', async () => {
+    const git = new FakeGit(REPO, 'main');
+    const removed: string[] = [];
+    const service = new WorktreeService({
+      git,
+      sep: '\\',
+      listDirs: async (dir) =>
+        dir === 'D:\\work\\repo\\.foreman\\worktrees' ? ['leftover-aaaaaa', 'used-bbbbbb'] : [],
+      removeDir: async (dir) => {
+        removed.push(dir);
+      },
+    });
+    await service.cleanupOrphans(REPO, ['D:\\work\\repo\\.foreman\\worktrees\\used-bbbbbb']);
+    assert.deepStrictEqual(removed, ['D:\\work\\repo\\.foreman\\worktrees\\leftover-aaaaaa']);
+    assert.ok(git.calls.includes('prune'));
+  });
+});

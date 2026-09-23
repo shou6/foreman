@@ -100,3 +100,29 @@ suite('GitCli.ignored', function () {
     assert.deepStrictEqual(await new GitCli().ignored(plain, ['out/a.js']), []);
   });
 });
+
+suite('GitCli.ignored: 区切り', function () {
+  this.timeout(30_000);
+  test('OS の区切り（Windows の \\）で渡しても判定でき、渡した形のまま返す', async () => {
+    const repo = makeRepo();
+    fs.writeFileSync(path.join(repo, '.gitignore'), 'out/\n');
+    const git = new GitCli();
+    const native = ['out', 'a.js'].join(path.sep);
+    const src = ['src', 'a.ts'].join(path.sep);
+    assert.deepStrictEqual(await git.ignored(repo, [native, src]), [native]);
+  });
+});
+
+suite('GitCli.prune', function () {
+  this.timeout(30_000);
+  test('フォルダだけ消えた worktree の登録を外す', async () => {
+    const repo = makeRepo();
+    const git = new GitCli();
+    const wt = path.join(repo, '.foreman', 'worktrees', 't-gone');
+    await git.addWorktree(repo, wt, 'foreman/t-gone', 'main');
+    fs.rmSync(wt, { recursive: true, force: true });
+    await git.prune(repo);
+    const list = (await git.listWorktrees(repo)).map((p) => path.resolve(p));
+    assert.ok(!list.includes(path.resolve(wt)));
+  });
+});
