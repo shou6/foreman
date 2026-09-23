@@ -1,0 +1,31 @@
+import type { TaskStatus } from '../domain/task';
+import type { TranscriptItem } from '../domain/transcript';
+import type { TranscriptDelta } from '../app/transcripts';
+
+export type { TranscriptDelta };
+
+/** 画面に出す文字列。翻訳は拡張機能側で済ませて渡す（Webview からは vscode.l10n を使えない） */
+export interface PanelStrings {
+  send: string;
+  stop: string;
+  running: string;
+}
+
+export interface PanelState {
+  taskId: string;
+  title: string;
+  status: TaskStatus;
+  model?: string;
+  items: TranscriptItem[];
+  strings: PanelStrings;
+}
+
+/** 拡張機能 → Webview */
+export type ToWebview =
+  | { type: 'state'; state: PanelState }
+  | { type: 'task'; status: TaskStatus; title: string; model?: string }
+  | TranscriptDelta;
+
+/** Webview → 拡張機能 */
+export type ToExtension =
+  { type: 'ready' } | { type: 'send'; prompt: string } | { type: 'interrupt' };

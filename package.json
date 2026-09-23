@@ -23,14 +23,22 @@
     "vscode": "^1.138.0"
   },
   "categories": [
+    "AI",
     "Other"
   ],
-  "keywords": [],
+  "keywords": [
+    "claude",
+    "claude code",
+    "agent",
+    "tasks"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "files": [
     "dist/extension.js",
+    "dist/webview.js",
+    "dist/webview.css",
     "resources/**",
     "l10n/**",
     "package.nls.json",
@@ -40,13 +48,118 @@
     "LICENSE"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "foreman",
+          "title": "%viewContainer.title%",
+          "icon": "resources/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "foreman": [
+        {
+          "id": "foreman.tasks",
+          "name": "%view.tasks%",
+          "icon": "resources/activity.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "foreman.tasks",
+        "contents": "%viewsWelcome.noTasks%"
+      }
+    ],
     "commands": [
       {
-        "command": "foreman.helloWorld",
-        "title": "%command.helloWorld%",
-        "category": "Foreman for Claude Code"
+        "command": "foreman.newTask",
+        "title": "%command.newTask%",
+        "category": "Foreman",
+        "icon": "$(add)"
+      },
+      {
+        "command": "foreman.openTask",
+        "title": "%command.openTask%",
+        "category": "Foreman"
+      },
+      {
+        "command": "foreman.stopTask",
+        "title": "%command.stopTask%",
+        "category": "Foreman",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "foreman.deleteTask",
+        "title": "%command.deleteTask%",
+        "category": "Foreman",
+        "icon": "$(trash)"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "foreman.openTask",
+          "when": "false"
+        },
+        {
+          "command": "foreman.stopTask",
+          "when": "false"
+        },
+        {
+          "command": "foreman.deleteTask",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "foreman.newTask",
+          "when": "view == foreman.tasks",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "foreman.stopTask",
+          "when": "view == foreman.tasks && viewItem =~ /^(running|waiting)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "foreman.deleteTask",
+          "when": "view == foreman.tasks && viewItem != group",
+          "group": "inline@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Foreman for Claude Code",
+      "properties": {
+        "foreman.claudePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.claudePath%"
+        },
+        "foreman.defaultModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.defaultModel%"
+        },
+        "foreman.defaultPermissionMode": {
+          "type": "string",
+          "enum": [
+            "default",
+            "acceptEdits"
+          ],
+          "enumDescriptions": [
+            "%config.defaultPermissionMode.default%",
+            "%config.defaultPermissionMode.acceptEdits%"
+          ],
+          "default": "default",
+          "description": "%config.defaultPermissionMode%"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -60,8 +173,8 @@
     "pretest": "npm run compile-tests && npm run compile && mocha",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "format": "prettier --write \"src/**/*.ts\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
     "test": "vscode-test",
     "vsix": "vsce package",
     "try": "node scripts/try-extension.js",
@@ -70,6 +183,10 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "verify:package": "npm run compile-tests && node scripts/verify-package.js",
     "icon": "node scripts/generate-icon.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.280",
+    "preact": "^10.29.8"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -92,9 +209,5 @@
   "overrides": {
     "diff": "^8.0.4",
     "serialize-javascript": "^7.0.6"
-  },
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.280",
-    "preact": "^10.29.8"
   }
 }

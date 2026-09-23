@@ -1,0 +1,166 @@
+/* VS Code のテーマ変数だけを使い、標準の見た目に合わせる */
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+  padding: 0.5em 1em;
+  background: var(--vscode-editor-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  padding: 0 0.5em;
+  border-radius: 0.75em;
+  font-size: 0.85em;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.status[data-status='waiting'] {
+  background: var(--vscode-editorWarning-foreground);
+  color: var(--vscode-editor-background);
+}
+
+.status[data-status='failed'] {
+  background: var(--vscode-editorError-foreground);
+  color: var(--vscode-editor-background);
+}
+
+.model {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.transcript {
+  flex: 1;
+  padding: 0.5em 1em 1em;
+}
+
+.item {
+  margin: 0.5em 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.item.prompt {
+  padding: 0.5em 0.75em;
+  border-left: 3px solid var(--vscode-textLink-foreground);
+  background: var(--vscode-textBlockQuote-background);
+}
+
+.item.tool {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.item.tool summary {
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+}
+
+.item.tool[data-status='running'] summary::before {
+  content: '… ';
+}
+
+.item.tool[data-status='ok'] summary::before {
+  content: '✓ ';
+  color: var(--vscode-testing-iconPassed);
+}
+
+.item.tool[data-status='error'] summary::before {
+  content: '✗ ';
+  color: var(--vscode-editorError-foreground);
+}
+
+.tool-name {
+  font-weight: 600;
+  margin-right: 0.5em;
+}
+
+.tool-output {
+  margin: 0.25em 0 0 1em;
+  padding: 0.5em;
+  max-height: 20em;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+.item.error {
+  color: var(--vscode-editorError-foreground);
+}
+
+.item.interrupted,
+.item.running {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.5em;
+  padding: 0.5em 1em;
+  background: var(--vscode-editor-background);
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.prompt-input {
+  flex: 1;
+  resize: vertical;
+  padding: 0.5em;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.prompt-input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.action {
+  align-self: flex-end;
+  padding: 0.4em 1em;
+  border: none;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+.action:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.action.stop {
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+}

@@ -48,6 +48,9 @@ export function checkPackageFiles(
     const main = normalize(manifest.main);
     allowed.push(new RegExp('^' + escapeRegExp(main) + '$'));
     required.push(main);
+    // main と同じフォルダの .js と .css は Webview のバンドルなので入れてよい
+    const dir = main.replace(/\/[^/]*$/, '');
+    allowed.push(new RegExp('^' + escapeRegExp(dir) + '/[\\w.-]+\\.(js|css)$'));
   }
   if (manifest.l10n) {
     const dir = normalize(manifest.l10n).replace(/\/$/, '');

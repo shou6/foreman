@@ -42,7 +42,7 @@ suite('webview App', () => {
         post={() => {}}
       />
     );
-    assert.ok(html.includes('Fix &lt;it&gt;'), 'HTML はエスケープされる');
+    assert.ok(html.includes('Fix &lt;it') && !html.includes('<it>'), 'HTML はエスケープされる');
     assert.ok(html.includes('Sure'));
     assert.ok(html.includes('Edit'));
     assert.ok(html.includes('a.txt'));
@@ -50,7 +50,9 @@ suite('webview App', () => {
   });
 
   test('実行中は Stop、それ以外は Send のボタンを出す', () => {
-    assert.ok(render(<App state={state({ status: 'running' })} post={() => {}} />).includes('Stop'));
+    assert.ok(
+      render(<App state={state({ status: 'running' })} post={() => {}} />).includes('Stop')
+    );
     assert.ok(render(<App state={state({ status: 'done' })} post={() => {}} />).includes('Send'));
   });
 

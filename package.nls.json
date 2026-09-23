@@ -1,4 +1,15 @@
 {
-  "description": "A Visual Studio Code extension.",
-  "command.helloWorld": "Hello World"
+  "description": "Run Claude Code sessions as tasks: see who is running or waiting, approve tool calls, and review changes turn by turn.",
+  "viewContainer.title": "Foreman",
+  "view.tasks": "Tasks",
+  "viewsWelcome.noTasks": "No tasks yet.\n[New Task](command:foreman.newTask)",
+  "command.newTask": "New Task",
+  "command.openTask": "Open Task",
+  "command.stopTask": "Stop Task",
+  "command.deleteTask": "Delete Task",
+  "config.claudePath": "Path to the `claude` executable. Leave empty to search `PATH` and `~/.local/bin`.",
+  "config.defaultModel": "Model for new tasks (for example `claude-sonnet-5`). Leave empty to use the Claude Code default.",
+  "config.defaultPermissionMode": "How tool calls are approved in new tasks.",
+  "config.defaultPermissionMode.default": "Ask before every tool call (the Claude Code default).",
+  "config.defaultPermissionMode.acceptEdits": "Allow file edits automatically; ask for everything else."
 }

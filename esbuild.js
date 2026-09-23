@@ -23,28 +23,49 @@ const esbuildProblemMatcherPlugin = {
   },
 };
 
+/** @type {import('esbuild').BuildOptions} */
+const common = {
+  bundle: true,
+  minify: production,
+  sourcemap: !production,
+  sourcesContent: false,
+  logLevel: 'silent',
+  plugins: [esbuildProblemMatcherPlugin],
+};
+
+/** 拡張機能本体（Node、CJS） */
+const extension = {
+  ...common,
+  entryPoints: ['src/extension.ts'],
+  format: 'cjs',
+  platform: 'node',
+  outfile: 'dist/extension.js',
+  external: ['vscode'],
+  // Agent SDK は ESM で import.meta.url を使う。CJS に束ねると undefined になり起動時に落ちるので、
+  // 同じ意味の値に置き換える（docs/spike-results.md）
+  define: { 'import.meta.url': '__importMetaUrl' },
+  banner: { js: "const __importMetaUrl = require('node:url').pathToFileURL(__filename).href;" },
+};
+
+/** タスク画面（Webview、ブラウザ）。styles.css は同名の dist/webview.css に出る */
+const webview = {
+  ...common,
+  entryPoints: ['src/webview/main.tsx'],
+  format: 'iife',
+  platform: 'browser',
+  target: 'es2022',
+  outfile: 'dist/webview.js',
+  jsx: 'automatic',
+  jsxImportSource: 'preact',
+};
+
 async function main() {
-  const ctx = await esbuild.context({
-    entryPoints: ['src/extension.ts'],
-    bundle: true,
-    format: 'cjs',
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: 'node',
-    outfile: 'dist/extension.js',
-    external: ['vscode'],
-    logLevel: 'silent',
-    plugins: [
-      /* add to the end of plugins array */
-      esbuildProblemMatcherPlugin,
-    ],
-  });
+  const contexts = await Promise.all([esbuild.context(extension), esbuild.context(webview)]);
   if (watch) {
-    await ctx.watch();
+    await Promise.all(contexts.map((ctx) => ctx.watch()));
   } else {
-    await ctx.rebuild();
-    await ctx.dispose();
+    await Promise.all(contexts.map((ctx) => ctx.rebuild()));
+    await Promise.all(contexts.map((ctx) => ctx.dispose()));
   }
 }
 

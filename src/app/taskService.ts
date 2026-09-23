@@ -51,6 +51,7 @@ export class TaskService {
   private readonly listeners = new Set<Listener>();
   private readonly eventListeners = new Set<EventListener>();
   private readonly queues = new Map<string, Promise<unknown>>();
+  private readonly deleteListeners = new Set<(taskId: string) => void>();
 
   constructor(private readonly deps: TaskServiceDeps) {}
 
@@ -62,6 +63,11 @@ export class TaskService {
   onDidReceiveEvent(listener: EventListener): () => void {
     this.eventListeners.add(listener);
     return () => this.eventListeners.delete(listener);
+  }
+
+  onDidDelete(listener: (taskId: string) => void): () => void {
+    this.deleteListeners.add(listener);
+    return () => this.deleteListeners.delete(listener);
   }
 
   list(): Promise<Task[]> {
@@ -167,6 +173,9 @@ export class TaskService {
     }
     // 中断のイベントの処理より後に消す
     await this.serialize(id, () => this.deps.store.delete(id));
+    for (const listener of this.deleteListeners) {
+      listener(id);
+    }
   }
 
   private startOptions(task: Task, prompt: string): StartOptions {

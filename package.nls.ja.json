@@ -1,4 +1,15 @@
 {
-  "description": "Visual Studio Code の拡張機能。",
-  "command.helloWorld": "Hello World"
+  "description": "Claude Code のセッションをタスクとして動かす。実行中と入力待ちを一目で確かめ、ツールの実行を承認し、変更をターンごとに確認できる。",
+  "viewContainer.title": "Foreman",
+  "view.tasks": "タスク",
+  "viewsWelcome.noTasks": "タスクはまだありません。\n[新しいタスク](command:foreman.newTask)",
+  "command.newTask": "新しいタスク",
+  "command.openTask": "タスクを開く",
+  "command.stopTask": "タスクを停止",
+  "command.deleteTask": "タスクを削除",
+  "config.claudePath": "`claude` の実行ファイルの場所。空なら `PATH` と `~/.local/bin` から探す。",
+  "config.defaultModel": "新しいタスクで使うモデル（例：`claude-sonnet-5`）。空なら Claude Code の既定に従う。",
+  "config.defaultPermissionMode": "新しいタスクでのツール実行の承認方式。",
+  "config.defaultPermissionMode.default": "ツールの実行のたびに確認する（Claude Code の既定）。",
+  "config.defaultPermissionMode.acceptEdits": "ファイルの編集は自動で許可し、それ以外は確認する。"
 }

@@ -2,7 +2,9 @@
   "compilerOptions": {
     "module": "Node16",
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "types": ["node", "mocha"],
     "sourceMap": true,
     "rootDir": "src",
