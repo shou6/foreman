@@ -449,7 +449,7 @@ suite('AgentSdkRunner', () => {
 
 suite('AgentSdkRunner: M3', () => {
   const base = {
-    cwd: 'D:\work',
+    cwd: 'D:\\work',
     prompt: 'hello',
     permissionMode: 'default' as const,
     alwaysAllowed: [],
@@ -491,5 +491,23 @@ suite('AgentSdkRunner: M3', () => {
     assert.deepStrictEqual(events, [
       { type: 'turn-end', ok: false, interrupted: false, reason: 'Claude Code CLI was not found' },
     ]);
+  });
+});
+
+suite('AgentSdkRunner: setModel', () => {
+  test('setModel は SDK の setModel に渡す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await handle.setModel('claude-opus-5');
+    await handle.setModel(undefined);
+    assert.deepStrictEqual(fake.models, ['claude-opus-5', undefined]);
   });
 });
