@@ -30,6 +30,8 @@ export interface TaskPanelDeps {
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
   exportTask: (taskId: string) => Promise<void>;
+  /** タスク名の変更（入力のダイアログを含む） */
+  renameTask: (taskId: string) => Promise<void>;
   /** 貼り付けた画像を保存して、そのパスを返す */
   savePastedImage: (mime: string, base64: string) => Promise<string>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
@@ -260,6 +262,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'export':
           await this.deps.exportTask(taskId);
           return;
+        case 'rename':
+          await this.deps.renameTask(taskId);
+          return;
         case 'rewind':
           await this.deps.checkpoint.rewind(taskId, message.turn);
           return;
@@ -385,6 +390,7 @@ export class TaskPanels implements vscode.Disposable {
         discard: vscode.l10n.t('Discard'),
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
         export: vscode.l10n.t('Export'),
+        rename: vscode.l10n.t('Rename'),
         merging: vscode.l10n.t('Merging…'),
         discarding: vscode.l10n.t('Discarding…'),
         alwaysScope: vscode.l10n.t('"Always allow" would allow'),

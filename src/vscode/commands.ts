@@ -171,6 +171,14 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         }
       })();
     }),
+    vscode.commands.registerCommand('foreman.renameTask', (arg: unknown) => {
+      return withError(async () => {
+        const id = taskIdOf(arg) ?? (await pickTask());
+        if (id !== undefined) {
+          await renameTask(service, id);
+        }
+      })();
+    }),
     // 一覧の右クリック「ここから切り出す」。最後のターンから分岐する（FR-TASK-12）
     vscode.commands.registerCommand('foreman.forkTask', (arg: unknown) => {
       return withError(async () => {
@@ -262,4 +270,21 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       }
     )
   );
+}
+
+/** タスク名を聞いて変える。空なら何もしない */
+export async function renameTask(service: TaskService, taskId: string): Promise<void> {
+  const task = await service.load(taskId);
+  if (task === undefined) {
+    return;
+  }
+  const title = await vscode.window.showInputBox({
+    title: vscode.l10n.t('Rename Task'),
+    value: task.title,
+    ignoreFocusOut: true,
+  });
+  if (title === undefined || title.trim() === '') {
+    return;
+  }
+  await service.rename(taskId, title);
 }

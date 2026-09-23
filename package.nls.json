@@ -26,6 +26,7 @@
   "command.exportTask": "Export Task as Markdown",
   "command.attachSelectionToTask": "Foreman: Attach Selection to Task",
   "command.forkTask": "Fork Task",
+  "command.renameTask": "Rename Task",
   "command.approveTask": "Approve Changes",
   "command.startTask": "Start Draft",
   "command.editDraft": "Edit Draft",

@@ -121,5 +121,7 @@
   "Attach": "添付",
   "Context": "コンテキスト",
   "Context of this task": "このタスクのコンテキスト",
-  "Tokens today (all tasks)": "今日のトークン（全タスク）"
+  "Tokens today (all tasks)": "今日のトークン（全タスク）",
+  "Rename": "名前を変更",
+  "Rename Task": "タスク名を変更"
 }

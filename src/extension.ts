@@ -19,7 +19,7 @@ import { DiffService } from './app/diffService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
 import { WorktreeService } from './app/worktreeService';
-import { registerCommands } from './vscode/commands';
+import { registerCommands, renameTask } from './vscode/commands';
 import { Notifications } from './vscode/notifications';
 import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
@@ -167,6 +167,7 @@ export async function activate(
     approve: (taskId) => review.approve(taskId),
     sources,
     savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
+    renameTask: (taskId) => renameTask(service, taskId),
     checkpoint: {
       rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
       fork: (taskId, turn) => checkpoints.fork(taskId, turn),

@@ -45,6 +45,7 @@ const STRINGS = {
   discard: 'Discard',
   toolCalls: '{0} tool calls',
   export: 'Export',
+  rename: 'Rename',
   merging: 'Merging…',
   discarding: 'Discarding…',
   alwaysScope: '"Always allow" would allow',

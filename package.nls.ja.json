@@ -26,6 +26,7 @@
   "command.exportTask": "タスクを Markdown に書き出す",
   "command.attachSelectionToTask": "Foreman: 選択範囲をタスクに添付",
   "command.forkTask": "タスクを切り出す",
+  "command.renameTask": "タスク名を変更",
   "command.approveTask": "変更を承認",
   "command.startTask": "下書きを開始",
   "command.editDraft": "下書きを編集",

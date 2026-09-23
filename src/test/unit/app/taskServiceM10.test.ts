@@ -166,3 +166,13 @@ suite('TaskService: 並べ替え（M10）', () => {
     assert.strictEqual((await h.service.load('task-2'))?.order, 2);
   });
 });
+
+suite('TaskService: タスク名の変更', () => {
+  test('任意の名前に変えられる。空白だけは受け付けない', async () => {
+    const h = build();
+    await h.service.createDraft({ prompt: 'a long prompt', cwd: 'D:\w' });
+    await h.service.rename('task-1', '  短い名前  ');
+    assert.strictEqual((await h.service.load('task-1'))?.title, '短い名前');
+    await assert.rejects(h.service.rename('task-1', '   '), /empty/);
+  });
+});

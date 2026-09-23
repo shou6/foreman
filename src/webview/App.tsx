@@ -79,7 +79,9 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
       style={`--foreman-max-width: ${state.maxWidthEm > 0 ? `${state.maxWidthEm}em` : 'none'}`}
     >
       <header class="head">
-        <h1 class="title">{state.title}</h1>
+        <button class="title" title={state.strings.rename} onClick={() => post({ type: 'rename' })}>
+          {state.title}
+        </button>
         <span class="status" data-status={state.status}>
           {state.strings.statusLabels[state.status]}
         </span>

@@ -143,6 +143,12 @@
         "icon": "$(export)"
       },
       {
+        "command": "foreman.renameTask",
+        "title": "%command.renameTask%",
+        "category": "Foreman",
+        "icon": "$(edit)"
+      },
+      {
         "command": "foreman.forkTask",
         "title": "%command.forkTask%",
         "category": "Foreman",
@@ -265,6 +271,11 @@
           "command": "foreman.forkTask",
           "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && !foremanOpen && foremanStatus != 'draft'",
           "group": "3_more@1"
+        },
+        {
+          "command": "foreman.renameTask",
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "group": "3_more@0"
         },
         {
           "command": "foreman.exportTask",

@@ -29,10 +29,31 @@ body {
 
 .title {
   margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
   font-size: 1.05em;
   font-weight: 600;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.title:hover {
+  text-decoration: underline dotted;
+}
+
+/* 見出しのボタンは折り返さず、狭い時は行を分ける */
+.head {
+  flex-wrap: wrap;
+}
+
+.head .ghost,
+.head .meter {
   white-space: nowrap;
 }
 

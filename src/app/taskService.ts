@@ -239,6 +239,17 @@ export class TaskService {
     });
   }
 
+  /** タスク名を変える（任意の文字列）。空白だけは受け付けない */
+  async rename(id: string, title: string): Promise<void> {
+    const trimmed = title.trim();
+    if (trimmed === '') {
+      throw new Error('title must not be empty');
+    }
+    await this.update(id, (task) =>
+      task.title === trimmed ? undefined : { ...task, title: trimmed }
+    );
+  }
+
   /** ボードの並び。渡した順に order を振る */
   async reorder(ids: readonly string[]): Promise<void> {
     for (const [order, id] of ids.entries()) {

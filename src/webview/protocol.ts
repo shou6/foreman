@@ -47,6 +47,8 @@ export interface PanelStrings {
   /** {0} に件数が入る */
   toolCalls: string;
   export: string;
+  /** 題名を押した時の説明（名前の変更） */
+  rename: string;
   merging: string;
   discarding: string;
   /** 「常に許可」で許可する内容の見出し */
@@ -150,6 +152,8 @@ export type ToExtension =
   | { type: 'discard' }
   /** タスクを Markdown に書き出す */
   | { type: 'export' }
+  /** タスク名の変更（入力は拡張機能側のダイアログ） */
+  | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */
   | { type: 'rewind'; turn: number }
   /** 指定のターンの直後から新しいタスクを切り出す。FR-TASK-12 */

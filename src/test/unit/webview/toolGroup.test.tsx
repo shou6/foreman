@@ -43,6 +43,7 @@ const STRINGS = {
   discard: 'Discard',
   toolCalls: '{0} tool calls',
   export: 'Export',
+  rename: 'Rename',
   merging: 'Merging…',
   discarding: 'Discarding…',
   alwaysScope: '"Always allow" would allow',
@@ -117,5 +118,14 @@ suite('webview: ツールの呼び出しのたたみ', () => {
     assert.ok(html.includes('>Export<'));
     const message: ToExtension = { type: 'export' };
     assert.strictEqual(message.type, 'export');
+  });
+});
+
+suite('webview: タスク名の変更', () => {
+  test('見出しの題名はボタンで、押すと rename のメッセージを送る', () => {
+    const html = render(<App state={state({})} post={() => {}} />);
+    assert.ok(/<button[^>]*class="title"[^>]*title="Rename"/.test(html));
+    const message: ToExtension = { type: 'rename' };
+    assert.strictEqual(message.type, 'rename');
   });
 });
