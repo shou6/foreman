@@ -8,17 +8,20 @@ import { resolveClaudePath } from './adapters/claudePath';
 import { FsSnapshotStore } from './adapters/fsSnapshotStore';
 import { FsTaskStore } from './adapters/fsTaskStore';
 import { FsTranscriptStore } from './adapters/fsTranscriptStore';
+import { GitCli } from './adapters/gitCli';
 import { NodeFileSystem } from './adapters/nodeFileSystem';
 import { ApprovalService } from './app/approvalService';
 import { DiffService } from './app/diffService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
+import { WorktreeService } from './app/worktreeService';
 import { registerCommands } from './vscode/commands';
 import { Notifications } from './vscode/notifications';
 import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
 import { SNAPSHOT_SCHEME, TaskPanels } from './vscode/taskPanel';
 import { TaskTreeProvider } from './vscode/taskTreeView';
+import { WorktreeActions } from './vscode/worktreeActions';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -49,7 +52,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       approvals.cancel(task.id);
     }
   });
-  // 前回の履歴を読んでから、前回の終了で途中だったタスクを中断に直す（中断の記録が履歴にも残る）
   // Claude との通信の記録（いつ・どのタスクが・何を使ったか）を出力パネルへ
   const stamp = (): string => new Date().toISOString();
   service.onDidReceiveEvent(({ taskId, turn, event }) => {
@@ -70,15 +72,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   service.onDidChange((task) => {
     output.appendLine(`${stamp()} [${task.id}] ${task.status} "${task.title}"`);
   });
+  // 前回の履歴を読んでから、前回の終了で途中だったタスクを中断に直す（中断の記録が履歴にも残る）
   const transcripts = new Transcripts(service, transcriptStore, await transcriptStore.loadAll());
   await service.recover();
   const diffs = new DiffService({ service, fs: new NodeFileSystem(), snapshots, sep: path.sep });
+  const worktrees = new WorktreeService({ git: new GitCli(), sep: path.sep });
+  const worktreeActions = new WorktreeActions(service, worktrees);
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
     transcripts,
     approvals,
     diffs,
+    finish: {
+      merge: (taskId) => worktreeActions.merge(taskId),
+      discard: (taskId) => worktreeActions.discard(taskId),
+    },
   });
   const tree = new TaskTreeProvider(service);
 
@@ -100,10 +109,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     { dispose: () => service.dispose() },
     { dispose: () => void transcriptStore.flush() }
   );
-  registerCommands(context, { service, panels, settings: readSettings });
+  registerCommands(context, {
+    service,
+    panels,
+    settings: readSettings,
+    worktrees,
+    worktreeActions,
+    newId: () => randomUUID(),
+  });
+
+  // タスクの無い worktree（前回の異常終了で残ったものなど）を片付ける
+  void cleanupWorktrees(service, worktrees, output);
 }
 
 export function deactivate(): void {}
+
+async function cleanupWorktrees(
+  service: TaskService,
+  worktrees: WorktreeService,
+  output: vscode.OutputChannel
+): Promise<void> {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  if (folder === undefined) {
+    return;
+  }
+  try {
+    const repo = await worktrees.repoRoot(folder.uri.fsPath);
+    if (repo === undefined) {
+      return;
+    }
+    const inUse = (await service.list())
+      .map((task) => task.worktree?.path)
+      .filter((p): p is string => p !== undefined);
+    await worktrees.cleanupOrphans(repo, inUse);
+  } catch (error) {
+    output.appendLine(
+      `worktree cleanup failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 
 /** ユーザーの claude CLI の場所。見つからなければ、設定を案内する文言で失敗する */
 function locateClaude(): string {

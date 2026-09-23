@@ -17,5 +17,8 @@
   "config.defaultPermissionMode.default": "Ask before every tool call (the Claude Code default).",
   "config.defaultPermissionMode.acceptEdits": "Allow file edits automatically; ask for everything else.",
   "command.attachToTask": "Foreman: Attach to Task",
-  "config.taskViewWidth": "Maximum width of the task view content, in em. 0 uses the full width."
+  "config.taskViewWidth": "Maximum width of the task view content, in em. 0 uses the full width.",
+  "command.mergeTask": "Merge Worktree into Base Branch",
+  "command.discardTask": "Discard Worktree",
+  "config.useWorktree": "Run new tasks in a git worktree by default. You can still choose per task."
 }

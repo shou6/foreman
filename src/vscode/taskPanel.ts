@@ -22,6 +22,8 @@ export interface TaskPanelDeps {
   transcripts: Transcripts;
   approvals: ApprovalService;
   diffs: DiffService;
+  /** worktree のマージと破棄（確認や後始末は呼ぶ側が行う） */
+  finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
 }
 
 /** タスク画面（WebviewPanel）。タスクごとに 1 つだけ開き、既に開いていれば前面に出す */
@@ -43,6 +45,7 @@ export class TaskPanels implements vscode.Disposable {
             title: task.title,
             model: task.model,
             activeModel: task.activeModel,
+            worktree: task.worktree,
           });
           for (const turn of task.turns) {
             if (turn.changes.length > 0) {
@@ -158,6 +161,12 @@ export class TaskPanels implements vscode.Disposable {
               .map((u) => u.fsPath)
           );
           return;
+        case 'merge':
+          await this.deps.finish.merge(taskId);
+          return;
+        case 'discard':
+          await this.deps.finish.discard(taskId);
+          return;
         case 'removeAttachment': {
           const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
           this.attachments.set(taskId, next);
@@ -210,6 +219,7 @@ export class TaskPanels implements vscode.Disposable {
       diffs: {},
       attachments: this.attachments.get(task.id) ?? [],
       maxWidthEm: readSettings().taskViewWidth,
+      worktree: task.worktree,
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
@@ -240,6 +250,9 @@ export class TaskPanels implements vscode.Disposable {
           failed: statusLabel('failed'),
           interrupted: statusLabel('interrupted'),
         },
+        worktree: vscode.l10n.t('worktree'),
+        merge: vscode.l10n.t('Merge into {0}', '{0}'),
+        discard: vscode.l10n.t('Discard'),
       },
     };
   }

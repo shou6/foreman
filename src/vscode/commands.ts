@@ -1,13 +1,19 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
+import type { WorktreeService } from '../app/worktreeService';
+import type { Worktree } from '../domain/task';
+import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
 import { statusLabel, type TreeNode } from './taskTreeView';
-import type { Settings } from './settings';
+import type { WorktreeActions } from './worktreeActions';
 
 export interface CommandDeps {
   service: TaskService;
   panels: TaskPanels;
   settings: () => Settings;
+  worktrees: WorktreeService;
+  worktreeActions: WorktreeActions;
+  newId: () => string;
 }
 
 function taskIdOf(arg: unknown): string | undefined {
@@ -19,7 +25,7 @@ function taskIdOf(arg: unknown): string | undefined {
 }
 
 export function registerCommands(context: vscode.ExtensionContext, deps: CommandDeps): void {
-  const { service, panels } = deps;
+  const { service, panels, worktrees, worktreeActions } = deps;
   const withError = (run: () => Promise<void>) => async (): Promise<void> => {
     try {
       await run();
@@ -51,6 +57,29 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     return picked?.id;
   };
 
+  /** Git リポジトリなら worktree を使うか聞く。使うなら作って返す。中止なら null */
+  const chooseWorktree = async (
+    folder: string,
+    prompt: string,
+    taskId: string
+  ): Promise<Worktree | undefined | null> => {
+    const repo = await worktrees.repoRoot(folder);
+    if (repo === undefined) {
+      return undefined;
+    }
+    const yes = vscode.l10n.t('Yes, in a worktree');
+    const no = vscode.l10n.t('No, in the workspace folder');
+    const preferred = deps.settings().useWorktree ? [yes, no] : [no, yes];
+    const choice = await vscode.window.showQuickPick(preferred, {
+      title: vscode.l10n.t('Run this task in a git worktree?'),
+      ignoreFocusOut: true,
+    });
+    if (choice === undefined) {
+      return null;
+    }
+    return choice === yes ? worktrees.create(repo, prompt, taskId) : undefined;
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'foreman.newTask',
@@ -70,10 +99,17 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         if (prompt === undefined || prompt.trim() === '') {
           return;
         }
+        const taskId = deps.newId();
+        const worktree = await chooseWorktree(folder.uri.fsPath, prompt.trim(), taskId);
+        if (worktree === null) {
+          return;
+        }
         const settings = deps.settings();
         const task = await service.create({
+          id: taskId,
           prompt: prompt.trim(),
           cwd: folder.uri.fsPath,
+          worktree,
           model: settings.defaultModel,
           permissionMode: settings.defaultPermissionMode,
         });
@@ -108,10 +144,28 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           { modal: true },
           yes
         );
-        if (choice === yes) {
+        if (choice !== yes) {
+          return;
+        }
+        if (task.status === 'running' || task.status === 'waiting') {
+          await service.stop(id);
+        }
+        if (await worktreeActions.beforeDelete(id)) {
           await service.delete(id);
         }
       })();
+    }),
+    vscode.commands.registerCommand('foreman.mergeTask', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        void withError(() => worktreeActions.merge(id))();
+      }
+    }),
+    vscode.commands.registerCommand('foreman.discardTask', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        void withError(() => worktreeActions.discard(id))();
+      }
     }),
     // エクスプローラーとタブの右クリック「タスクに添付」（FR-VIEW-5）
     vscode.commands.registerCommand(

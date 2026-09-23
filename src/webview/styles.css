@@ -655,3 +655,12 @@ body.dragging .composer {
 .diff-line[data-kind='del'] .diff-sign {
   color: var(--vscode-gitDecoration-deletedResourceForeground);
 }
+
+.head-spacer {
+  flex: 1;
+}
+
+.ghost.merge {
+  border-color: var(--vscode-button-background);
+  color: var(--vscode-button-background);
+}

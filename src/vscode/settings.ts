@@ -9,6 +9,8 @@ export interface Settings {
   notifications: NotificationSetting;
   /** タスク画面の本文の最大の幅（em）。0 なら画面いっぱい */
   taskViewWidth: number;
+  /** 新しいタスクで worktree を使うかの既定 */
+  useWorktree: boolean;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -26,5 +28,6 @@ export function readSettings(): Settings {
     defaultPermissionMode: mode === 'acceptEdits' ? 'acceptEdits' : 'default',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
+    useWorktree: config.get<boolean>('useWorktree', false),
   };
 }

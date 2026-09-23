@@ -42,5 +42,17 @@
   "Open diff": "差分を開く",
   "$(sync~spin) {0} running": "$(sync~spin) 実行中 {0}",
   "$(bell) {0} waiting": "$(bell) 入力待ち {0}",
-  "Done": "完了"
+  "Done": "完了",
+  "worktree": "worktree",
+  "Merge into {0}": "{0} にマージ",
+  "Discard": "破棄",
+  "Run this task in a git worktree?": "このタスクを git worktree の中で動かしますか？",
+  "Yes, in a worktree": "はい、worktree で",
+  "No, in the workspace folder": "いいえ、開いているフォルダで",
+  "Merged {0} into {1}.": "{0} を {1} にマージしました。",
+  "Discard the worktree of \"{0}\"? Unmerged changes will be lost.": "タスク「{0}」の worktree を破棄しますか？ マージしていない変更は失われます。",
+  "Task \"{0}\" has unmerged changes in its worktree. Delete the task and discard them?": "タスク「{0}」の worktree にマージしていない変更があります。タスクを削除して変更を捨てますか？",
+  "Merge failed: {0}": "マージに失敗しました: {0}",
+  "This task does not use a worktree.": "このタスクは worktree を使っていません。",
+  "Stop the task before merging or discarding its worktree.": "worktree をマージ・破棄する前に、タスクを止めてください。"
 }

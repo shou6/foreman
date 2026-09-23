@@ -101,6 +101,18 @@
         "title": "%command.attachToTask%",
         "category": "Foreman",
         "icon": "$(attach)"
+      },
+      {
+        "command": "foreman.mergeTask",
+        "title": "%command.mergeTask%",
+        "category": "Foreman",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "foreman.discardTask",
+        "title": "%command.discardTask%",
+        "category": "Foreman",
+        "icon": "$(discard)"
       }
     ],
     "menus": {
@@ -120,6 +132,14 @@
         {
           "command": "foreman.attachToTask",
           "when": "editorIsOpen"
+        },
+        {
+          "command": "foreman.mergeTask",
+          "when": "false"
+        },
+        {
+          "command": "foreman.discardTask",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -139,6 +159,16 @@
           "command": "foreman.deleteTask",
           "when": "view == foreman.tasks && viewItem != group",
           "group": "inline@2"
+        },
+        {
+          "command": "foreman.mergeTask",
+          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted) worktree$/",
+          "group": "worktree@1"
+        },
+        {
+          "command": "foreman.discardTask",
+          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted) worktree$/",
+          "group": "worktree@2"
         }
       ],
       "explorer/context": [
@@ -202,6 +232,11 @@
           "default": 72,
           "minimum": 0,
           "description": "%config.taskViewWidth%"
+        },
+        "foreman.useWorktree": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.useWorktree%"
         }
       }
     }

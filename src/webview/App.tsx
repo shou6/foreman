@@ -75,6 +75,20 @@ export function App({ state, post }: AppProps) {
             {state.activeModel}
           </span>
         )}
+        {state.worktree !== undefined && (
+          <>
+            <span class="chip" title={state.strings.worktree}>
+              {state.worktree.branch}
+            </span>
+            <span class="head-spacer" />
+            <button class="ghost merge" disabled={busy} onClick={() => post({ type: 'merge' })}>
+              {state.strings.merge.replace('{0}', state.worktree.base)}
+            </button>
+            <button class="ghost discard" disabled={busy} onClick={() => post({ type: 'discard' })}>
+              {state.strings.discard}
+            </button>
+          </>
+        )}
       </header>
       <main class="transcript">
         {groupTools(state.items).map((block, i) => (

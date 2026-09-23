@@ -68,9 +68,9 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     const item = new vscode.TreeItem(task.title, vscode.TreeItemCollapsibleState.None);
     item.id = task.id;
     item.iconPath = new vscode.ThemeIcon(ICONS[task.status]);
-    item.description = task.model;
+    item.description = task.worktree === undefined ? task.model : task.worktree.branch;
     item.tooltip = task.turns[task.turns.length - 1]?.prompt;
-    item.contextValue = task.status;
+    item.contextValue = task.worktree === undefined ? task.status : `${task.status} worktree`;
     item.command = {
       command: 'foreman.openTask',
       title: vscode.l10n.t('Open Task'),

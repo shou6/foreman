@@ -25,6 +25,8 @@ export interface TaskServiceDeps {
 }
 
 export interface CreateInput {
+  /** 先に決めた ID。省略すれば newId で作る */
+  id?: string;
   prompt: string;
   cwd: string;
   title?: string;
@@ -117,7 +119,7 @@ export class TaskService {
   async create(input: CreateInput): Promise<Task> {
     const now = this.deps.now();
     const created = createTask({
-      id: this.deps.newId(),
+      id: input.id ?? this.deps.newId(),
       prompt: input.prompt,
       cwd: input.cwd,
       worktree: input.worktree,

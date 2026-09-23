@@ -32,6 +32,10 @@ export interface PanelStrings {
   dropHint: string;
   /** 状態の表示名 */
   statusLabels: Record<TaskStatus, string>;
+  worktree: string;
+  /** {0} に元のブランチが入る */
+  merge: string;
+  discard: string;
 }
 
 export interface PanelState {
@@ -55,13 +59,22 @@ export interface PanelState {
   attachments: string[];
   /** 本文の最大の幅（em）。0 なら画面いっぱい */
   maxWidthEm: number;
+  /** タスクが使う worktree。無ければ undefined */
+  worktree?: { branch: string; base: string };
   strings: PanelStrings;
 }
 
 /** 拡張機能 → Webview */
 export type ToWebview =
   | { type: 'state'; state: PanelState }
-  | { type: 'task'; status: TaskStatus; title: string; model?: string; activeModel?: string }
+  | {
+      type: 'task';
+      status: TaskStatus;
+      title: string;
+      model?: string;
+      activeModel?: string;
+      worktree?: { branch: string; base: string };
+    }
   | { type: 'pending'; pending: PendingRequest | undefined }
   | { type: 'changes'; turn: number; changes: FileChange[] }
   | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
@@ -80,7 +93,10 @@ export type ToExtension =
   | { type: 'setModel'; model: string | undefined }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
-  | { type: 'removeAttachment'; path: string };
+  | { type: 'removeAttachment'; path: string }
+  /** worktree の変更を元のブランチへマージする / 捨てる */
+  | { type: 'merge' }
+  | { type: 'discard' };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;
