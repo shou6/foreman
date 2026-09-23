@@ -97,7 +97,7 @@ suite('webview: 差分カード', () => {
   test('ターンの終わりに、変更されたファイルと行数を並べる', () => {
     const html = render(<App state={state({ changes: { 0: CHANGES } })} post={() => {}} />);
     assert.ok(html.includes('class="diff-card'));
-    assert.ok(html.includes('src/a.ts'));
+    assert.ok(html.includes('a.ts') && html.includes('src/'));
     assert.ok(html.includes('+3'));
     assert.ok(html.includes('-1'));
     assert.ok(html.includes('Open in diff editor'));

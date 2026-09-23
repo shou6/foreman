@@ -27,12 +27,12 @@ export class StatusBar implements vscode.Disposable {
     }
     const parts: string[] = [];
     if (running > 0) {
-      parts.push(`$(sync~spin) ${running}`);
+      parts.push(vscode.l10n.t('$(sync~spin) {0} running', String(running)));
     }
     if (waiting > 0) {
-      parts.push(`$(bell) ${waiting}`);
+      parts.push(vscode.l10n.t('$(bell) {0} waiting', String(waiting)));
     }
-    this.item.text = parts.join(' ');
+    this.item.text = 'Foreman: ' + parts.join(' · ');
     this.item.tooltip = vscode.l10n.t(
       'Foreman: {0} running, {1} waiting for input',
       String(running),

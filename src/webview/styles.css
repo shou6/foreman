@@ -1,4 +1,4 @@
-/* VS Code のテーマ変数だけを使い、標準の見た目に合わせる */
+/* VS Code のテーマ変数だけを使い、標準の見た目に合わせる。配置はラフの画面（サービス案）に寄せる */
 body {
   margin: 0;
   padding: 0;
@@ -14,32 +14,44 @@ body {
   min-height: 100vh;
 }
 
+/* 見出し */
 .head {
   position: sticky;
   top: 0;
+  z-index: 1;
   display: flex;
-  align-items: baseline;
-  gap: 0.75em;
-  padding: 0.5em 1em;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.6em 1.2em;
   background: var(--vscode-editor-background);
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .title {
   margin: 0;
-  font-size: 1.1em;
+  font-size: 1.05em;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.status,
+.chip {
+  padding: 0.1em 0.6em;
+  border-radius: 0.8em;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
 .status {
-  padding: 0 0.5em;
-  border-radius: 0.75em;
-  font-size: 0.85em;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
+}
+
+.status[data-status='running'] {
+  background: var(--vscode-testing-iconQueued, var(--vscode-badge-background));
+  color: var(--vscode-editor-background);
 }
 
 .status[data-status='waiting'] {
@@ -52,64 +64,95 @@ body {
   color: var(--vscode-editor-background);
 }
 
-.model {
+.chip {
+  border: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family);
+}
+
+/* 会話 */
+.transcript {
+  flex: 1;
+  max-width: 60em;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0.75em 1.2em 1em;
+}
+
+.item {
+  margin: 0.6em 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+/* 指示の吹き出し */
+.item.prompt {
+  margin: 1em 0 1em 3em;
+  padding: 0.6em 0.9em;
+  border-radius: 10px 10px 2px 10px;
+  background: var(--vscode-textBlockQuote-background);
+  border: 1px solid var(--vscode-panel-border);
+}
+
+/* 連続するツールの呼び出し。1 行に並べ、開くと出力が見える */
+.item.tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 1em;
+  margin: 0.3em 0;
+  font-family: var(--vscode-editor-font-family);
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
 }
 
-.transcript {
-  flex: 1;
-  padding: 0.5em 1em 1em;
-}
-
-.item {
-  margin: 0.5em 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.5;
-}
-
-.item.prompt {
-  padding: 0.5em 0.75em;
-  border-left: 3px solid var(--vscode-textLink-foreground);
-  background: var(--vscode-textBlockQuote-background);
-}
-
-.item.tool {
-  font-family: var(--vscode-editor-font-family);
-  font-size: 0.9em;
-}
-
-.item.tool summary {
+.tool summary {
   cursor: pointer;
-  color: var(--vscode-descriptionForeground);
+  list-style: none;
 }
 
-.item.tool[data-status='running'] summary::before {
-  content: '… ';
+.tool summary::-webkit-details-marker {
+  display: none;
 }
 
-.item.tool[data-status='ok'] summary::before {
-  content: '✓ ';
+.tool summary::before {
+  content: '·';
+  margin-right: 0.4em;
+}
+
+.tool[data-status='running'] summary::before {
+  content: '…';
+}
+
+.tool[data-status='ok'] summary::before {
+  content: '✓';
   color: var(--vscode-testing-iconPassed);
 }
 
-.item.tool[data-status='error'] summary::before {
-  content: '✗ ';
+.tool[data-status='error'] summary::before {
+  content: '✗';
   color: var(--vscode-editorError-foreground);
 }
 
 .tool-name {
   font-weight: 600;
-  margin-right: 0.5em;
+  margin-right: 0.4em;
 }
 
 .tool-output {
-  margin: 0.25em 0 0 1em;
+  flex-basis: 100%;
+  margin: 0.25em 0 0.5em 1em;
   padding: 0.5em;
   max-height: 20em;
   overflow: auto;
   background: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+}
+
+.tool[open] {
+  flex-basis: 100%;
 }
 
 .item.error {
@@ -122,23 +165,32 @@ body {
   font-style: italic;
 }
 
+/* 入力欄 */
 .composer {
   position: sticky;
   bottom: 0;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
   gap: 0.5em;
-  padding: 0.5em 1em;
+  max-width: 60em;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0.6em 1.2em 0.8em;
   background: var(--vscode-editor-background);
   border-top: 1px solid var(--vscode-panel-border);
 }
 
 .prompt-input {
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   resize: vertical;
-  padding: 0.5em;
+  padding: 0.6em;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 6px;
   font-family: inherit;
   font-size: inherit;
 }
@@ -147,12 +199,40 @@ body {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
+.composer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.composer-spacer {
+  flex: 1;
+}
+
+.model-select select {
+  padding: 0.25em 0.5em;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9em;
+}
+
+.waiting-note {
+  padding: 0.6em 0;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
 .action {
-  align-self: flex-end;
   padding: 0.4em 1em;
   border: none;
+  border-radius: 4px;
   color: var(--vscode-button-foreground);
   background: var(--vscode-button-background);
+  font-family: inherit;
+  font-size: inherit;
   cursor: pointer;
 }
 
@@ -160,9 +240,83 @@ body {
   background: var(--vscode-button-hoverBackground);
 }
 
-.action.stop {
+.action.stop,
+.action.deny,
+.action.allow-always {
   color: var(--vscode-button-secondaryForeground);
   background: var(--vscode-button-secondaryBackground);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 枠だけのボタン（差分カードの操作） */
+.ghost {
+  padding: 0.15em 0.6em;
+  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* 添付 */
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.85em;
+}
+
+.attachments-label {
+  color: var(--vscode-descriptionForeground);
+}
+
+.attachment {
+  padding: 0 0.5em;
+  border-radius: 0.75em;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.attachment .link {
+  margin-left: 0.3em;
+  color: inherit;
+}
+
+body.dragging .composer {
+  outline: 2px dashed var(--vscode-focusBorder);
+  outline-offset: -4px;
 }
 
 /* 承認カードと質問カード */
@@ -171,7 +325,7 @@ body {
   margin: 0.75em 0;
   padding: 0.75em;
   border: 1px solid var(--vscode-editorWarning-foreground);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--vscode-editorWidget-background);
 }
 
@@ -205,6 +359,7 @@ body {
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 4px;
   font-family: inherit;
   font-size: inherit;
 }
@@ -215,21 +370,11 @@ body {
   flex-wrap: wrap;
 }
 
-.action.deny,
-.action.allow-always {
-  color: var(--vscode-button-secondaryForeground);
-  background: var(--vscode-button-secondaryBackground);
-}
-
-.action:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .question-group {
   margin: 0 0 0.75em;
   padding: 0.5em 0.75em;
   border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
 }
 
 .question-group legend {
@@ -259,67 +404,102 @@ body {
   font-size: 0.9em;
 }
 
-.waiting-note {
-  flex: 1;
-  align-self: center;
-  color: var(--vscode-descriptionForeground);
-  font-style: italic;
-}
-
 /* 差分カード */
 .diff-card {
   margin: 0.75em 0;
-  padding: 0.5em 0.75em;
   border: 1px solid var(--vscode-panel-border);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--vscode-editorWidget-background);
+  overflow: hidden;
 }
 
 .diff-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+  padding: 0.5em 0.9em;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.diff-card-title {
   font-weight: 600;
-  margin-bottom: 0.25em;
+}
+
+.diff-card-summary {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.diff-file {
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.diff-file:last-child {
+  border-bottom: none;
 }
 
 .diff-file-row {
   display: flex;
-  align-items: baseline;
-  gap: 0.75em;
+  align-items: center;
+  gap: 0.6em;
   flex-wrap: wrap;
+  padding: 0.4em 0.9em;
   font-family: var(--vscode-editor-font-family);
   font-size: 0.9em;
+}
+
+.diff-kind {
+  width: 1.2em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.diff-file[data-kind='created'] .diff-kind {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.diff-file[data-kind='deleted'] .diff-kind {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.diff-file[data-kind='modified'] .diff-kind {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground);
 }
 
 .diff-file-name {
   padding: 0;
   border: none;
   background: none;
-  color: var(--vscode-textLink-foreground);
+  color: var(--vscode-foreground);
   font: inherit;
   cursor: pointer;
+  text-align: left;
 }
 
-.diff-file[data-kind='created'] .diff-file-name::before {
-  content: 'A ';
+.diff-file-name:hover .file-base {
+  text-decoration: underline;
+}
+
+.file-base {
+  font-weight: 600;
+}
+
+.file-dir {
+  margin-left: 0.5em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.added {
   color: var(--vscode-gitDecoration-addedResourceForeground);
 }
 
-.diff-file[data-kind='deleted'] .diff-file-name::before {
-  content: 'D ';
+.removed {
   color: var(--vscode-gitDecoration-deletedResourceForeground);
-}
-
-.diff-file[data-kind='modified'] .diff-file-name::before {
-  content: 'M ';
-  color: var(--vscode-gitDecoration-modifiedResourceForeground);
 }
 
 .diff-counts .added {
-  color: var(--vscode-gitDecoration-addedResourceForeground);
-  margin-right: 0.5em;
-}
-
-.diff-counts .removed {
-  color: var(--vscode-gitDecoration-deletedResourceForeground);
+  margin-right: 0.4em;
 }
 
 .diff-counts .unknown,
@@ -331,35 +511,30 @@ body {
 .diff-file-actions {
   margin-left: auto;
   display: flex;
-  gap: 0.75em;
-}
-
-.link {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--vscode-textLink-foreground);
-  font: inherit;
-  cursor: pointer;
-}
-
-.link:hover {
-  text-decoration: underline;
+  gap: 0.4em;
+  align-items: center;
 }
 
 .diff-lines {
-  margin: 0.25em 0 0.5em;
+  margin: 0;
   padding: 0.25em 0;
   max-height: 30em;
   overflow: auto;
   background: var(--vscode-textCodeBlock-background);
   font-family: var(--vscode-editor-font-family);
-  font-size: 0.9em;
+  font-size: 0.85em;
+  line-height: 1.5;
 }
 
 .diff-line {
-  padding: 0 0.5em;
+  padding: 0 0.9em;
   white-space: pre;
+}
+
+.diff-sign {
+  display: inline-block;
+  width: 1.2em;
+  color: var(--vscode-descriptionForeground);
 }
 
 .diff-line[data-kind='add'] {
@@ -368,68 +543,4 @@ body {
 
 .diff-line[data-kind='del'] {
   background: var(--vscode-diffEditor-removedLineBackground);
-}
-
-/* モデルの選択と添付 */
-.model-select {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4em;
-  margin-left: auto;
-  font-size: 0.85em;
-  color: var(--vscode-descriptionForeground);
-}
-
-.model-select select {
-  color: var(--vscode-dropdown-foreground);
-  background: var(--vscode-dropdown-background);
-  border: 1px solid var(--vscode-dropdown-border, transparent);
-  font-family: inherit;
-  font-size: inherit;
-}
-
-.composer {
-  flex-direction: column;
-}
-
-.composer-row {
-  display: flex;
-  gap: 0.5em;
-}
-
-.attachments {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5em;
-  font-size: 0.85em;
-}
-
-.attachments-label {
-  color: var(--vscode-descriptionForeground);
-}
-
-.attachment {
-  padding: 0 0.5em;
-  border-radius: 0.75em;
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-}
-
-.attachment .link {
-  margin-left: 0.3em;
-  color: inherit;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-body.dragging .composer {
-  outline: 2px dashed var(--vscode-focusBorder);
-  outline-offset: -4px;
 }

@@ -26,8 +26,6 @@
   "Delete task \"{0}\"?": "タスク「{0}」を削除しますか？",
   "foreman.claudePath points to a missing file: {0}": "foreman.claudePath のファイルが見つかりません: {0}",
   "Claude Code CLI was not found. Install it and log in, or set foreman.claudePath.": "Claude Code の CLI が見つかりません。インストールしてログインするか、foreman.claudePath を設定してください。",
-  "Changes": "変更",
-  "Open in diff editor": "差分エディタで開く",
   "Revert": "戻す",
   "Reverted": "戻した",
   "Previous content unknown": "変更前は不明",
@@ -39,5 +37,10 @@
   "Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.": "追加の指示を入力（Ctrl+Enter で送信）。ファイルをここへドロップすると添付できます。エディタ領域からは Shift を押しながらドラッグしてください。",
   "No tasks to attach to. Create a task first.": "添付先のタスクがありません。先にタスクを作ってください。",
   "Attach to which task?": "どのタスクに添付しますか？",
-  "Replied": "返答済み"
+  "Replied": "返答済み",
+  "Changes in this turn": "このターンの変更",
+  "files": "ファイル",
+  "Open diff": "差分を開く",
+  "$(sync~spin) {0} running": "$(sync~spin) 実行中 {0}",
+  "$(bell) {0} waiting": "$(bell) 入力待ち {0}"
 }

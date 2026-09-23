@@ -19,6 +19,8 @@ export interface PanelStrings {
   answer: string;
   waiting: string;
   changes: string;
+  /** 差分カードの見出しの「n files」の files */
+  files: string;
   openDiff: string;
   revert: string;
   reverted: string;

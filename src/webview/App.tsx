@@ -16,6 +16,29 @@ export interface AppProps {
   post: (message: ToExtension) => void;
 }
 
+type ToolItem = TranscriptItem & { kind: 'tool' };
+
+/** 連続するツールの呼び出しを 1 つにまとめた、描画用の項目 */
+type Block = { kind: 'tools'; turn: number; tools: ToolItem[] } | Exclude<TranscriptItem, ToolItem>;
+
+/** 連続するツールの呼び出しをまとめる（ラフの「Read … · Read … · Grep …」の 1 行） */
+function groupTools(items: readonly TranscriptItem[]): Block[] {
+  const blocks: Block[] = [];
+  for (const item of items) {
+    const last = blocks[blocks.length - 1];
+    if (item.kind === 'tool') {
+      if (last?.kind === 'tools' && last.turn === item.turn) {
+        last.tools.push(item);
+      } else {
+        blocks.push({ kind: 'tools', turn: item.turn, tools: [item] });
+      }
+    } else {
+      blocks.push(item);
+    }
+  }
+  return blocks;
+}
+
 /** タスク画面。状態は拡張機能から届いたものをそのまま描く */
 export function App({ state, post }: AppProps) {
   const [draft, setDraft] = useState('');
@@ -42,40 +65,21 @@ export function App({ state, post }: AppProps) {
         <span class="status" data-status={state.status}>
           {state.strings.statusLabels[state.status]}
         </span>
-        <label class="model-select">
-          <span class="model-label">{state.strings.model}</span>
-          <select
-            value={state.model ?? ''}
-            onChange={(e) => {
-              const value = (e.target as HTMLSelectElement).value;
-              post({ type: 'setModel', model: value === '' ? undefined : value });
-            }}
-          >
-            <option value="" selected={state.model === undefined}>
-              {state.strings.defaultModel}
-            </option>
-            {modelOptions.map((m) => (
-              <option key={m} value={m} selected={m === state.model}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </label>
-        {state.activeModel !== undefined && state.activeModel !== state.model && (
-          <span class="model" title={state.strings.model}>
+        {state.activeModel !== undefined && (
+          <span class="chip" title={state.strings.model}>
             {state.activeModel}
           </span>
         )}
       </header>
       <main class="transcript">
-        {state.items.map((item, i) => (
+        {groupTools(state.items).map((block, i) => (
           <>
-            <Item key={i} item={item} />
-            {item.kind === 'turn-end' && (state.changes[item.turn]?.length ?? 0) > 0 && (
+            <BlockView key={i} block={block} />
+            {block.kind === 'turn-end' && (state.changes[block.turn]?.length ?? 0) > 0 && (
               <DiffCard
-                key={`changes-${item.turn}`}
-                turn={item.turn}
-                changes={state.changes[item.turn] ?? []}
+                key={`changes-${block.turn}`}
+                turn={block.turn}
+                changes={state.changes[block.turn] ?? []}
                 diffs={state.diffs}
                 strings={state.strings}
                 post={post}
@@ -111,25 +115,45 @@ export function App({ state, post }: AppProps) {
             ))}
           </div>
         )}
+        {state.pending !== undefined ? (
+          <div class="waiting-note">{state.strings.waiting}</div>
+        ) : (
+          <textarea
+            class="prompt-input"
+            rows={3}
+            value={draft}
+            disabled={busy}
+            placeholder={state.strings.dropHint}
+            onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+          />
+        )}
         <div class="composer-row">
-          {state.pending !== undefined ? (
-            <div class="waiting-note">{state.strings.waiting}</div>
-          ) : (
-            <textarea
-              class="prompt-input"
-              rows={3}
-              value={draft}
-              disabled={busy}
-              placeholder={state.strings.dropHint}
-              onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  submit();
-                }
+          <label class="model-select">
+            <span class="sr-only">{state.strings.model}</span>
+            <select
+              value={state.model ?? ''}
+              onChange={(e) => {
+                const value = (e.target as HTMLSelectElement).value;
+                post({ type: 'setModel', model: value === '' ? undefined : value });
               }}
-            />
-          )}
+            >
+              <option value="" selected={state.model === undefined}>
+                {state.strings.defaultModel}
+              </option>
+              {modelOptions.map((m) => (
+                <option key={m} value={m} selected={m === state.model}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span class="composer-spacer" />
           {busy ? (
             <button class="action stop" onClick={() => post({ type: 'interrupt' })}>
               {state.strings.stop}
@@ -150,25 +174,34 @@ function basename(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
-function Item({ item }: { item: TranscriptItem }) {
-  switch (item.kind) {
+function dirname(path: string): string {
+  const i = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  return i < 0 ? '' : path.slice(0, i + 1);
+}
+
+function BlockView({ block }: { block: Block }) {
+  switch (block.kind) {
     case 'prompt':
-      return <div class="item prompt">{item.text}</div>;
+      return <div class="item prompt">{block.text}</div>;
     case 'text':
-      return <div class="item text">{item.text}</div>;
-    case 'tool':
+      return <div class="item text">{block.text}</div>;
+    case 'tools':
       return (
-        <details class="item tool" data-status={item.status}>
-          <summary>
-            <span class="tool-name">{item.name}</span>
-            <span class="tool-target">{summarize(item.input)}</span>
-          </summary>
-          {item.output !== undefined && <pre class="tool-output">{item.output}</pre>}
-        </details>
+        <div class="tool-group item">
+          {block.tools.map((tool) => (
+            <details class="tool" data-status={tool.status} key={tool.id}>
+              <summary>
+                <span class="tool-name">{tool.name}</span>
+                <span class="tool-target">{summarize(tool.input)}</span>
+              </summary>
+              {tool.output !== undefined && <pre class="tool-output">{tool.output}</pre>}
+            </details>
+          ))}
+        </div>
       );
     case 'turn-end':
-      return item.ok ? null : (
-        <div class={item.interrupted ? 'item interrupted' : 'item error'}>{item.reason}</div>
+      return block.ok ? null : (
+        <div class={block.interrupted ? 'item interrupted' : 'item error'}>{block.reason}</div>
       );
   }
 }
@@ -184,9 +217,18 @@ interface DiffCardProps {
 /** ターンの差分カード（FR-DIFF-1〜7）。ファイルを開くとインラインの差分を拡張機能に求める */
 function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const added = changes.reduce((n, c) => n + (c.added ?? 0), 0);
+  const removed = changes.reduce((n, c) => n + (c.removed ?? 0), 0);
   return (
     <section class="diff-card">
-      <div class="diff-card-head">{strings.changes}</div>
+      <div class="diff-card-head">
+        <span class="diff-card-title">{strings.changes}</span>
+        <span class="diff-card-summary">
+          {changes.length} {strings.files}
+          <span class="added"> +{added}</span>
+          <span class="removed"> -{removed}</span>
+        </span>
+      </div>
       {changes.map((change) => {
         const key = diffKey(turn, change.path);
         const lines = diffs[key];
@@ -195,6 +237,9 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
         return (
           <div class="diff-file" data-kind={change.kind} key={change.path}>
             <div class="diff-file-row">
+              <span class="diff-kind" aria-hidden="true">
+                {change.kind === 'created' ? 'A' : change.kind === 'deleted' ? 'D' : 'M'}
+              </span>
               <button
                 class="diff-file-name"
                 onClick={() => {
@@ -205,7 +250,10 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
                   }
                 }}
               >
-                {change.path}
+                <span class="file-base">{basename(change.path)}</span>
+                {dirname(change.path) !== '' && (
+                  <span class="file-dir">{dirname(change.path)}</span>
+                )}
               </button>
               <span class="diff-counts">
                 {change.added !== undefined && <span class="added">+{change.added}</span>}
@@ -216,7 +264,7 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
               </span>
               <span class="diff-file-actions">
                 <button
-                  class="link"
+                  class="ghost"
                   onClick={() => post({ type: 'openDiff', turn, path: change.path })}
                 >
                   {strings.openDiff}
@@ -226,7 +274,7 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
                 ) : (
                   canRevert && (
                     <button
-                      class="link"
+                      class="ghost"
                       onClick={() => post({ type: 'revert', turn, path: change.path })}
                     >
                       {strings.revert}
@@ -239,7 +287,9 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
               <pre class="diff-lines">
                 {lines.map((line, i) => (
                   <div class="diff-line" data-kind={line.kind} key={i}>
-                    {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
+                    <span class="diff-sign">
+                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
+                    </span>
                     {line.text}
                   </div>
                 ))}
