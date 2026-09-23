@@ -446,3 +446,50 @@ suite('AgentSdkRunner', () => {
     assert.strictEqual(fake.params[0]?.options?.permissionMode, 'acceptEdits');
   });
 });
+
+suite('AgentSdkRunner: M3', () => {
+  const base = {
+    cwd: 'D:\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+  };
+
+  test('allow に updatedInput があれば、それを SDK に返す（質問への答え）', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    runner.start({
+      ...base,
+      onEvent: () => {},
+      onPermissionRequest: async () => ({
+        behavior: 'allow',
+        updatedInput: { questions: [], answers: { q: 'a' } },
+      }),
+    });
+    assert.deepStrictEqual(await fake.canUseTool('AskUserQuestion', { questions: [] }, []), {
+      behavior: 'allow',
+      updatedInput: { questions: [], answers: { q: 'a' } },
+    });
+  });
+
+  test('claude の場所が決まらなければ、起動せずに失敗の turn-end を出す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({
+      query,
+      claudePath: () => {
+        throw new Error('Claude Code CLI was not found');
+      },
+    });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await handle.done;
+    assert.strictEqual(fake.params.length, 0);
+    assert.deepStrictEqual(events, [
+      { type: 'turn-end', ok: false, interrupted: false, reason: 'Claude Code CLI was not found' },
+    ]);
+  });
+});
