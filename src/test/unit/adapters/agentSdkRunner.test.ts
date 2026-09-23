@@ -195,6 +195,7 @@ suite('sdkOptionsFromAlwaysAllowed', () => {
 interface FakeQuery {
   params: Parameters<QueryFn>[0][];
   interrupts: number;
+  models: (string | undefined)[];
   /** 台本を進める。null で終了、Error で例外 */
   push: (m: SdkMessage | null | Error) => void;
   canUseTool: (
@@ -212,6 +213,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
   const fake: FakeQuery = {
     params: [],
     interrupts: 0,
+    models: [],
     prompts: [],
     push: (m) => {
       queue.push(m);
@@ -259,6 +261,9 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       interrupt: async () => {
         fake.interrupts++;
         return undefined;
+      },
+      setModel: async (model?: string) => {
+        fake.models.push(model);
       },
     };
     return iterator as unknown as ReturnType<QueryFn>;

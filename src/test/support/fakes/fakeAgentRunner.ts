@@ -4,6 +4,7 @@ import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../../.
 /** テストから操作できる RunHandle。イベントの発火と承認の要求を外から起こせる */
 export class FakeRunHandle implements RunHandle {
   readonly sent: string[] = [];
+  readonly models: (string | undefined)[] = [];
   interrupted = false;
   closed = false;
   private resolveDone!: () => void;
@@ -22,6 +23,10 @@ export class FakeRunHandle implements RunHandle {
   async interrupt(): Promise<void> {
     this.interrupted = true;
     this.emit({ type: 'turn-end', ok: false, interrupted: true, reason: 'interrupted' });
+  }
+
+  async setModel(model: string | undefined): Promise<void> {
+    this.models.push(model);
   }
 
   close(): void {

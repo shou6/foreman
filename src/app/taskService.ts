@@ -1,3 +1,4 @@
+import { promptWithAttachments } from '../domain/attachments';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import {
   createTask,
@@ -27,6 +28,8 @@ export interface CreateInput {
   title?: string;
   model?: string;
   permissionMode?: PermissionMode;
+  /** 添付したファイルの絶対パス */
+  attachments?: string[];
 }
 
 /** Runner から届いたイベント。表示（transcript）と差分の担当が受け取る */
@@ -118,20 +121,26 @@ export class TaskService {
       model: input.model,
       permissionMode: input.permissionMode,
     });
+    const attachments = input.attachments ?? [];
     const task = await this.serialize(created.id, () =>
-      this.commit(this.withTurn(created, input.prompt, now))
+      this.commit(this.withTurn(created, input.prompt, attachments, now))
     );
-    this.attach(task, this.deps.runner.start(this.startOptions(task, input.prompt)));
+    this.attach(
+      task,
+      this.deps.runner.start(
+        this.startOptions(task, promptWithAttachments(input.prompt, attachments))
+      )
+    );
     return task;
   }
 
   /** 完了・失敗・中断したタスクへ追加の指示を送る */
-  async send(id: string, prompt: string): Promise<void> {
+  async send(id: string, prompt: string, attachments: string[] = []): Promise<void> {
     await this.mustLoad(id);
     const handle = this.handles.get(id);
     if (handle === undefined) {
       // プロセスが終わっている（VS Code の再起動など）ので、セッションを再開する
-      await this.resume(id, prompt);
+      await this.resume(id, prompt, attachments);
       return;
     }
     const next = await this.serialize(id, async () => {
@@ -140,16 +149,17 @@ export class TaskService {
         this.withTurn(
           { ...task, status: transition(task.status, 'prompt') },
           prompt,
+          attachments,
           this.deps.now()
         )
       );
     });
     this.currentTurn.set(id, next.turns.length - 1);
-    handle.send(prompt);
+    handle.send(promptWithAttachments(prompt, attachments));
   }
 
   /** 中断したタスクを同じセッションで再開し、新しいターンを始める */
-  async resume(id: string, prompt: string): Promise<void> {
+  async resume(id: string, prompt: string, attachments: string[] = []): Promise<void> {
     const { task, sessionId } = await this.serialize(id, async () => {
       const current = await this.mustLoad(id);
       if (current.sessionId === undefined) {
@@ -160,12 +170,26 @@ export class TaskService {
         this.withTurn(
           { ...current, status: transition(current.status, event) },
           prompt,
+          attachments,
           this.deps.now()
         )
       );
       return { task: next, sessionId: current.sessionId };
     });
-    this.attach(task, this.deps.runner.resume(sessionId, this.startOptions(task, prompt)));
+    this.attach(
+      task,
+      this.deps.runner.resume(
+        sessionId,
+        this.startOptions(task, promptWithAttachments(prompt, attachments))
+      )
+    );
+  }
+
+  /** 次のターンから使うモデルを変える（FR-VIEW-4）。undefined で Claude Code の既定 */
+  async setModel(id: string, model: string | undefined): Promise<void> {
+    await this.mustLoad(id);
+    await this.update(id, (task) => ({ ...task, model }));
+    await this.handles.get(id)?.setModel(model);
   }
 
   async stop(id: string): Promise<void> {
@@ -263,7 +287,9 @@ export class TaskService {
     switch (event.type) {
       case 'init':
         return this.update(id, (task) =>
-          task.sessionId === event.sessionId ? undefined : { ...task, sessionId: event.sessionId }
+          task.sessionId === event.sessionId && task.activeModel === event.model
+            ? undefined
+            : { ...task, sessionId: event.sessionId, activeModel: event.model }
         );
       case 'turn-end':
         return this.update(id, (task) => {
@@ -321,11 +347,11 @@ export class TaskService {
     return { ...task, status: transition(task.status, event), turns };
   }
 
-  private withTurn(task: Task, prompt: string, startedAt: string): Task {
+  private withTurn(task: Task, prompt: string, attachments: string[], startedAt: string): Task {
     const turn: Turn = {
       index: task.turns.length,
       prompt,
-      attachments: [],
+      attachments: [...attachments],
       startedAt,
       changes: [],
     };

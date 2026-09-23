@@ -11,6 +11,9 @@ import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 /** スナップショットを差分エディタに出すための URI スキーム */
 export const SNAPSHOT_SCHEME = 'foreman-snapshot';
 
+/** モデルの選択肢。設定や一覧に無いモデルは、指定されていれば選択肢に足す */
+export const MODEL_PRESETS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
+
 export interface TaskPanelDeps {
   extensionUri: vscode.Uri;
   service: TaskService;
@@ -22,6 +25,8 @@ export interface TaskPanelDeps {
 /** タスク画面（WebviewPanel）。タスクごとに 1 つだけ開き、既に開いていれば前面に出す */
 export class TaskPanels implements vscode.Disposable {
   private readonly panels = new Map<string, vscode.WebviewPanel>();
+  /** 次の指示に添付するファイル（タスクごと） */
+  private readonly attachments = new Map<string, string[]>();
   private readonly subscriptions: vscode.Disposable[] = [];
 
   constructor(private readonly deps: TaskPanelDeps) {
@@ -35,6 +40,7 @@ export class TaskPanels implements vscode.Disposable {
             status: task.status,
             title: task.title,
             model: task.model,
+            activeModel: task.activeModel,
           });
           for (const turn of task.turns) {
             if (turn.changes.length > 0) {
@@ -48,7 +54,12 @@ export class TaskPanels implements vscode.Disposable {
           this.post(taskId, { type: 'pending', pending })
         ),
       },
-      { dispose: service.onDidDelete((taskId) => this.panels.get(taskId)?.dispose()) }
+      {
+        dispose: service.onDidDelete((taskId) => {
+          this.attachments.delete(taskId);
+          this.panels.get(taskId)?.dispose();
+        }),
+      }
     );
   }
 
@@ -80,6 +91,14 @@ export class TaskPanels implements vscode.Disposable {
     this.panels.set(taskId, panel);
   }
 
+  /** ファイルを次の指示の添付に足す（FR-VIEW-5） */
+  attach(taskId: string, files: string[]): void {
+    const current = this.attachments.get(taskId) ?? [];
+    const next = [...new Set([...current, ...files])];
+    this.attachments.set(taskId, next);
+    this.post(taskId, { type: 'attachments', paths: next });
+  }
+
   dispose(): void {
     for (const s of this.subscriptions) {
       s.dispose();
@@ -100,7 +119,9 @@ export class TaskPanels implements vscode.Disposable {
           return;
         }
         case 'send':
-          await this.deps.service.send(taskId, message.prompt);
+          this.attachments.delete(taskId);
+          this.post(taskId, { type: 'attachments', paths: [] });
+          await this.deps.service.send(taskId, message.prompt, message.attachments);
           return;
         case 'interrupt':
           await this.deps.service.stop(taskId);
@@ -123,6 +144,24 @@ export class TaskPanels implements vscode.Disposable {
         case 'revert':
           await this.deps.diffs.revert(taskId, message.turn, message.path);
           return;
+        case 'setModel':
+          await this.deps.service.setModel(taskId, message.model);
+          return;
+        case 'dropped':
+          this.attach(
+            taskId,
+            message.uris
+              .map((u) => vscode.Uri.parse(u))
+              .filter((u) => u.scheme === 'file')
+              .map((u) => u.fsPath)
+          );
+          return;
+        case 'removeAttachment': {
+          const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
+          this.attachments.set(taskId, next);
+          this.post(taskId, { type: 'attachments', paths: next });
+          return;
+        }
       }
     } catch (error) {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
@@ -161,10 +200,13 @@ export class TaskPanels implements vscode.Disposable {
       title: task.title,
       status: task.status,
       model: task.model,
+      activeModel: task.activeModel,
+      models: MODEL_PRESETS,
       items: this.deps.transcripts.get(task.id),
       pending: this.deps.approvals.pending(task.id),
       changes,
       diffs: {},
+      attachments: this.attachments.get(task.id) ?? [],
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
@@ -180,6 +222,13 @@ export class TaskPanels implements vscode.Disposable {
         revert: vscode.l10n.t('Revert'),
         reverted: vscode.l10n.t('Reverted'),
         unknownBefore: vscode.l10n.t('Previous content unknown'),
+        model: vscode.l10n.t('Model'),
+        defaultModel: vscode.l10n.t('Default'),
+        attachments: vscode.l10n.t('Attachments'),
+        remove: vscode.l10n.t('Remove'),
+        dropHint: vscode.l10n.t(
+          'Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.'
+        ),
       },
     };
   }

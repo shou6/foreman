@@ -17,6 +17,11 @@ const STRINGS = {
   revert: 'Revert',
   reverted: 'Reverted',
   unknownBefore: 'Previous content unknown',
+  model: 'Model',
+  defaultModel: 'Default',
+  attachments: 'Attachments',
+  remove: 'Remove',
+  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
 };
 
 const initial: PanelState = {
@@ -26,6 +31,8 @@ const initial: PanelState = {
   items: [],
   changes: {},
   diffs: {},
+  attachments: [],
+  models: [],
   strings: STRINGS,
 };
 

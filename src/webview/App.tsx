@@ -28,9 +28,13 @@ export function App({ state, post }: AppProps) {
     if (prompt === '') {
       return;
     }
-    post({ type: 'send', prompt });
+    post({ type: 'send', prompt, attachments: state.attachments });
     setDraft('');
   };
+  const modelOptions =
+    state.model !== undefined && !state.models.includes(state.model)
+      ? [state.model, ...state.models]
+      : state.models;
   return (
     <div class="panel">
       <header class="head">
@@ -38,7 +42,30 @@ export function App({ state, post }: AppProps) {
         <span class="status" data-status={state.status}>
           {state.status}
         </span>
-        {state.model !== undefined && <span class="model">{state.model}</span>}
+        <label class="model-select">
+          <span class="model-label">{state.strings.model}</span>
+          <select
+            value={state.model ?? ''}
+            onChange={(e) => {
+              const value = (e.target as HTMLSelectElement).value;
+              post({ type: 'setModel', model: value === '' ? undefined : value });
+            }}
+          >
+            <option value="" selected={state.model === undefined}>
+              {state.strings.defaultModel}
+            </option>
+            {modelOptions.map((m) => (
+              <option key={m} value={m} selected={m === state.model}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        {state.activeModel !== undefined && state.activeModel !== state.model && (
+          <span class="model" title={state.strings.model}>
+            {state.activeModel}
+          </span>
+        )}
       </header>
       <main class="transcript">
         {state.items.map((item, i) => (
@@ -67,35 +94,60 @@ export function App({ state, post }: AppProps) {
         {state.status === 'running' && <div class="item running">{state.strings.running}</div>}
       </main>
       <footer class="composer">
-        {state.pending !== undefined ? (
-          <div class="waiting-note">{state.strings.waiting}</div>
-        ) : (
-          <textarea
-            class="prompt-input"
-            rows={3}
-            value={draft}
-            disabled={busy}
-            onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-          />
+        {state.attachments.length > 0 && (
+          <div class="attachments">
+            <span class="attachments-label">{state.strings.attachments}</span>
+            {state.attachments.map((path) => (
+              <span class="attachment" key={path} title={path}>
+                {basename(path)}
+                <button
+                  class="link"
+                  onClick={() => post({ type: 'removeAttachment', path })}
+                  title={state.strings.remove}
+                >
+                  ×<span class="sr-only">{state.strings.remove}</span>
+                </button>
+              </span>
+            ))}
+          </div>
         )}
-        {busy ? (
-          <button class="action stop" onClick={() => post({ type: 'interrupt' })}>
-            {state.strings.stop}
-          </button>
-        ) : (
-          <button class="action send" onClick={submit}>
-            {state.strings.send}
-          </button>
-        )}
+        <div class="composer-row">
+          {state.pending !== undefined ? (
+            <div class="waiting-note">{state.strings.waiting}</div>
+          ) : (
+            <textarea
+              class="prompt-input"
+              rows={3}
+              value={draft}
+              disabled={busy}
+              placeholder={state.strings.dropHint}
+              onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+            />
+          )}
+          {busy ? (
+            <button class="action stop" onClick={() => post({ type: 'interrupt' })}>
+              {state.strings.stop}
+            </button>
+          ) : (
+            <button class="action send" onClick={submit}>
+              {state.strings.send}
+            </button>
+          )}
+        </div>
       </footer>
     </div>
   );
+}
+
+function basename(path: string): string {
+  const parts = path.split(/[\\/]/);
+  return parts[parts.length - 1] ?? path;
 }
 
 function Item({ item }: { item: TranscriptItem }) {

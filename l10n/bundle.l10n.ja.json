@@ -32,5 +32,12 @@
   "Revert": "戻す",
   "Reverted": "戻した",
   "Previous content unknown": "変更前は不明",
-  "{0} (before ↔ current)": "{0}（変更前 ↔ 現在）"
+  "{0} (before ↔ current)": "{0}（変更前 ↔ 現在）",
+  "Model": "モデル",
+  "Default": "既定",
+  "Attachments": "添付",
+  "Remove": "外す",
+  "Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.": "追加の指示を入力（Ctrl+Enter で送信）。ファイルをここへドロップすると添付できます。エディタ領域からは Shift を押しながらドラッグしてください。",
+  "No tasks to attach to. Create a task first.": "添付先のタスクがありません。先にタスクを作ってください。",
+  "Attach to which task?": "どのタスクに添付しますか？"
 }

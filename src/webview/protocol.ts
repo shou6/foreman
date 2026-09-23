@@ -23,13 +23,23 @@ export interface PanelStrings {
   revert: string;
   reverted: string;
   unknownBefore: string;
+  model: string;
+  defaultModel: string;
+  attachments: string;
+  remove: string;
+  dropHint: string;
 }
 
 export interface PanelState {
   taskId: string;
   title: string;
   status: TaskStatus;
+  /** タスクに指定したモデル。無ければ Claude Code の既定 */
   model?: string;
+  /** SDK が報告した、実際に動いているモデル */
+  activeModel?: string;
+  /** モデルの選択肢 */
+  models: string[];
   items: TranscriptItem[];
   /** 承認待ちの要求。無ければ undefined */
   pending?: PendingRequest;
@@ -37,27 +47,34 @@ export interface PanelState {
   changes: Record<number, FileChange[]>;
   /** "<turn>:<path>" → インライン差分の行 */
   diffs: Record<string, DiffLine[]>;
+  /** 次の指示に添付するファイル（絶対パス） */
+  attachments: string[];
   strings: PanelStrings;
 }
 
 /** 拡張機能 → Webview */
 export type ToWebview =
   | { type: 'state'; state: PanelState }
-  | { type: 'task'; status: TaskStatus; title: string; model?: string }
+  | { type: 'task'; status: TaskStatus; title: string; model?: string; activeModel?: string }
   | { type: 'pending'; pending: PendingRequest | undefined }
   | { type: 'changes'; turn: number; changes: FileChange[] }
   | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
+  | { type: 'attachments'; paths: string[] }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
 export type ToExtension =
   | { type: 'ready' }
-  | { type: 'send'; prompt: string }
+  | { type: 'send'; prompt: string; attachments: string[] }
   | { type: 'interrupt' }
   | { type: 'decision'; requestId: string; decision: PermissionDecision }
   | { type: 'showDiff'; turn: number; path: string }
   | { type: 'openDiff'; turn: number; path: string }
-  | { type: 'revert'; turn: number; path: string };
+  | { type: 'revert'; turn: number; path: string }
+  | { type: 'setModel'; model: string | undefined }
+  /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
+  | { type: 'dropped'; uris: string[] }
+  | { type: 'removeAttachment'; path: string };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;

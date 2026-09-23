@@ -20,6 +20,11 @@ const STRINGS = {
   revert: 'Revert',
   reverted: 'Reverted',
   unknownBefore: 'Previous content unknown',
+  model: 'Model',
+  defaultModel: 'Default',
+  attachments: 'Attachments',
+  remove: 'Remove',
+  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
 };
 
 const CHANGES: FileChange[] = [
@@ -62,6 +67,8 @@ function state(overrides: Partial<PanelState>): PanelState {
     ],
     changes: {},
     diffs: {},
+    attachments: [],
+    models: [],
     strings: STRINGS,
     ...overrides,
   };

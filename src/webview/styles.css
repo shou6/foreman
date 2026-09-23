@@ -369,3 +369,67 @@ body {
 .diff-line[data-kind='del'] {
   background: var(--vscode-diffEditor-removedLineBackground);
 }
+
+/* モデルの選択と添付 */
+.model-select {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.model-select select {
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.composer {
+  flex-direction: column;
+}
+
+.composer-row {
+  display: flex;
+  gap: 0.5em;
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.85em;
+}
+
+.attachments-label {
+  color: var(--vscode-descriptionForeground);
+}
+
+.attachment {
+  padding: 0 0.5em;
+  border-radius: 0.75em;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.attachment .link {
+  margin-left: 0.3em;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+body.dragging .composer {
+  outline: 2px dashed var(--vscode-focusBorder);
+  outline-offset: -4px;
+}

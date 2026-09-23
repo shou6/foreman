@@ -17,6 +17,8 @@ export interface RunHandle {
   send(prompt: string): void;
   /** 実行中のターンを止める */
   interrupt(): Promise<void>;
+  /** 次のターンから使うモデルを変える。undefined で Claude Code の既定に戻す */
+  setModel(model: string | undefined): Promise<void>;
   /** 入力を閉じてプロセスを終わらせる。セッションは resume で続けられる */
   close(): void;
   /** プロセスが終わった時に解決する。異常終了は reject ではなく、turn-end イベントで伝える */

@@ -62,6 +62,8 @@ export interface Task {
   parentTaskId?: string;
   cwd: string;
   model?: string;
+  /** SDK の init が返した、実際に動いているモデル */
+  activeModel?: string;
   permissionMode: PermissionMode;
   alwaysAllowed: PermissionRule[];
   turns: Turn[];
@@ -116,6 +118,8 @@ export interface CreateTaskInput {
   createdAt: string;
   title?: string;
   model?: string;
+  /** SDK の init が返した、実際に動いているモデル */
+  activeModel?: string;
   permissionMode?: PermissionMode;
   parentTaskId?: string;
 }

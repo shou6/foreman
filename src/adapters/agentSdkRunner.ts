@@ -223,6 +223,7 @@ export class AgentSdkRunner implements AgentRunner {
         interruptRequested = true;
         await query.interrupt();
       },
+      setModel: (model) => query.setModel(model),
       close: () => prompts.end(),
       done,
     };
@@ -323,6 +324,7 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
   return {
     send: () => {},
     interrupt: async () => {},
+    setModel: async () => {},
     close: () => {},
     done: Promise.resolve(),
   };

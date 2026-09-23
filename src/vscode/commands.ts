@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { TaskPanels } from './taskPanel';
-import type { TreeNode } from './taskTreeView';
+import { statusLabel, type TreeNode } from './taskTreeView';
 import type { Settings } from './settings';
 
 export interface CommandDeps {
@@ -26,6 +26,29 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     } catch (error) {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     }
+  };
+
+  /** 添付先のタスクを決める。1 つならそれ、複数なら選んでもらう */
+  const pickTask = async (): Promise<string | undefined> => {
+    const tasks = (await service.list()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    if (tasks.length === 0) {
+      void vscode.window.showErrorMessage(
+        vscode.l10n.t('No tasks to attach to. Create a task first.')
+      );
+      return undefined;
+    }
+    if (tasks.length === 1) {
+      return tasks[0]?.id;
+    }
+    const picked = await vscode.window.showQuickPick(
+      tasks.map((task) => ({
+        label: task.title,
+        description: statusLabel(task.status),
+        id: task.id,
+      })),
+      { title: vscode.l10n.t('Attach to which task?') }
+    );
+    return picked?.id;
   };
 
   context.subscriptions.push(
@@ -89,6 +112,28 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           await service.delete(id);
         }
       })();
-    })
+    }),
+    // エクスプローラーとタブの右クリック「タスクに添付」（FR-VIEW-5）
+    vscode.commands.registerCommand(
+      'foreman.attachToTask',
+      (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        void withError(async () => {
+          const targets = uris ?? (uri !== undefined ? [uri] : []);
+          const active = vscode.window.activeTextEditor?.document.uri;
+          const files = (targets.length > 0 ? targets : active !== undefined ? [active] : [])
+            .filter((u) => u.scheme === 'file')
+            .map((u) => u.fsPath);
+          if (files.length === 0) {
+            return;
+          }
+          const taskId = await pickTask();
+          if (taskId === undefined) {
+            return;
+          }
+          await panels.open(taskId);
+          panels.attach(taskId, files);
+        })();
+      }
+    )
   );
 }

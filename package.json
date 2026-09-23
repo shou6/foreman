@@ -95,6 +95,12 @@
         "title": "%command.deleteTask%",
         "category": "Foreman",
         "icon": "$(trash)"
+      },
+      {
+        "command": "foreman.attachToTask",
+        "title": "%command.attachToTask%",
+        "category": "Foreman",
+        "icon": "$(attach)"
       }
     ],
     "menus": {
@@ -110,6 +116,10 @@
         {
           "command": "foreman.deleteTask",
           "when": "false"
+        },
+        {
+          "command": "foreman.attachToTask",
+          "when": "editorIsOpen"
         }
       ],
       "view/title": [
@@ -129,6 +139,20 @@
           "command": "foreman.deleteTask",
           "when": "view == foreman.tasks && viewItem != group",
           "group": "inline@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "foreman.attachToTask",
+          "when": "resourceScheme == file",
+          "group": "foreman@1"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "foreman.attachToTask",
+          "when": "resourceScheme == file",
+          "group": "foreman@1"
         }
       ]
     },

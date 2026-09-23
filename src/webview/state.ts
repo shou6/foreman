@@ -11,7 +11,13 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
   }
   switch (message.type) {
     case 'task':
-      return { ...state, status: message.status, title: message.title, model: message.model };
+      return {
+        ...state,
+        status: message.status,
+        title: message.title,
+        model: message.model,
+        activeModel: message.activeModel,
+      };
     case 'pending':
       return { ...state, pending: message.pending };
     case 'changes':
@@ -21,6 +27,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         ...state,
         diffs: { ...state.diffs, [diffKey(message.turn, message.path)]: message.lines },
       };
+    case 'attachments':
+      return { ...state, attachments: message.paths };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':
