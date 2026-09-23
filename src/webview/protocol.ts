@@ -137,6 +137,8 @@ export type ToExtension =
   | { type: 'setModel'; model: string | undefined }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
+  /** クリップボードから貼り付けた画像（base64）。拡張機能が保存してファイルとして添付する */
+  | { type: 'pasteImage'; mime: string; data: string }
   | { type: 'removeAttachment'; key: string }
   /** 「渡すもの」: エディタの選択範囲、診断、git diff、ファイルの選択 */
   | { type: 'attachSelection' }

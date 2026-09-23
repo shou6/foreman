@@ -27,6 +27,7 @@ import { TaskPanels } from './vscode/taskPanel';
 import { SNAPSHOT_SCHEME } from './vscode/snapshotUri';
 import { SidebarView, SIDEBAR_VIEW_ID } from './vscode/sidebarView';
 import { AttachmentSources } from './vscode/attachmentSources';
+import { savePastedImage } from './adapters/pastedImages';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
@@ -165,6 +166,7 @@ export async function activate(
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
     approve: (taskId) => review.approve(taskId),
     sources,
+    savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
     checkpoint: {
       rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
       fork: (taskId, turn) => checkpoints.fork(taskId, turn),

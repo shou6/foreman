@@ -15,7 +15,7 @@ Foreman uses the `claude` CLI that is already installed and logged in on your ma
 - **Task view in an editor tab**: streamed output, tool calls, follow-up prompts (Ctrl+Enter) and a model switch. Open it next to your code.
 - **Approvals in the task view**: allow or deny each tool call, add a reason, or choose "always allow in this task". Questions from Claude appear as choices.
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file with one click. This works in folders that are not Git repositories.
-- **Pass along**: attach the editor selection, the errors and warnings from Problems, the uncommitted `git diff`, or files from a picker. You can also right-click a file and choose "Foreman: Attach to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
+- **Pass along**: attach the editor selection, the errors and warnings from Problems, the uncommitted `git diff`, or files from a picker. Paste a screenshot from the clipboard to attach it as an image. You can also right-click a file and choose "Foreman: Attach to Task", right-click in the editor for "Foreman: Attach Selection to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
 - **Notifications and status bar**: know when a task needs you or has finished. The status bar counts running and waiting tasks.
 - **Context meter**: the task view, the sidebar and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens.
 - **Persistence**: tasks, history and diff cards survive a restart. An interrupted task keeps its session, so your next prompt continues it.

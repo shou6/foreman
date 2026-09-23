@@ -30,6 +30,8 @@ export interface TaskPanelDeps {
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
   exportTask: (taskId: string) => Promise<void>;
+  /** 貼り付けた画像を保存して、そのパスを返す */
+  savePastedImage: (mime: string, base64: string) => Promise<string>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
   /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
@@ -117,6 +119,8 @@ export class TaskPanels implements vscode.Disposable {
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
+        // 別のタブに移っても、入力の途中や開いた差分をそのまま残す
+        retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(this.deps.extensionUri, 'dist')],
       }
     );
@@ -212,6 +216,11 @@ export class TaskPanels implements vscode.Disposable {
               .map((u) => ({ kind: 'file', path: u.fsPath }))
           );
           return;
+        case 'pasteImage': {
+          const file = await this.deps.savePastedImage(message.mime, message.data);
+          this.attach(taskId, [{ kind: 'file', path: file }]);
+          return;
+        }
         case 'attachSelection': {
           const item = this.deps.sources.selection();
           if (item !== undefined) {

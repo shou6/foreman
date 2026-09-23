@@ -179,3 +179,35 @@ suite('webview: 渡すもの（入力欄の添付）', () => {
     assert.strictEqual(messages.length, 6);
   });
 });
+
+suite('webview: 入力の途中の保持と画像の貼り付け', () => {
+  test('initialDraft を渡すと入力欄にその文が入る（画面を隠しても消えないように）', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false })}
+        post={() => {}}
+        initialDraft="writing…"
+      />
+    );
+    assert.ok(html.includes('writing…'));
+  });
+
+  test('入力が変わると onDraftChange で知らせる型がある', () => {
+    let seen = '';
+    render(
+      <App
+        state={state({ status: 'done', turnOpen: false })}
+        post={() => {}}
+        onDraftChange={(d) => {
+          seen = d;
+        }}
+      />
+    );
+    assert.strictEqual(seen, '');
+  });
+
+  test('pasteImage のメッセージの型がある', () => {
+    const message: ToExtension = { type: 'pasteImage', mime: 'image/png', data: 'AAAA' };
+    assert.strictEqual(message.type, 'pasteImage');
+  });
+});

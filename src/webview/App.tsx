@@ -20,6 +20,9 @@ import {
 export interface AppProps {
   state: PanelState | undefined;
   post: (message: ToExtension) => void;
+  /** 前回の入力の途中（画面を隠したり閉じたりしても残す） */
+  initialDraft?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 type ToolItem = TranscriptItem & { kind: 'tool' };
@@ -46,8 +49,12 @@ function groupTools(items: readonly TranscriptItem[]): Block[] {
 }
 
 /** タスク画面。状態は拡張機能から届いたものをそのまま描く */
-export function App({ state, post }: AppProps) {
-  const [draft, setDraft] = useState('');
+export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
+  const [draft, setDraftState] = useState(initialDraft ?? '');
+  const setDraft = (value: string): void => {
+    setDraftState(value);
+    onDraftChange?.(value);
+  };
   if (state === undefined) {
     return null;
   }
