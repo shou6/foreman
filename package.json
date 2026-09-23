@@ -220,8 +220,7 @@
     "test:unit": "npm run compile-tests && mocha",
     "test:integration:local": "node scripts/test-integration-local.js",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
-    "verify:package": "npm run compile-tests && node scripts/verify-package.js",
-    "icon": "node scripts/generate-icon.js"
+    "verify:package": "npm run compile-tests && node scripts/verify-package.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.280",
