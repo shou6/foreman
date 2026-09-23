@@ -83,3 +83,20 @@ suite('GitCli', function () {
     assert.strictEqual(status.trim(), '');
   });
 });
+
+suite('GitCli.ignored', function () {
+  this.timeout(30_000);
+  test('.gitignore に合うパスだけを返す。パスは渡したままの形で返す', async () => {
+    const repo = makeRepo();
+    fs.writeFileSync(path.join(repo, '.gitignore'), 'out/\n');
+    const git = new GitCli();
+    const result = await git.ignored(repo, ['out/a.js', 'src/a.ts', 'out/b/c.js']);
+    assert.deepStrictEqual(result.sort(), ['out/a.js', 'out/b/c.js']);
+    assert.deepStrictEqual(await git.ignored(repo, []), []);
+  });
+
+  test('Git でない場所では何も無視しない', async () => {
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'foreman-plain-'));
+    assert.deepStrictEqual(await new GitCli().ignored(plain, ['out/a.js']), []);
+  });
+});
