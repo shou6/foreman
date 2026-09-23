@@ -56,11 +56,17 @@ export class FakeGit implements Git {
     r.worktrees.add(path);
   }
 
+  /** hasChanges を失敗させたいパス（フォルダが無い時の git の失敗を再現する） */
+  readonly failStatusFor = new Set<string>();
+
   async removeWorktree(repo: string, path: string, force: boolean): Promise<void> {
     this.calls.push(`removeWorktree ${path} ${force ? 'force' : ''}`.trim());
     const r = this.repos.get(repo);
     if (r === undefined) {
       throw new Error('not a repo: ' + repo);
+    }
+    if (!r.worktrees.has(path)) {
+      throw new Error("fatal: '" + path + "' is not a working tree");
     }
     if (!force && (this.dirty.get(path) ?? false)) {
       throw new Error('worktree has changes: ' + path);
@@ -79,6 +85,9 @@ export class FakeGit implements Git {
   }
 
   async hasChanges(dir: string): Promise<boolean> {
+    if (this.failStatusFor.has(dir)) {
+      throw new Error('fatal: cannot change to ' + dir);
+    }
     return this.dirty.get(dir) ?? false;
   }
 

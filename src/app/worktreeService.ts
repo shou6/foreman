@@ -50,9 +50,13 @@ export class WorktreeService {
     return worktree;
   }
 
-  /** 未マージの変更（未コミットの変更）があるか */
-  hasChanges(worktree: Worktree): Promise<boolean> {
-    return this.deps.git.hasChanges(worktree.path);
+  /** 未マージの変更（未コミットの変更）があるか。フォルダが無ければ false */
+  async hasChanges(worktree: Worktree): Promise<boolean> {
+    try {
+      return await this.deps.git.hasChanges(worktree.path);
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -113,8 +117,21 @@ export class WorktreeService {
     return trimmed === '' ? name : (trimmed.endsWith('/') ? trimmed : trimmed + '/') + name;
   }
 
+  /**
+   * worktree とブランチを消す。worktree が既に無ければ登録を整理してブランチだけ消す。
+   * フォルダを消せない時（掴まれている時など）は失敗にする
+   */
   private async remove(worktree: Worktree): Promise<void> {
-    await this.deps.git.removeWorktree(worktree.repo, worktree.path, true);
-    await this.deps.git.deleteBranch(worktree.repo, worktree.branch);
+    const registered = (await this.deps.git.listWorktrees(worktree.repo)).includes(worktree.path);
+    if (registered) {
+      await this.deps.git.removeWorktree(worktree.repo, worktree.path, true);
+    } else {
+      await this.deps.git.prune(worktree.repo);
+    }
+    try {
+      await this.deps.git.deleteBranch(worktree.repo, worktree.branch);
+    } catch {
+      // ブランチが既に無ければそのまま
+    }
   }
 }

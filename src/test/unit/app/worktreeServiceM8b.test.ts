@@ -73,3 +73,24 @@ suite('WorktreeService.cleanupOrphans: 登録の無いフォルダ', () => {
     assert.ok(git.calls.includes('prune'));
   });
 });
+
+suite('WorktreeService: 既に無い worktree', () => {
+  test('登録もフォルダも無い worktree の破棄は失敗せず、ブランチだけ消す', async () => {
+    const git = new FakeGit(REPO, 'main');
+    const service = new WorktreeService({ git, sep: '\\' });
+    const wt = await service.create(REPO, 'gone', 'dddddd0000');
+    git.repos.get(REPO)!.worktrees.delete(wt.path);
+    await service.discard(wt);
+    assert.ok(git.calls.includes('prune'));
+    assert.ok(!git.repos.get(REPO)!.branches.has(wt.branch));
+  });
+
+  test('無い worktree の hasChanges は false', async () => {
+    const git = new FakeGit(REPO, 'main');
+    const service = new WorktreeService({ git, sep: '\\' });
+    const wt = await service.create(REPO, 'gone', 'eeeeee0000');
+    git.repos.get(REPO)!.worktrees.delete(wt.path);
+    git.failStatusFor.add(wt.path);
+    assert.strictEqual(await service.hasChanges(wt), false);
+  });
+});
