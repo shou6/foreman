@@ -177,3 +177,65 @@ body {
   margin-top: 4px;
   font-size: 0.9em;
 }
+
+.changes-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 12px 6px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}
+
+.finish {
+  margin: 12px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 6px;
+}
+
+.finish-title {
+  margin: 0 0 4px;
+  font-size: 1em;
+}
+
+.finish-hint {
+  margin: 0 0 8px;
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.finish-button {
+  padding: 3px 10px;
+  border: 1px solid var(--vscode-button-border, var(--vscode-widget-border));
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.finish-button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.finish-button.primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.finish-button.primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.finish-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

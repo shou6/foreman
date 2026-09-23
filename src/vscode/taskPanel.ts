@@ -10,10 +10,10 @@ import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
 import { isTurnOpen } from '../domain/task';
 import { randomNonce } from './nonce';
-import { statusLabel } from './taskTreeView';
+import { statusLabel } from './statusLabel';
+import { snapshotUri } from './snapshotUri';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
-export const SNAPSHOT_SCHEME = 'foreman-snapshot';
 
 /** モデルの選択肢。設定や一覧に無いモデルは、指定されていれば選択肢に足す */
 export const MODEL_PRESETS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
@@ -366,15 +366,6 @@ export class TaskPanels implements vscode.Disposable {
       '</html>',
     ].join('\n');
   }
-}
-
-/** スナップショットの URI。hash が無ければ空の内容（新規作成の前、削除の後） */
-function snapshotUri(file: string, hash: string | undefined): vscode.Uri {
-  return vscode.Uri.from({
-    scheme: SNAPSHOT_SCHEME,
-    path: '/' + file.replace(/\\/g, '/'),
-    query: hash ?? '',
-  });
 }
 
 /** 拒否の理由が空なら、既定の文言を Claude に返す */

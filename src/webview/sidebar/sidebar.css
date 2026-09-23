@@ -1,0 +1,190 @@
+/* 左サイドバーの一覧。VS Code のテーマ変数だけで色を決める */
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  background: transparent;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  user-select: none;
+}
+
+.sidebar {
+  padding: 6px 0 12px;
+}
+
+.new-task {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 4px 12px 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.new-task:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.new-task::before {
+  content: '+ ';
+}
+
+.empty {
+  padding: 8px 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.group {
+  margin-bottom: 4px;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.group-head::-webkit-details-marker {
+  display: none;
+}
+
+.count {
+  color: var(--vscode-descriptionForeground);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--vscode-descriptionForeground);
+}
+
+.dot[data-status='running'] {
+  background: var(--vscode-testing-iconQueued, #4aa3ff);
+}
+
+.dot[data-status='waiting'] {
+  background: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.dot[data-status='review'] {
+  background: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.dot[data-status='done'] {
+  background: var(--vscode-testing-iconPassed, #4caf50);
+  opacity: 0.6;
+}
+
+.dot[data-status='failed'] {
+  background: var(--vscode-editorError-foreground, #f14c4c);
+}
+
+.dot[data-status='interrupted'] {
+  background: var(--vscode-descriptionForeground);
+}
+
+.dot[data-status='draft'] {
+  background: transparent;
+  border: 1px solid var(--vscode-descriptionForeground);
+}
+
+.task {
+  padding: 4px 12px 5px 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+}
+
+.task:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.task.active {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+  border-left-color: var(--vscode-focusBorder);
+}
+
+.task-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.8em;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  color: var(--vscode-descriptionForeground);
+}
+
+.badge.approval {
+  border-color: var(--vscode-editorWarning-foreground, #e5a50a);
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.badge.replied {
+  border-color: var(--vscode-editorWarning-foreground, #e5a50a);
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.badge.elapsed {
+  border-color: var(--vscode-testing-iconQueued, #4aa3ff);
+  color: var(--vscode-testing-iconQueued, #4aa3ff);
+}
+
+.badge.review,
+.badge.done {
+  border-color: var(--vscode-testing-iconPassed, #4caf50);
+  color: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.badge.failed {
+  border-color: var(--vscode-editorError-foreground, #f14c4c);
+  color: var(--vscode-editorError-foreground, #f14c4c);
+}
+
+.task.active .badge {
+  color: inherit;
+  border-color: currentColor;
+}
+
+.task-sub {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+  padding-left: 16px;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task.active .task-sub {
+  color: inherit;
+  opacity: 0.8;
+}

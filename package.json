@@ -43,6 +43,8 @@
     "dist/board.css",
     "dist/details.js",
     "dist/details.css",
+    "dist/sidebar.js",
+    "dist/sidebar.css",
     "resources/**",
     "l10n/**",
     "package.nls.json",
@@ -72,6 +74,7 @@
       "foreman": [
         {
           "id": "foreman.tasks",
+          "type": "webview",
           "name": "%view.tasks%",
           "icon": "resources/activity.svg"
         }
@@ -85,12 +88,6 @@
         }
       ]
     },
-    "viewsWelcome": [
-      {
-        "view": "foreman.tasks",
-        "contents": "%viewsWelcome.noTasks%"
-      }
-    ],
     "commands": [
       {
         "command": "foreman.newTask",
@@ -227,51 +224,51 @@
           "group": "navigation@2"
         }
       ],
-      "view/item/context": [
+      "webview/context": [
         {
           "command": "foreman.stopTask",
-          "when": "view == foreman.tasks && viewItem =~ / open/",
-          "group": "inline@1"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanOpen",
+          "group": "1_state@1"
         },
         {
           "command": "foreman.startTask",
-          "when": "view == foreman.tasks && viewItem =~ /^draft/",
-          "group": "inline@1"
-        },
-        {
-          "command": "foreman.approveTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(review|waiting idle)/",
-          "group": "inline@1"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanStatus == 'draft'",
+          "group": "1_state@1"
         },
         {
           "command": "foreman.editDraft",
-          "when": "view == foreman.tasks && viewItem =~ /^draft/",
-          "group": "draft@1"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanStatus == 'draft'",
+          "group": "1_state@2"
         },
         {
-          "command": "foreman.deleteTask",
-          "when": "view == foreman.tasks && viewItem != group",
-          "group": "inline@2"
+          "command": "foreman.approveTask",
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && (foremanStatus == 'review' || (foremanStatus == 'waiting' && !foremanOpen))",
+          "group": "1_state@2"
         },
         {
           "command": "foreman.mergeTask",
-          "when": "view == foreman.tasks && viewItem =~ / idle.* worktree$|^(review|done|failed|interrupted).* worktree$/",
-          "group": "worktree@1"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanWorktree && !foremanOpen && foremanStatus != 'draft'",
+          "group": "2_worktree@1"
         },
         {
           "command": "foreman.discardTask",
-          "when": "view == foreman.tasks && viewItem =~ / idle.* worktree$|^(review|done|failed|interrupted).* worktree$/",
-          "group": "worktree@2"
-        },
-        {
-          "command": "foreman.exportTask",
-          "when": "view == foreman.tasks && viewItem != group",
-          "group": "export@1"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanWorktree && !foremanOpen && foremanStatus != 'draft'",
+          "group": "2_worktree@2"
         },
         {
           "command": "foreman.forkTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted|waiting idle)/",
-          "group": "export@2"
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && !foremanOpen && foremanStatus != 'draft'",
+          "group": "3_more@1"
+        },
+        {
+          "command": "foreman.exportTask",
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "group": "3_more@2"
+        },
+        {
+          "command": "foreman.deleteTask",
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "group": "4_delete@1"
         }
       ],
       "explorer/context": [

@@ -4,7 +4,6 @@
   "view.tasks": "Tasks",
   "viewContainer.details": "Foreman Task",
   "view.details": "Changes and Checkpoints",
-  "viewsWelcome.noTasks": "No tasks yet.\n[New Task](command:foreman.newTask)",
   "command.newTask": "New Task",
   "command.openTask": "Open Task",
   "command.stopTask": "Stop Task",

@@ -3,7 +3,6 @@
   "Waiting for input": "入力待ち",
   "Failed": "失敗",
   "Interrupted": "中断",
-  "Open Task": "タスクを開く",
   "Send": "送信",
   "Stop": "停止",
   "Running…": "実行中…",
@@ -95,5 +94,16 @@
   "Changes": "変更",
   "Checkpoints": "チェックポイント",
   "No changes yet": "変更はまだありません",
-  "Mark as done": "完了にする"
+  "Mark as done": "完了にする",
+  "New task": "新しいタスク",
+  "No tasks yet. Create one to get started.": "タスクはまだありません。作成すると、ここに並びます。",
+  "Approval": "承認待ち",
+  "Replied": "返答あり",
+  "{0} min": "{0} 分",
+  "{0} files": "{0} ファイル",
+  "Finish the task": "タスクの仕上げ",
+  "Review the whole diff before merging the worktree into {0}.": "worktree の変更を {0} に取り込む前に、全体の差分をまとめて確認できます。",
+  "Whole diff": "全体の差分",
+  "Changes in this task": "このタスクの変更",
+  "{0}: all changes": "{0}: すべての変更"
 }

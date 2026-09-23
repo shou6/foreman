@@ -19,6 +19,8 @@ export interface BoardStrings {
   files: string;
   /** 列が空の時 */
   empty: string;
+  /** {0} に分数 */
+  minutes: string;
 }
 
 export interface BoardState {

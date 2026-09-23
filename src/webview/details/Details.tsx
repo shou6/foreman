@@ -1,5 +1,22 @@
 import type { DetailsState, DetailsTurn, FromDetails } from '../detailsProtocol';
 
+/** 全ターンの追加・削除の行数の合計。数えられない変更は除く */
+function lineTotals(turns: readonly DetailsTurn[]): { added?: number; removed?: number } {
+  let added: number | undefined;
+  let removed: number | undefined;
+  for (const turn of turns) {
+    for (const change of turn.changes) {
+      if (change.added !== undefined) {
+        added = (added ?? 0) + change.added;
+      }
+      if (change.removed !== undefined) {
+        removed = (removed ?? 0) + change.removed;
+      }
+    }
+  }
+  return { added, removed };
+}
+
 interface DetailsProps {
   state: DetailsState | undefined;
   post: (message: FromDetails) => void;
@@ -15,6 +32,7 @@ export function Details({ state, post }: DetailsProps) {
     return <div class="details empty">{strings.noTask}</div>;
   }
   const busy = task.turnOpen;
+  const totals = lineTotals(task.turns);
   return (
     <div class="details">
       <header class="details-head">
@@ -25,9 +43,49 @@ export function Details({ state, post }: DetailsProps) {
           {strings.statusLabels[task.status]}
         </span>
       </header>
+      <div class="changes-title">
+        <span>{strings.changesTitle}</span>
+        {(totals.added !== undefined || totals.removed !== undefined) && (
+          <span class="counts">
+            <span class="added">+{totals.added ?? 0}</span>
+            <span class="removed">-{totals.removed ?? 0}</span>
+          </span>
+        )}
+      </div>
       {[...task.turns].reverse().map((turn) => (
         <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
       ))}
+      <section class="finish">
+        {task.worktree !== undefined && (
+          <>
+            <h3 class="finish-title">{strings.finish}</h3>
+            <p class="finish-hint">{strings.finishHint.replace('{0}', task.worktree.base)}</p>
+          </>
+        )}
+        <div class="finish-actions">
+          <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
+            {strings.allDiff}
+          </button>
+          {task.worktree !== undefined && (
+            <>
+              <button
+                class="finish-button discard"
+                disabled={busy}
+                onClick={() => post({ type: 'discard' })}
+              >
+                {strings.discard}
+              </button>
+              <button
+                class="finish-button merge primary"
+                disabled={busy}
+                onClick={() => post({ type: 'merge' })}
+              >
+                {strings.merge.replace('{0}', task.worktree.base)}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

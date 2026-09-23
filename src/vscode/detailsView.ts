@@ -4,7 +4,9 @@ import type { TaskService } from '../app/taskService';
 import { isTurnOpen, type Task } from '../domain/task';
 import type { DetailsState, FromDetails, ToDetails } from '../webview/detailsProtocol';
 import { randomNonce } from './nonce';
-import { statusLabel } from './taskTreeView';
+import { snapshotUri } from './snapshotUri';
+import { statusLabel } from './statusLabel';
+import * as path from 'path';
 
 export interface DetailsViewDeps {
   extensionUri: vscode.Uri;
@@ -17,6 +19,8 @@ export interface DetailsViewDeps {
   openDiff: (taskId: string, turn: number, path: string) => Promise<void>;
   rewind: (taskId: string, turn: number) => Promise<void>;
   fork: (taskId: string, turn: number) => Promise<void>;
+  merge: (taskId: string) => Promise<void>;
+  discard: (taskId: string) => Promise<void>;
   onError: (error: unknown) => void;
 }
 
@@ -75,7 +79,49 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
       case 'fork':
         await this.deps.fork(taskId, message.turn);
         return;
+      case 'allDiff':
+        await this.openAllDiff(taskId);
+        return;
+      case 'merge':
+        await this.deps.merge(taskId);
+        return;
+      case 'discard':
+        await this.deps.discard(taskId);
+        return;
     }
+  }
+
+  /** 全ターンの変更をファイルごとにまとめ、最初の変更前と今のファイルを複数ファイルの差分エディタで開く */
+  private async openAllDiff(taskId: string): Promise<void> {
+    const task = await this.deps.service.load(taskId);
+    if (task === undefined) {
+      return;
+    }
+    const first = new Map<string, { before: string | undefined; deleted: boolean }>();
+    for (const turn of task.turns) {
+      for (const change of turn.changes) {
+        const entry = first.get(change.path);
+        if (entry === undefined) {
+          first.set(change.path, { before: change.before, deleted: change.kind === 'deleted' });
+        } else {
+          entry.deleted = change.kind === 'deleted';
+        }
+      }
+    }
+    if (first.size === 0) {
+      void vscode.window.showInformationMessage(vscode.l10n.t('No changes yet'));
+      return;
+    }
+    const resources = [...first.entries()].map(([file, entry]) => [
+      vscode.Uri.file(path.join(task.cwd, file)),
+      snapshotUri(file, entry.before),
+      entry.deleted ? snapshotUri(file, undefined) : vscode.Uri.file(path.join(task.cwd, file)),
+    ]);
+    await vscode.commands.executeCommand(
+      'vscode.changes',
+      vscode.l10n.t('{0}: all changes', task.title),
+      resources
+    );
   }
 
   private async refresh(): Promise<void> {
@@ -97,6 +143,15 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
         noChanges: vscode.l10n.t('No changes yet'),
+        finish: vscode.l10n.t('Finish the task'),
+        finishHint: vscode.l10n.t(
+          'Review the whole diff before merging the worktree into {0}.',
+          '{0}'
+        ),
+        allDiff: vscode.l10n.t('Whole diff'),
+        merge: vscode.l10n.t('Merge into {0}', '{0}'),
+        discard: vscode.l10n.t('Discard'),
+        changesTitle: vscode.l10n.t('Changes in this task'),
         statusLabels: {
           draft: statusLabel('draft'),
           running: statusLabel('running'),
@@ -150,6 +205,10 @@ export function detailsOf(task: Task): DetailsState['task'] {
     title: task.title,
     status: task.status,
     turnOpen: isTurnOpen(task),
+    worktree:
+      task.worktree === undefined
+        ? undefined
+        : { branch: task.worktree.branch, base: task.worktree.base },
     turns: task.turns.map((turn) => ({
       index: turn.index,
       prompt: turn.prompt,

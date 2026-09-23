@@ -14,6 +14,12 @@ const STRINGS = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   noChanges: 'No changes yet',
+  finish: 'Finish the task',
+  finishHint: 'Review the whole diff before merging the worktree into {0}.',
+  allDiff: 'Whole diff',
+  merge: 'Merge into {0}',
+  discard: 'Discard',
+  changesTitle: 'Changes in this task',
   statusLabels: {
     draft: 'Draft',
     running: 'Running',
@@ -96,5 +102,51 @@ suite('webview: 右サイドバー（このタスクの変更とチェックポ�
       { type: 'fork', turn: 1 },
     ];
     assert.strictEqual(messages.length, 6);
+  });
+});
+
+suite('webview: 右サイドバーのタスクの仕上げ', () => {
+  const finishStrings = {
+    ...STRINGS,
+    finish: 'Finish the task',
+    finishHint: 'Review the whole diff before merging the worktree into {0}.',
+    allDiff: 'Whole diff',
+    merge: 'Merge into {0}',
+    discard: 'Discard',
+    changesTitle: 'Changes in this task',
+  };
+
+  test('worktree のタスクには、全体の差分・破棄・マージのボタンを出す', () => {
+    const html = render(
+      <Details
+        state={{
+          ...state(),
+          task: { ...state().task!, worktree: { branch: 'foreman/x', base: 'main' } },
+          strings: finishStrings,
+        }}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('Finish the task'));
+    assert.ok(html.includes('class="finish-button all-diff"'));
+    assert.ok(html.includes('Merge into main'));
+    assert.ok(html.includes('class="finish-button discard"'));
+  });
+
+  test('worktree でないタスクには全体の差分だけを出す', () => {
+    const html = render(<Details state={{ ...state(), strings: finishStrings }} post={() => {}} />);
+    assert.ok(html.includes('class="finish-button all-diff"'));
+    assert.ok(!html.includes('Finish the task'));
+  });
+
+  test('見出しに全ターンの行数の合計を出す', () => {
+    const html = render(<Details state={{ ...state(), strings: finishStrings }} post={() => {}} />);
+    assert.ok(html.includes('+12'));
+    assert.ok(html.includes('-1'));
+  });
+
+  test('メッセージの型: allDiff、merge、discard', () => {
+    const messages: FromDetails[] = [{ type: 'allDiff' }, { type: 'merge' }, { type: 'discard' }];
+    assert.strictEqual(messages.length, 3);
   });
 });

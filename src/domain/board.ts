@@ -1,3 +1,4 @@
+import { elapsedMinutes } from './sidebar';
 import { isTurnOpen, type Task, type TaskStatus } from './task';
 
 /** ボードの列（要件定義書 5.1）。失敗と中断は「実行中」の列にバッジで出す */
@@ -24,6 +25,11 @@ export interface BoardCard {
   branch?: string;
   /** 最後のターンの変更ファイル数 */
   changes: number;
+  /** 全ターンの追加・削除の行数 */
+  added?: number;
+  removed?: number;
+  /** 実行中なら、今のターンの開始からの分数 */
+  elapsedMinutes?: number;
   /** 下書きの指示、または最後の指示 */
   prompt?: string;
   updatedAt: string;
@@ -59,9 +65,16 @@ export function moveAllowed(
   return undefined;
 }
 
-export function cardOf(task: Task): BoardCard {
+export function cardOf(task: Task, now?: string): BoardCard {
   const last = task.turns[task.turns.length - 1];
+  const totals = lineTotals(task);
   return {
+    added: totals.added,
+    removed: totals.removed,
+    elapsedMinutes:
+      task.status === 'running' && now !== undefined
+        ? elapsedMinutes(last?.startedAt, now)
+        : undefined,
     id: task.id,
     title: task.title,
     status: task.status,
@@ -76,17 +89,35 @@ export function cardOf(task: Task): BoardCard {
 }
 
 /** タスクを列に振り分ける。列の中は order の小さい順、order が無いものは更新の新しい順 */
-export function boardOf(tasks: readonly Task[]): BoardColumn[] {
+export function boardOf(tasks: readonly Task[], now?: string): BoardColumn[] {
   return BOARD_COLUMNS.map((key) => ({
     key,
     cards: tasks
       .filter((task) => columnOf(task.status) === key)
-      .sort(compare)
-      .map(cardOf),
+      .sort(compareForBoard)
+      .map((task) => cardOf(task, now)),
   }));
 }
 
-function compare(a: Task, b: Task): number {
+/** 全ターンの追加・削除の行数の合計。数えられない変更（変更前が不明）は除く */
+export function lineTotals(task: Pick<Task, 'turns'>): { added?: number; removed?: number } {
+  let added: number | undefined;
+  let removed: number | undefined;
+  for (const turn of task.turns) {
+    for (const change of turn.changes) {
+      if (change.added !== undefined) {
+        added = (added ?? 0) + change.added;
+      }
+      if (change.removed !== undefined) {
+        removed = (removed ?? 0) + change.removed;
+      }
+    }
+  }
+  return { added, removed };
+}
+
+/** ボードと一覧の並び。order の小さい順、order が無いものは更新の新しい順 */
+export function compareForBoard(a: Task, b: Task): number {
   if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
     return a.order - b.order;
   }

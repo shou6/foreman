@@ -65,6 +65,7 @@ export function Board({ state, post }: BoardProps) {
             }}
           >
             <h2 class="column-title">
+              <span class="dot" data-column={column.key} />
               {state.strings.columns[column.key]}
               <span class="count">{column.cards.length}</span>
             </h2>
@@ -107,6 +108,8 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
     <article
       class="card"
       data-task={card.id}
+      data-attention={column === 'waiting' ? 'true' : undefined}
+      data-live={card.turnOpen ? 'true' : undefined}
       draggable
       onDragStart={(e) => {
         e.dataTransfer?.setData('text/plain', card.id);
@@ -132,9 +135,20 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
       <div class="card-meta">
         {card.model !== undefined && <span class="chip">{card.model}</span>}
         {card.branch !== undefined && <span class="chip">{card.branch}</span>}
+        {card.elapsedMinutes !== undefined && (
+          <span class="chip elapsed">
+            {strings.minutes.replace('{0}', String(card.elapsedMinutes))}
+          </span>
+        )}
         {card.changes > 0 && (
           <span class="chip changes">
             {card.changes} {strings.files}
+          </span>
+        )}
+        {(card.added !== undefined || card.removed !== undefined) && (
+          <span class="counts">
+            <span class="added">+{card.added ?? 0}</span>
+            <span class="removed">-{card.removed ?? 0}</span>
           </span>
         )}
       </div>

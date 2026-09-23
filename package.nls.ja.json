@@ -4,7 +4,6 @@
   "view.tasks": "タスク",
   "viewContainer.details": "Foreman のタスク",
   "view.details": "変更とチェックポイント",
-  "viewsWelcome.noTasks": "タスクはまだありません。\n[新しいタスク](command:foreman.newTask)",
   "command.newTask": "新しいタスク",
   "command.openTask": "タスクを開く",
   "command.stopTask": "タスクを停止",

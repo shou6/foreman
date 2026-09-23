@@ -22,6 +22,7 @@ const STRINGS = {
   delete: 'Delete',
   files: 'files',
   empty: 'No tasks',
+  minutes: '{0} min',
 };
 
 function state(overrides: Partial<BoardState> = {}): BoardState {
@@ -142,5 +143,86 @@ suite('webview: タスクボード', () => {
       { type: 'open', id: 'x' },
     ];
     assert.strictEqual(messages.length, 4);
+  });
+});
+
+suite('webview: タスクボードの強調', () => {
+  test('入力待ちのカードは attention、動いているカードは live が付く', () => {
+    const html = render(
+      <Board
+        state={state({
+          columns: [
+            { key: 'draft', cards: [] },
+            {
+              key: 'running',
+              cards: [
+                {
+                  id: 'r2',
+                  title: 'Run',
+                  status: 'running',
+                  turnOpen: true,
+                  changes: 0,
+                  updatedAt: '',
+                  elapsedMinutes: 4,
+                },
+              ],
+            },
+            {
+              key: 'waiting',
+              cards: [
+                {
+                  id: 'w1',
+                  title: 'Wait',
+                  status: 'waiting',
+                  turnOpen: true,
+                  changes: 0,
+                  updatedAt: '',
+                },
+              ],
+            },
+            { key: 'review', cards: [] },
+            { key: 'done', cards: [] },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/data-task="w1"[^>]*data-attention="true"/.test(html));
+    assert.ok(/data-task="r2"[^>]*data-live="true"/.test(html));
+    assert.ok(html.includes('4 min'));
+  });
+
+  test('列の見出しに状態の点が付き、変更の行数がカードに出る', () => {
+    const html = render(
+      <Board
+        state={state({
+          columns: [
+            { key: 'draft', cards: [] },
+            { key: 'running', cards: [] },
+            { key: 'waiting', cards: [] },
+            {
+              key: 'review',
+              cards: [
+                {
+                  id: 'v1',
+                  title: 'Review',
+                  status: 'review',
+                  turnOpen: false,
+                  changes: 2,
+                  added: 88,
+                  removed: 0,
+                  updatedAt: '',
+                },
+              ],
+            },
+            { key: 'done', cards: [] },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/class="dot"[^>]*data-column="review"/.test(html));
+    assert.ok(html.includes('+88'));
+    assert.ok(html.includes('-0'));
   });
 });

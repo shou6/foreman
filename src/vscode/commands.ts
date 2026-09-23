@@ -5,7 +5,7 @@ import { chooseWorktree } from './chooseWorktree';
 import { isTurnOpen, type Worktree } from '../domain/task';
 import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
-import { statusLabel, type TreeNode } from './taskTreeView';
+import { statusLabel } from './statusLabel';
 import type { WorktreeActions } from './worktreeActions';
 
 export interface CommandDeps {
@@ -32,8 +32,9 @@ function taskIdOf(arg: unknown): string | undefined {
   if (typeof arg === 'string') {
     return arg;
   }
-  const node = arg as TreeNode | undefined;
-  return node?.kind === 'task' ? node.task.id : undefined;
+  // 左サイドバー（Webview）の右クリックは data-vscode-context の内容が届く
+  const context = arg as { taskId?: unknown } | undefined;
+  return typeof context?.taskId === 'string' ? context.taskId : undefined;
 }
 
 export function registerCommands(context: vscode.ExtensionContext, deps: CommandDeps): void {

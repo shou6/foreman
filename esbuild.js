@@ -73,12 +73,20 @@ const details = {
   outfile: 'dist/details.js',
 };
 
+/** 左サイドバー（WebviewView）。sidebar.css は dist/sidebar.css に出る */
+const sidebar = {
+  ...webview,
+  entryPoints: ['src/webview/sidebar/main.tsx'],
+  outfile: 'dist/sidebar.js',
+};
+
 async function main() {
   const contexts = await Promise.all([
     esbuild.context(extension),
     esbuild.context(webview),
     esbuild.context(board),
     esbuild.context(details),
+    esbuild.context(sidebar),
   ]);
   if (watch) {
     await Promise.all(contexts.map((ctx) => ctx.watch()));

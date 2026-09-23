@@ -16,6 +16,7 @@ export interface BoardPanelDeps {
   fork: (taskId: string) => Promise<void>;
   delete: (taskId: string) => Promise<void>;
   onError: (error: unknown) => void;
+  now: () => string;
 }
 
 /** タスクボード（WebviewPanel）。1 つだけ開き、タスクの変化で描き直す */
@@ -23,11 +24,15 @@ export class BoardPanel implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined;
   private readonly subscriptions: (() => void)[] = [];
 
+  private readonly timer: ReturnType<typeof setInterval>;
+
   constructor(private readonly deps: BoardPanelDeps) {
     this.subscriptions.push(
       deps.service.onDidChange(() => void this.refresh()),
       deps.service.onDidDelete(() => void this.refresh())
     );
+    // 実行中の経過時間を進める
+    this.timer = setInterval(() => void this.refresh(), 60_000);
   }
 
   open(): void {
@@ -111,7 +116,7 @@ export class BoardPanel implements vscode.Disposable {
       return;
     }
     const state: BoardState = {
-      columns: boardOf(await this.deps.service.list()),
+      columns: boardOf(await this.deps.service.list(), this.deps.now()),
       strings: {
         columns: {
           draft: vscode.l10n.t('Draft'),
@@ -134,6 +139,7 @@ export class BoardPanel implements vscode.Disposable {
         delete: vscode.l10n.t('Delete'),
         files: vscode.l10n.t('files'),
         empty: vscode.l10n.t('No tasks'),
+        minutes: vscode.l10n.t('{0} min', '{0}'),
       },
     };
     const message: ToBoard = { type: 'state', state };
@@ -165,6 +171,7 @@ export class BoardPanel implements vscode.Disposable {
   }
 
   dispose(): void {
+    clearInterval(this.timer);
     for (const unsubscribe of this.subscriptions) {
       unsubscribe();
     }

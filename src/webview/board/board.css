@@ -196,3 +196,84 @@ body {
   margin-left: auto;
   color: var(--vscode-descriptionForeground);
 }
+
+/* 列と状態の点 */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--vscode-descriptionForeground);
+  vertical-align: middle;
+}
+
+.dot[data-column='running'] {
+  background: var(--vscode-testing-iconQueued, #4aa3ff);
+}
+
+.dot[data-column='waiting'] {
+  background: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.dot[data-column='review'] {
+  background: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.dot[data-column='done'] {
+  background: var(--vscode-testing-iconPassed, #4caf50);
+  opacity: 0.6;
+}
+
+.dot[data-column='draft'] {
+  background: transparent;
+  border: 1px solid var(--vscode-descriptionForeground);
+}
+
+/* 手が要るカードと動いているカードの強調 */
+.card[data-attention='true'] {
+  border-color: var(--vscode-editorWarning-foreground, #e5a50a);
+  box-shadow: 0 0 0 1px var(--vscode-editorWarning-foreground, #e5a50a) inset;
+}
+
+.card[data-live='true'] .card-title::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--vscode-testing-iconQueued, #4aa3ff);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.counts {
+  display: inline-flex;
+  gap: 4px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.85em;
+}
+
+.counts .added {
+  color: var(--vscode-gitDecoration-addedResourceForeground, #4caf50);
+}
+
+.counts .removed {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, #f14c4c);
+}
+
+.chip.elapsed {
+  background: transparent;
+  border: 1px solid var(--vscode-testing-iconQueued, #4aa3ff);
+  color: var(--vscode-testing-iconQueued, #4aa3ff);
+}

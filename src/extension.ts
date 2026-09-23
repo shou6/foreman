@@ -21,8 +21,9 @@ import { registerCommands } from './vscode/commands';
 import { Notifications } from './vscode/notifications';
 import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
-import { SNAPSHOT_SCHEME, TaskPanels } from './vscode/taskPanel';
-import { TaskTreeProvider } from './vscode/taskTreeView';
+import { TaskPanels } from './vscode/taskPanel';
+import { SNAPSHOT_SCHEME } from './vscode/snapshotUri';
+import { SidebarView, SIDEBAR_VIEW_ID } from './vscode/sidebarView';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
@@ -175,6 +176,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     onError: (error) => {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     },
+    now: () => new Date().toISOString(),
   });
   const details = new DetailsView({
     extensionUri: context.extensionUri,
@@ -186,11 +188,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     openDiff: (taskId, turn, path) => panels.openDiff(taskId, turn, path),
     rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
     fork: (taskId, turn) => checkpoints.fork(taskId, turn),
+    merge: (taskId) => worktreeActions.merge(taskId),
+    discard: (taskId) => worktreeActions.discard(taskId),
     onError: (error) => {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     },
   });
-  const tree = new TaskTreeProvider(service);
+  const sidebar = new SidebarView({
+    extensionUri: context.extensionUri,
+    service,
+    approvals,
+    activeTaskId: () => panels.activeTaskId,
+    onDidChangeActive: (listener) => panels.onDidChangeActive(listener),
+    openTask: (taskId) => panels.open(taskId),
+    newTask: async () => {
+      await vscode.commands.executeCommand('foreman.newTask');
+    },
+    now: () => new Date().toISOString(),
+    onError: (error) => {
+      void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+    },
+  });
 
   context.subscriptions.push(
     output,
@@ -202,7 +220,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       (taskId) => void panels.open(taskId),
       () => readSettings().notifications
     ),
-    vscode.window.registerTreeDataProvider('foreman.tasks', tree),
+    sidebar,
+    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
     details,
     vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
     // 差分エディタの左側（変更前）をスナップショットから出す

@@ -14,6 +14,15 @@ export interface DetailsStrings {
   forkHere: string;
   noChanges: string;
   statusLabels: Record<TaskStatus, string>;
+  /** タスクの仕上げ（worktree のマージ・破棄・全体の差分） */
+  finish: string;
+  /** {0} に元のブランチ */
+  finishHint: string;
+  allDiff: string;
+  /** {0} に元のブランチ */
+  merge: string;
+  discard: string;
+  changesTitle: string;
 }
 
 export interface DetailsChange {
@@ -38,6 +47,7 @@ export interface DetailsTask {
   status: TaskStatus;
   turnOpen: boolean;
   turns: DetailsTurn[];
+  worktree?: { branch: string; base: string };
 }
 
 export interface DetailsState {
@@ -57,4 +67,8 @@ export type FromDetails =
   | { type: 'openDiff'; turn: number; path: string }
   | { type: 'revert'; turn: number; path: string }
   | { type: 'rewind'; turn: number }
-  | { type: 'fork'; turn: number };
+  | { type: 'fork'; turn: number }
+  /** 全ターンの変更をまとめて差分エディタで開く */
+  | { type: 'allDiff' }
+  | { type: 'merge' }
+  | { type: 'discard' };
