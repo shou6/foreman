@@ -178,3 +178,32 @@ suite('Scenario: 下書きと画面', function () {
     await vscode.commands.executeCommand('foreman.openBoard');
   });
 });
+
+suite('Scenario: 完了の後に続きを指示する', function () {
+  this.timeout(30_000);
+
+  test('完了したタスクに続きを指示してファイルが変わると、完了ではなくレビュー待ちに戻る', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const cwd = workDir();
+    const file = path.join(cwd, 'a.txt');
+    fs.writeFileSync(file, 'v1\n');
+    const task = await t.service.create({ prompt: 'first', cwd });
+    t.runner.last.emit({ type: 'init', sessionId: 'sess-3', model: 'm' });
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'waiting');
+    await t.service.approve(task.id);
+    await untilStatus(t, task.id, 'done');
+
+    await t.service.send(task.id, 'second');
+    await untilStatus(t, task.id, 'running');
+    t.runner.last.emit({ type: 'file-edit', phase: 'before', path: file });
+    await settle(300);
+    fs.writeFileSync(file, 'v1\nv2\n');
+    t.runner.last.emit({ type: 'file-edit', phase: 'after', path: file });
+    await settle();
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'review');
+    assert.strictEqual((await t.service.load(task.id))?.turns[1]?.changes.length, 1);
+  });
+});
