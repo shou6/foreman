@@ -20,6 +20,8 @@ export interface Git {
   commitAll(dir: string, message: string): Promise<void>;
   /** repo の今のブランチへ branch をマージする（--no-ff）。衝突したら中止して失敗にする */
   merge(repo: string, branch: string, message: string): Promise<void>;
+  /** paths（dir からの相対）のうち、Git が無視するもの。Git でない場所なら空 */
+  ignored(dir: string, paths: readonly string[]): Promise<string[]>;
   /** .git/info/exclude に pattern を足す（既にあれば何もしない） */
   ensureExcluded(repo: string, pattern: string): Promise<void>;
 }

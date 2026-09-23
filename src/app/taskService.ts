@@ -199,6 +199,20 @@ export class TaskService {
     await this.handles.get(id)?.setModel(model);
   }
 
+  /**
+   * セッションの入力を閉じてプロセスを終わらせ、終了を待つ。タスクの状態は変えない。
+   * worktree を消す前など、作業ディレクトリを掴んでいるプロセスを手放したい時に使う
+   */
+  async close(id: string): Promise<void> {
+    const handle = this.handles.get(id);
+    if (handle === undefined) {
+      return;
+    }
+    this.handles.delete(id);
+    handle.close();
+    await handle.done;
+  }
+
   async stop(id: string): Promise<void> {
     await this.mustLoad(id);
     const handle = this.handles.get(id);

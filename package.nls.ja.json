@@ -20,5 +20,6 @@
   "config.taskViewWidth": "タスク画面の本文の最大の幅（em）。0 なら画面いっぱいに広げる。",
   "command.mergeTask": "worktree を元のブランチへマージ",
   "command.discardTask": "worktree を破棄",
-  "config.useWorktree": "新しいタスクを既定で git worktree の中で動かす。タスクごとに選び直せる。"
+  "config.useWorktree": "新しいタスクを既定で git worktree の中で動かす。タスクごとに選び直せる。",
+  "config.worktreeBranchPrefix": "タスクの worktree のブランチ名に付ける接頭辞（例：`foreman/`）。"
 }

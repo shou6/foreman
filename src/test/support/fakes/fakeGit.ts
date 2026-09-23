@@ -98,6 +98,13 @@ export class FakeGit implements Git {
     this.merges.push({ repo, branch, message });
   }
 
+  /** 無視するパス。テストで設定する */
+  ignoredPaths: string[] = [];
+
+  async ignored(_dir: string, paths: readonly string[]): Promise<string[]> {
+    return paths.filter((p) => this.ignoredPaths.includes(p));
+  }
+
   async ensureExcluded(repo: string, pattern: string): Promise<void> {
     const list = this.excluded.get(repo) ?? [];
     if (!list.includes(pattern)) {

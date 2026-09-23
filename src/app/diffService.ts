@@ -10,6 +10,8 @@ export interface DiffServiceDeps {
   snapshots: SnapshotStore;
   /** パスの区切り（Windows は \\） */
   sep: string;
+  /** 監視で拾ったパス（cwd からの相対）のうち、記録しないもの（git が無視するファイルなど） */
+  isIgnored?: (dir: string, paths: string[]) => Promise<string[]>;
 }
 
 /** 監視で無視するフォルダ */
@@ -180,9 +182,21 @@ export class DiffService {
     if (task === undefined) {
       return;
     }
+    // 監視で拾っただけのファイルは、git が無視するもの（生成物など）を除く
+    const watched = [...active.entries]
+      .filter(([, entry]) => entry.source === 'watcher')
+      .map(([path]) => this.relative(active.cwd, path));
+    const ignored = new Set(
+      watched.length > 0 && this.deps.isIgnored !== undefined
+        ? await this.deps.isIgnored(active.cwd, watched)
+        : []
+    );
     const changes: FileChange[] = [];
     for (const [path, entry] of active.entries) {
       const relative = this.relative(active.cwd, path);
+      if (entry.source === 'watcher' && ignored.has(relative)) {
+        continue;
+      }
       if (!entry.afterKnown) {
         entry.after = await this.deps.fs.readFile(path);
         entry.afterKnown = true;

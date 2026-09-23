@@ -50,7 +50,7 @@ suite('TaskService.close', () => {
     assert.strictEqual(runner.last.closed, true);
     assert.strictEqual((await service.load('task-1'))?.status, 'done');
     // 閉じた後の追加の指示は resume で続く
-    await service.send('task-1', 'more');
+    await assert.rejects(service.send('task-1', 'more'), /session/);
     assert.strictEqual(runner.resumes.length, 0, 'session_id が無いので再開できず失敗する');
   });
 });

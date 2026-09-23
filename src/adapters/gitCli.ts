@@ -9,7 +9,7 @@ export class GitCli implements Git {
 
   async repoRoot(dir: string): Promise<string | undefined> {
     try {
-      return (await this.run(dir, 'rev-parse', '--show-toplevel')).trim();
+      return path.normalize((await this.run(dir, 'rev-parse', '--show-toplevel')).trim());
     } catch {
       return undefined;
     }
@@ -70,6 +70,34 @@ export class GitCli implements Git {
       }
       throw error;
     }
+  }
+
+  async ignored(dir: string, paths: readonly string[]): Promise<string[]> {
+    if (paths.length === 0) {
+      return [];
+    }
+    const result: string[] = [];
+    // 引数の長さの上限を避けて、少しずつ問い合わせる
+    for (let i = 0; i < paths.length; i += 100) {
+      const chunk = paths.slice(i, i + 100);
+      try {
+        const out = await this.run(dir, 'check-ignore', '--', ...chunk);
+        const hits = new Set(
+          out
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l !== '')
+        );
+        for (const p of chunk) {
+          if (hits.has(p) || hits.has(p.replace(/\\/g, '/'))) {
+            result.push(p);
+          }
+        }
+      } catch {
+        // 終了コード 1 は「無視するものが無い」。Git でない場所のエラーも同じ扱い
+      }
+    }
+    return result;
   }
 
   async ensureExcluded(repo: string, pattern: string): Promise<void> {

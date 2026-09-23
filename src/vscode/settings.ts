@@ -11,6 +11,8 @@ export interface Settings {
   taskViewWidth: number;
   /** 新しいタスクで worktree を使うかの既定 */
   useWorktree: boolean;
+  /** worktree のブランチ名の接頭辞 */
+  worktreeBranchPrefix: string;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -29,5 +31,6 @@ export function readSettings(): Settings {
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),
+    worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
   };
 }

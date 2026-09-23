@@ -75,8 +75,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // 前回の履歴を読んでから、前回の終了で途中だったタスクを中断に直す（中断の記録が履歴にも残る）
   const transcripts = new Transcripts(service, transcriptStore, await transcriptStore.loadAll());
   await service.recover();
-  const diffs = new DiffService({ service, fs: new NodeFileSystem(), snapshots, sep: path.sep });
-  const worktrees = new WorktreeService({ git: new GitCli(), sep: path.sep });
+  const git = new GitCli();
+  const diffs = new DiffService({
+    service,
+    fs: new NodeFileSystem(),
+    snapshots,
+    sep: path.sep,
+    isIgnored: (dir, paths) => git.ignored(dir, paths),
+  });
+  const worktrees = new WorktreeService({
+    git,
+    sep: path.sep,
+    branchPrefix: () => readSettings().worktreeBranchPrefix,
+  });
   const worktreeActions = new WorktreeActions(service, worktrees);
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,

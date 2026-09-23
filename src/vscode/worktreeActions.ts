@@ -27,8 +27,11 @@ export class WorktreeActions {
       return;
     }
     const { worktree } = task;
+    // プロセスが作業ディレクトリを掴んでいると Windows では消せないので、先に閉じる
+    await this.service.close(taskId);
+    let result;
     try {
-      await this.worktrees.merge(worktree, task.title);
+      result = await this.worktrees.merge(worktree, task.title);
     } catch (error) {
       void vscode.window.showErrorMessage(
         vscode.l10n.t('Merge failed: {0}', error instanceof Error ? error.message : String(error))
@@ -36,9 +39,19 @@ export class WorktreeActions {
       return;
     }
     await this.service.patch(taskId, (t) => ({ ...t, worktree: undefined, cwd: worktree.repo }));
-    void vscode.window.showInformationMessage(
-      vscode.l10n.t('Merged {0} into {1}.', worktree.branch, worktree.base)
-    );
+    if (result.removed) {
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t('Merged {0} into {1}.', worktree.branch, worktree.base)
+      );
+    } else {
+      void vscode.window.showWarningMessage(
+        vscode.l10n.t(
+          'Merged {0} into {1}. The worktree folder could not be removed yet; Foreman will clean it up on the next start.',
+          worktree.branch,
+          worktree.base
+        )
+      );
+    }
   }
 
   async discard(taskId: string): Promise<void> {
@@ -62,6 +75,7 @@ export class WorktreeActions {
       return;
     }
     const { worktree } = task;
+    await this.service.close(taskId);
     await this.worktrees.discard(worktree);
     await this.service.patch(taskId, (t) => ({ ...t, worktree: undefined, cwd: worktree.repo }));
   }
@@ -89,6 +103,7 @@ export class WorktreeActions {
         return false;
       }
     }
+    await this.service.close(taskId);
     await this.worktrees.discard(task.worktree);
     return true;
   }

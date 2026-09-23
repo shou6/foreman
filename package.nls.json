@@ -20,5 +20,6 @@
   "config.taskViewWidth": "Maximum width of the task view content, in em. 0 uses the full width.",
   "command.mergeTask": "Merge Worktree into Base Branch",
   "command.discardTask": "Discard Worktree",
-  "config.useWorktree": "Run new tasks in a git worktree by default. You can still choose per task."
+  "config.useWorktree": "Run new tasks in a git worktree by default. You can still choose per task.",
+  "config.worktreeBranchPrefix": "Prefix for the branch of each task worktree, for example `foreman/`."
 }
