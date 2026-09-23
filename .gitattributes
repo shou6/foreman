@@ -1,0 +1,9 @@
+# 改行コードは LF に統一する（Windows ホストと CI の Linux で同じ作業ツリーを共有するため）
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# GitHub の言語統計
+docs/** linguist-documentation
+*.lock linguist-generated
+package-lock.json linguist-generated

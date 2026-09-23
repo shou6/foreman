@@ -1,0 +1,95 @@
+{
+  "name": "foreman",
+  "displayName": "Foreman for Claude Code",
+  "description": "%description%",
+  "version": "0.0.1",
+  "publisher": "shou6",
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#1F2937",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/shou6/foreman#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shou6/foreman.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shou6/foreman/issues"
+  },
+  "private": true,
+  "engines": {
+    "vscode": "^1.138.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "files": [
+    "dist/extension.js",
+    "resources/**",
+    "l10n/**",
+    "package.nls.json",
+    "package.nls.ja.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "foreman.helloWorld",
+        "title": "%command.helloWorld%",
+        "category": "Foreman for Claude Code"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && mocha",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.ts\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.{js,mjs,json}\" \".vscode/*.json\"",
+    "test": "vscode-test",
+    "vsix": "vsce package",
+    "try": "node scripts/try-extension.js",
+    "test:unit": "npm run compile-tests && mocha",
+    "test:integration:local": "node scripts/test-integration-local.js",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "verify:package": "npm run compile-tests && node scripts/verify-package.js",
+    "icon": "node scripts/generate-icon.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "@types/vscode": "^1.138.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "markdownlint-cli2": "^0.23.3",
+    "mocha": "^12.0.2",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.6.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}

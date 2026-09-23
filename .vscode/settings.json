@@ -1,0 +1,18 @@
+{
+  "files.exclude": {
+    "out": false,
+    "dist": false
+  },
+  "search.exclude": {
+    "out": true,
+    "dist": true,
+    ".vscode-test": true
+  },
+  // tsc のタスク自動検出は無効化する（必要なタスクは npm scripts に定義済み）
+  "js/ts.tsc.autoDetect": "off",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  }
+}

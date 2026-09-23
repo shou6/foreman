@@ -1,0 +1,30 @@
+# devDependencies と GitHub Actions の新版を、月に 1 回まとめて確認する。
+# コミットメッセージはコミット規約（chore(deps): ...）に合わせる。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      # engines.vscode より新しい @types/vscode にすると vsce package が失敗する。engines と一緒に手で上げる
+      - dependency-name: '@types/vscode'
+      # Node のメジャーは CI と engines に合わせて手で上げる
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # typescript-eslint が対応する範囲を超えると npm ci が失敗する（7.0.2 で実際に起きた）。
+      # typescript-eslint の peerDependencies が新しいメジャーを含んでから手で上げる
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope

@@ -1,0 +1,4 @@
+{
+  "description": "Visual Studio Code の拡張機能。",
+  "command.helloWorld": "Hello World"
+}

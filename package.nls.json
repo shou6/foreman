@@ -1,0 +1,4 @@
+{
+  "description": "A Visual Studio Code extension.",
+  "command.helloWorld": "Hello World"
+}

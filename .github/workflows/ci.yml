@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同じブランチへの新しい push が来たら、古い実行を止める
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, unit tests and package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Format
+        run: npm run format:check
+      - name: Type check, lint and bundle
+        run: npm run compile
+      # 翻訳の抜けと、公開パッケージの許可リストもここで検査される
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Markdown lint
+        run: npm run lint:md
+      - name: Package
+        run: npx vsce package --out extension.vsix
+      # 公開パッケージに意図しないファイルが入っていないことを、実際の中身で確かめる
+      - name: Verify package contents
+        run: node scripts/verify-package.js
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: extension.vsix
+          if-no-files-found: error
+
+  integration:
+    name: Integration tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # VS Code を実際に起動してバンドルを読み込む。Linux は画面が無いので xvfb を使う
+      - name: Integration tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm test
+      - name: Integration tests
+        if: runner.os != 'Linux'
+        run: npm test

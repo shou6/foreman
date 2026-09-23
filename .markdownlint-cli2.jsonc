@@ -1,0 +1,25 @@
+// markdownlint の設定（VSCode 拡張 davidanson.vscode-markdownlint と
+// Claude Code の PostToolUse hook（markdownlint-hook.js）の両方がこのファイルを読む）
+{
+  "globs": ["**/*.md"],
+  "ignores": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/out/**",
+    ".vscode-test/**",
+    // Claude Code が持ち込む配布物（skill / plugin）は対象外
+    ".claude/skills/**",
+    ".claude/plugins/**"
+  ],
+  "config": {
+    "default": true,
+    // 行長：日本語の文書は 80 桁で折り返さない
+    "MD013": false,
+    // 図表を埋め込むため、必要な要素だけ HTML を許可する
+    "MD033": {
+      "allowed_elements": ["img", "p", "br", "details", "summary", "kbd", "sub", "sup"]
+    },
+    // 同じ見出し名は別の親の下でのみ許可する
+    "MD024": { "siblings_only": true }
+  }
+}
