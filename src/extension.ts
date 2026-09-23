@@ -10,7 +10,9 @@ import { FsTaskStore } from './adapters/fsTaskStore';
 import { FsTranscriptStore } from './adapters/fsTranscriptStore';
 import { GitCli } from './adapters/gitCli';
 import { NodeFileSystem } from './adapters/nodeFileSystem';
+import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
 import { ApprovalService } from './app/approvalService';
+import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
@@ -132,6 +134,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     { dispose: () => service.dispose() },
     { dispose: () => void transcriptStore.flush() }
   );
+  const autoTitle = new AutoTitle(service, {
+    enabled: () => readSettings().autoTitle,
+    suggest: (prompt) =>
+      suggestTitleWithSdk(sdk.query, {
+        prompt,
+        model: readSettings().titleModel,
+        claudePath: locateClaude(),
+        cwd: os.tmpdir(),
+      }),
+  });
   registerCommands(context, {
     service,
     panels,
@@ -140,6 +152,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     worktreeActions,
     newId: () => randomUUID(),
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
+    afterCreate: (task) => void autoTitle.onCreated(task),
   });
 
   // タスクの無い worktree（前回の異常終了で残ったものなど）を片付ける

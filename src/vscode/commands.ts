@@ -15,6 +15,8 @@ export interface CommandDeps {
   worktreeActions: WorktreeActions;
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
+  /** タスクの作成後に呼ぶ（タイトル付けなど）。待たない */
+  afterCreate: (task: import('../domain/task').Task) => void;
 }
 
 function taskIdOf(arg: unknown): string | undefined {
@@ -115,6 +117,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           permissionMode: settings.defaultPermissionMode,
         });
         await panels.open(task.id);
+        deps.afterCreate(task);
       })
     ),
     vscode.commands.registerCommand('foreman.openTask', (arg: unknown) => {

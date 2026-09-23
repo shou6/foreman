@@ -15,6 +15,10 @@ export interface Settings {
   worktreeBranchPrefix: string;
   /** ツールの呼び出しを最初から開いて見せるか */
   toolCallsExpanded: boolean;
+  /** 軽いモデルで短いタイトルを付けるか */
+  autoTitle: boolean;
+  /** タイトル付けに使うモデル */
+  titleModel: string;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -35,5 +39,7 @@ export function readSettings(): Settings {
     useWorktree: config.get<boolean>('useWorktree', false),
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
+    autoTitle: config.get<boolean>('autoTitle', true),
+    titleModel: text('titleModel') ?? 'claude-haiku-4-5',
   };
 }

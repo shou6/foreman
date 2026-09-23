@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import type { TranscriptItem } from '../domain/transcript';
 import { renderMarkdown } from './markdown';
-import { numberLines } from '../domain/diff';
+import { hunksOf } from '../domain/diff';
 import {
   diffKey,
   type DiffLine,
@@ -343,18 +343,23 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
             </div>
             {lines !== undefined && (open[key] ?? true) && (
               <pre class="diff-lines">
-                {numberLines(lines).map((line, i) => (
-                  <div class="diff-line" data-kind={line.kind} key={i}>
-                    <span class="diff-no" data-old={line.oldNo} data-new={line.newNo}>
-                      <span>{line.oldNo ?? ''}</span>
-                      <span>{line.newNo ?? ''}</span>
-                    </span>
-                    <span class="diff-sign">
-                      {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
-                    </span>
-                    {line.text}
-                  </div>
-                ))}
+                {hunksOf(lines, 3).flatMap((hunk, h) => [
+                  <div class="diff-hunk" key={`h${h}`}>
+                    @@ -{hunk.oldStart},{hunk.oldCount} +{hunk.newStart},{hunk.newCount} @@
+                  </div>,
+                  ...hunk.lines.map((line, i) => (
+                    <div class="diff-line" data-kind={line.kind} key={`${h}-${i}`}>
+                      <span class="diff-no" data-old={line.oldNo} data-new={line.newNo}>
+                        <span>{line.oldNo ?? ''}</span>
+                        <span>{line.newNo ?? ''}</span>
+                      </span>
+                      <span class="diff-sign">
+                        {line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' '}
+                      </span>
+                      {line.text}
+                    </div>
+                  )),
+                ])}
               </pre>
             )}
           </div>

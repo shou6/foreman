@@ -713,3 +713,9 @@ body.dragging .composer {
 .tool-group[open] > .tool {
   margin-left: 1.6em;
 }
+
+.diff-hunk {
+  padding: 0.15em 0.9em;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
+}

@@ -70,3 +70,61 @@ export function numberLines(lines: readonly DiffLine[]): NumberedLine[] {
     return { ...line, oldNo: undefined, newNo };
   });
 }
+
+export interface Hunk {
+  oldStart: number;
+  oldCount: number;
+  newStart: number;
+  newCount: number;
+  lines: NumberedLine[];
+}
+
+/**
+ * 変更の前後 context 行だけを残して hunk に分ける（git diff と同じ見せ方）。
+ * 近い変更（間の同じ行が context の 2 倍以下）は 1 つの hunk にまとめる
+ */
+export function hunksOf(lines: readonly DiffLine[], context: number): Hunk[] {
+  const numbered = numberLines(lines);
+  const changed = numbered.map((l) => l.kind !== 'same');
+  const hunks: Hunk[] = [];
+  let i = 0;
+  while (i < numbered.length) {
+    if (!changed[i]) {
+      i++;
+      continue;
+    }
+    const start = Math.max(0, i - context);
+    let end = i;
+    let j = i;
+    while (j < numbered.length) {
+      if (changed[j]) {
+        end = j;
+        j++;
+        continue;
+      }
+      // 次の変更が context * 2 以内なら同じ hunk に含める
+      let k = j;
+      while (k < numbered.length && !changed[k] && k - j < context * 2) {
+        k++;
+      }
+      if (k < numbered.length && changed[k] && k - j <= context * 2) {
+        j = k;
+        continue;
+      }
+      break;
+    }
+    const stop = Math.min(numbered.length, end + context + 1);
+    const slice = numbered.slice(start, stop);
+    const olds = slice.filter((l) => l.oldNo !== undefined);
+    const news = slice.filter((l) => l.newNo !== undefined);
+    hunks.push({
+      oldStart: olds[0]?.oldNo ?? numbered[start]?.oldNo ?? 1,
+      oldCount: olds.length,
+      newStart: news[0]?.newNo ?? numbered[start]?.newNo ?? 1,
+      newCount: news.length,
+      lines: slice,
+    });
+    i = stop;
+  }
+  return hunks;
+}

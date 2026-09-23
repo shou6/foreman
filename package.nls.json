@@ -25,5 +25,7 @@
   "command.exportTask": "Export Task as Markdown",
   "config.toolCalls": "How tool calls are shown in the task view.",
   "config.toolCalls.collapsed": "One summary line per group; click to expand.",
-  "config.toolCalls.expanded": "Show every tool call."
+  "config.toolCalls.expanded": "Show every tool call.",
+  "config.autoTitle": "Ask a small model for a short task title right after a task is created. Uses one short request per task.",
+  "config.titleModel": "Model used to write task titles."
 }
