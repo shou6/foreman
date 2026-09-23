@@ -23,3 +23,16 @@ suite('notificationFor', () => {
     assert.strictEqual(notificationFor('running', 'waiting', 'none'), undefined);
   });
 });
+
+suite('notificationFor: レビュー待ち（M10）', () => {
+  test('レビュー待ちになった時は、完了と同じく all の時だけ通知する', () => {
+    assert.strictEqual(notificationFor('running', 'review', 'all'), 'review');
+    assert.strictEqual(notificationFor('done', 'review', 'all'), 'review');
+    assert.strictEqual(notificationFor('running', 'review', 'waiting'), undefined);
+    assert.strictEqual(
+      notificationFor('review', 'done', 'all'),
+      undefined,
+      '承認は自分の操作なので通知しない'
+    );
+  });
+});

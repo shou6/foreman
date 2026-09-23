@@ -85,6 +85,15 @@ export function App({ state, post }: AppProps) {
         <button class="ghost export" onClick={() => post({ type: 'export' })}>
           {state.strings.export}
         </button>
+        {state.status === 'review' && (
+          <button
+            class="ghost approve"
+            disabled={state.finishing !== undefined}
+            onClick={() => post({ type: 'approve' })}
+          >
+            {state.strings.approve}
+          </button>
+        )}
         {state.worktree !== undefined && (
           <>
             <button

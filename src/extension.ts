@@ -26,6 +26,8 @@ import { TaskTreeProvider } from './vscode/taskTreeView';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
+import { ReviewActions } from './vscode/reviewActions';
+import { BoardPanel } from './vscode/boardPanel';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -121,6 +123,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     newId: () => randomUUID(),
     openPanel: async (taskId) => panelsRef?.open(taskId),
   });
+  const review = new ReviewActions({
+    service,
+    worktrees,
+    worktreeActions,
+    settings: readSettings,
+    openPanel: async (taskId) => panelsRef?.open(taskId),
+    afterStart: (task) => void autoTitleRef?.onCreated(task),
+  });
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
@@ -132,17 +142,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       discard: (taskId) => worktreeActions.discard(taskId),
     },
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
+    approve: (taskId) => review.approve(taskId),
     checkpoint: {
       rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
       fork: (taskId, turn) => checkpoints.fork(taskId, turn),
     },
   });
   panelsRef = panels;
+  const board = new BoardPanel({
+    extensionUri: context.extensionUri,
+    service,
+    openTask: (taskId) => panels.open(taskId),
+    newDraft: async () => {
+      const folder = vscode.workspace.workspaceFolders?.[0];
+      if (folder === undefined) {
+        void vscode.window.showErrorMessage(vscode.l10n.t('Open a folder before creating a task.'));
+        return;
+      }
+      const task = await review.newDraft(folder.uri.fsPath);
+      if (task !== undefined) {
+        void autoTitleRef?.onCreated(task);
+      }
+    },
+    start: (taskId) => review.start(taskId),
+    approve: (taskId) => review.approve(taskId),
+    editDraft: (taskId) => review.editDraft(taskId),
+    fork: (taskId) => checkpoints.fork(taskId),
+    delete: async (taskId) => {
+      await vscode.commands.executeCommand('foreman.deleteTask', taskId);
+    },
+    onError: (error) => {
+      void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
+    },
+  });
   const tree = new TaskTreeProvider(service);
 
   context.subscriptions.push(
     output,
     panels,
+    board,
     new StatusBar(service),
     new Notifications(
       service,
@@ -173,6 +211,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     service,
     panels,
     checkpoints,
+    review: {
+      approve: (taskId) => review.approve(taskId),
+      start: (taskId) => review.start(taskId),
+      editDraft: (taskId) => review.editDraft(taskId),
+      newDraft: (folder) => review.newDraft(folder),
+    },
+    openBoard: () => board.open(),
     settings: readSettings,
     worktrees,
     worktreeActions,

@@ -76,5 +76,19 @@
   "This task has no session to fork.": "このタスクには切り出せるセッションがありません。",
   "Fork \"{0}\"": "「{0}」を切り出す",
   "Fork \"{0}\" from turn {1}": "「{0}」をターン {1} から切り出す",
-  "What should the new task do?": "新しいタスクで何をしますか？"
+  "What should the new task do?": "新しいタスクで何をしますか？",
+  "Draft": "下書き",
+  "Review": "レビュー待ち",
+  "Task \"{0}\" has changes to review.": "タスク「{0}」に確認する変更があります。",
+  "Approve": "承認",
+  "Task \"{0}\" has no changes waiting for review.": "タスク「{0}」に確認待ちの変更はありません。",
+  "New Draft": "新しい下書き",
+  "What should Claude do? You can start it later from the board.": "Claude に何をさせますか？ ボードから後で開始できます。",
+  "Edit Draft": "下書きを編集",
+  "Task Board": "タスクボード",
+  "New draft": "新しい下書き",
+  "Start": "開始",
+  "Edit": "編集",
+  "Fork": "切り出す",
+  "No tasks": "タスクはありません"
 }

@@ -413,3 +413,19 @@ suite('DiffService.revertAfter: ターン単位で戻す', () => {
     assert.strictEqual(h.fs.files.get(A), 'v1\n');
   });
 });
+
+suite('DiffService: レビュー待ち（M10）', () => {
+  test('変更を記録したターンの終了で、タスクはレビュー待ちになる', async () => {
+    const h = harness({ [A]: 'alpha\n' });
+    await h.service.create({ prompt: 'p', cwd: CWD });
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    h.fs.change(A, 'alpha\nedited\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await settle();
+    assert.strictEqual((await h.store.load('task-1'))?.status, 'review');
+  });
+});

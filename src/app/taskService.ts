@@ -4,12 +4,14 @@ import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../doma
 import {
   createTask,
   transition,
+  type FileChange,
   type PermissionMode,
   type Task,
   type TaskEvent,
   type Turn,
   type Worktree,
 } from '../domain/task';
+import { titleFromPrompt } from '../domain/taskTitle';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { TaskStore } from '../ports/taskStore';
 
@@ -139,6 +141,97 @@ export class TaskService {
       )
     );
     return task;
+  }
+
+  /** 下書きを作る。セッションは起動しない（FR-TASK-11） */
+  async createDraft(input: CreateInput): Promise<Task> {
+    const now = this.deps.now();
+    const created = createTask({
+      id: input.id ?? this.deps.newId(),
+      prompt: input.prompt,
+      cwd: input.cwd,
+      createdAt: now,
+      title: input.title,
+      model: input.model,
+      permissionMode: input.permissionMode,
+      draft: true,
+    });
+    return this.serialize(created.id, () => this.commit(created));
+  }
+
+  /** 下書きの指示を書き換える。タイトルを自分で付けていなければ追従する */
+  async updateDraft(id: string, prompt: string): Promise<void> {
+    await this.update(id, (task) => {
+      if (task.status !== 'draft') {
+        throw new Error(`Task "${id}" is not a draft`);
+      }
+      const title = titleFromPrompt(prompt);
+      if (title === undefined) {
+        throw new Error('prompt must not be empty');
+      }
+      const keepTitle = task.title !== titleFromPrompt(task.draftPrompt ?? '');
+      return { ...task, draftPrompt: prompt, title: keepTitle ? task.title : title };
+    });
+  }
+
+  /** 下書きを開始する。worktree を渡すとその場所で動く */
+  async start(
+    id: string,
+    options: { worktree?: Worktree; attachments?: string[] } = {}
+  ): Promise<Task> {
+    const attachments = options.attachments ?? [];
+    const { task, prompt } = await this.serialize(id, async () => {
+      const current = await this.mustLoad(id);
+      if (current.status !== 'draft' || current.draftPrompt === undefined) {
+        throw new Error(`Task "${id}" is not a draft`);
+      }
+      const prompt = current.draftPrompt;
+      const started: Task = {
+        ...current,
+        status: transition(current.status, 'start'),
+        draftPrompt: undefined,
+        worktree: options.worktree ?? current.worktree,
+        cwd: options.worktree?.path ?? current.cwd,
+      };
+      return {
+        task: await this.commit(this.withTurn(started, prompt, attachments, this.deps.now())),
+        prompt,
+      };
+    });
+    this.attach(
+      task,
+      this.deps.runner.start(this.startOptions(task, promptWithAttachments(prompt, attachments)))
+    );
+    return task;
+  }
+
+  /** ターンの変更を記録する。完了したタスクに変更が付けばレビュー待ちに進む */
+  recordChanges(id: string, turn: number, changes: FileChange[]): Promise<void> {
+    return this.update(id, (task) => {
+      const turns = task.turns.map((t, i) => (i === turn ? { ...t, changes } : t));
+      const status =
+        task.status === 'done' && changes.length > 0 && turn === task.turns.length - 1
+          ? transition(task.status, 'changes-recorded')
+          : task.status;
+      return { ...task, turns, status };
+    });
+  }
+
+  /** レビュー待ちの変更を確認済みにする */
+  async approve(id: string): Promise<void> {
+    await this.update(id, (task) => {
+      if (task.status !== 'review') {
+        throw new Error(`Task "${id}" is not waiting for review`);
+      }
+      return { ...task, status: transition(task.status, 'approve') };
+    });
+  }
+
+  /** ボードの並び。渡した順に order を振る */
+  async reorder(ids: readonly string[]): Promise<void> {
+    for (const [order, id] of ids.entries()) {
+      await this.update(id, (task) => (task.order === order ? undefined : { ...task, order }));
+    }
   }
 
   /** 完了・失敗・中断したタスクへ追加の指示を送る */
@@ -442,7 +535,13 @@ export class TaskService {
           }
         : turn
     );
-    return { ...task, status: transition(task.status, event), turns };
+    const completed = transition(task.status, event);
+    // 変更を伴うターンはレビュー待ちにする（要件定義書 5.1）
+    const status =
+      completed === 'done' && (turns[turns.length - 1]?.changes.length ?? 0) > 0
+        ? transition(completed, 'changes-recorded')
+        : completed;
+    return { ...task, status, turns };
   }
 
   private withTurn(task: Task, prompt: string, attachments: string[], startedAt: string): Task {

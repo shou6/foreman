@@ -1,7 +1,8 @@
 import { titleFromPrompt } from './taskTitle';
 
-/** タスクの状態（要件定義書 6.1） */
-export type TaskStatus = 'running' | 'waiting' | 'done' | 'failed' | 'interrupted';
+/** タスクの状態（要件定義書 6.1、5.1 のボードの列）。draft は未開始、review は変更を伴うターンが終わって確認待ち */
+export type TaskStatus =
+  'draft' | 'running' | 'waiting' | 'review' | 'done' | 'failed' | 'interrupted';
 
 /** 状態を変えるイベント（実装計画書 4.1 の表） */
 export type TaskEvent =
@@ -13,7 +14,10 @@ export type TaskEvent =
   | 'stop' // ユーザーが止めた
   | 'host-exit' // VS Code の終了やプロセスの異常終了で途中で終わった
   | 'prompt' // 追加の指示を送った
-  | 'resume'; // 中断したタスクを再開した
+  | 'resume' // 中断したタスクを再開した
+  | 'start' // 下書きを開始した
+  | 'changes-recorded' // 終わったターンに変更が記録された
+  | 'approve'; // ユーザーが変更を確認した
 
 export type PermissionMode = 'default' | 'acceptEdits';
 
@@ -77,6 +81,10 @@ export interface Task {
   worktree?: Worktree;
   /** 会話を戻した後、次の再開でこのメッセージから分岐する。使ったら消す */
   resumeAt?: string;
+  /** 下書きの指示。開始で最初のターンになり、消える */
+  draftPrompt?: string;
+  /** ボードでの並び。小さいほど上 */
+  order?: number;
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
@@ -99,6 +107,8 @@ export class TaskStateError extends Error {
 }
 
 const TRANSITIONS: Record<TaskStatus, Partial<Record<TaskEvent, TaskStatus>>> = {
+  draft: { start: 'running' },
+  review: { prompt: 'running', approve: 'done' },
   running: {
     'permission-requested': 'waiting',
     'question-asked': 'waiting',
@@ -113,7 +123,7 @@ const TRANSITIONS: Record<TaskStatus, Partial<Record<TaskEvent, TaskStatus>>> = 
     stop: 'interrupted',
     'host-exit': 'interrupted',
   },
-  done: { prompt: 'running' },
+  done: { prompt: 'running', 'changes-recorded': 'review' },
   failed: { prompt: 'running' },
   interrupted: { prompt: 'running', resume: 'running' },
 };
@@ -139,6 +149,8 @@ export interface CreateTaskInput {
   activeModel?: string;
   permissionMode?: PermissionMode;
   parentTaskId?: string;
+  /** true なら下書き（開始しない）として作る */
+  draft?: boolean;
 }
 
 /** 新しいタスクを作る。セッションの起動は呼ぶ側が行うので、状態は最初から「実行中」 */
@@ -150,7 +162,8 @@ export function createTask(input: CreateTaskInput): Task {
   return {
     id: input.id,
     title,
-    status: 'running',
+    status: input.draft === true ? 'draft' : 'running',
+    draftPrompt: input.draft === true ? input.prompt : undefined,
     parentTaskId: input.parentTaskId,
     cwd: input.worktree?.path ?? input.cwd,
     worktree: input.worktree,

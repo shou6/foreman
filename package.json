@@ -39,6 +39,8 @@
     "dist/extension.js",
     "dist/webview.js",
     "dist/webview.css",
+    "dist/board.js",
+    "dist/board.css",
     "resources/**",
     "l10n/**",
     "package.nls.json",
@@ -125,6 +127,36 @@
         "title": "%command.forkTask%",
         "category": "Foreman",
         "icon": "$(git-branch)"
+      },
+      {
+        "command": "foreman.approveTask",
+        "title": "%command.approveTask%",
+        "category": "Foreman",
+        "icon": "$(check)"
+      },
+      {
+        "command": "foreman.startTask",
+        "title": "%command.startTask%",
+        "category": "Foreman",
+        "icon": "$(play)"
+      },
+      {
+        "command": "foreman.editDraft",
+        "title": "%command.editDraft%",
+        "category": "Foreman",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "foreman.newDraft",
+        "title": "%command.newDraft%",
+        "category": "Foreman",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "foreman.openBoard",
+        "title": "%command.openBoard%",
+        "category": "Foreman",
+        "icon": "$(layout)"
       }
     ],
     "menus": {
@@ -152,20 +184,52 @@
         {
           "command": "foreman.discardTask",
           "when": "false"
+        },
+        {
+          "command": "foreman.approveTask",
+          "when": "false"
+        },
+        {
+          "command": "foreman.startTask",
+          "when": "false"
+        },
+        {
+          "command": "foreman.editDraft",
+          "when": "false"
         }
       ],
       "view/title": [
         {
           "command": "foreman.newTask",
           "when": "view == foreman.tasks",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "foreman.openBoard",
+          "when": "view == foreman.tasks",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
           "command": "foreman.stopTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(running|waiting)$/",
+          "when": "view == foreman.tasks && viewItem =~ /^(running|waiting)/",
           "group": "inline@1"
+        },
+        {
+          "command": "foreman.startTask",
+          "when": "view == foreman.tasks && viewItem =~ /^draft/",
+          "group": "inline@1"
+        },
+        {
+          "command": "foreman.approveTask",
+          "when": "view == foreman.tasks && viewItem =~ /^review/",
+          "group": "inline@1"
+        },
+        {
+          "command": "foreman.editDraft",
+          "when": "view == foreman.tasks && viewItem =~ /^draft/",
+          "group": "draft@1"
         },
         {
           "command": "foreman.deleteTask",
@@ -174,12 +238,12 @@
         },
         {
           "command": "foreman.mergeTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted) worktree$/",
+          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted) worktree$/",
           "group": "worktree@1"
         },
         {
           "command": "foreman.discardTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted) worktree$/",
+          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted) worktree$/",
           "group": "worktree@2"
         },
         {
@@ -189,7 +253,7 @@
         },
         {
           "command": "foreman.forkTask",
-          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted)/",
+          "when": "view == foreman.tasks && viewItem =~ /^(review|done|failed|interrupted)/",
           "group": "export@2"
         }
       ],

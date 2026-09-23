@@ -19,8 +19,10 @@ const STRINGS = {
   reverted: 'Reverted',
   unknownBefore: 'Previous content unknown',
   statusLabels: {
+    draft: 'Draft',
     running: 'Running',
     waiting: 'Waiting for input',
+    review: 'Review',
     done: 'Done',
     failed: 'Failed',
     interrupted: 'Interrupted',
@@ -41,6 +43,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  approve: 'Approve',
 };
 
 const initial: PanelState = {

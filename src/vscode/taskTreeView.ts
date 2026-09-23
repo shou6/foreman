@@ -6,11 +6,21 @@ export type TreeNode =
   { kind: 'group'; status: TaskStatus; tasks: Task[] } | { kind: 'task'; task: Task };
 
 /** 一覧に出す順。手が要るものを上にする */
-const ORDER: TaskStatus[] = ['waiting', 'running', 'interrupted', 'failed', 'done'];
+const ORDER: TaskStatus[] = [
+  'waiting',
+  'running',
+  'review',
+  'interrupted',
+  'failed',
+  'done',
+  'draft',
+];
 
 const ICONS: Record<TaskStatus, string> = {
+  draft: 'edit',
   running: 'sync~spin',
   waiting: 'bell',
+  review: 'eye',
   done: 'check',
   failed: 'error',
   interrupted: 'debug-pause',
@@ -18,6 +28,10 @@ const ICONS: Record<TaskStatus, string> = {
 
 export function statusLabel(status: TaskStatus): string {
   switch (status) {
+    case 'draft':
+      return vscode.l10n.t('Draft');
+    case 'review':
+      return vscode.l10n.t('Review');
     case 'running':
       return vscode.l10n.t('Running');
     case 'waiting':

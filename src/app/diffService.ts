@@ -290,10 +290,7 @@ export class DiffService {
         removed: counts?.removed,
       });
     }
-    await this.deps.service.patch(taskId, (t) => ({
-      ...t,
-      turns: t.turns.map((tt, i) => (i === active.turn ? { ...tt, changes } : tt)),
-    }));
+    await this.deps.service.recordChanges(taskId, active.turn, changes);
   }
 
   /** 前のターンまでで、同じファイルの最後の変更後。無ければ undefined。削除されていれば hash が undefined */

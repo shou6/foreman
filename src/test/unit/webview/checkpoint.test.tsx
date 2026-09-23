@@ -25,8 +25,10 @@ const STRINGS = {
   remove: 'Remove',
   dropHint: 'Drop files here',
   statusLabels: {
+    draft: 'Draft',
     running: 'Running',
     waiting: 'Waiting for input',
+    review: 'Review',
     done: 'Done',
     failed: 'Failed',
     interrupted: 'Interrupted',
@@ -42,6 +44,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  approve: 'Approve',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -102,5 +105,20 @@ suite('webview: チェックポイント', () => {
       { type: 'fork', turn: 1 },
     ];
     assert.strictEqual(messages.length, 2);
+  });
+});
+
+suite('webview: 承認（レビュー待ち）', () => {
+  test('レビュー待ちの時だけ「承認」ボタンを出す', () => {
+    const review = render(<App state={state({ status: 'review' })} post={() => {}} />);
+    assert.ok(review.includes('class="ghost approve"'));
+    assert.ok(review.includes('Approve'));
+    const done = render(<App state={state({ status: 'done' })} post={() => {}} />);
+    assert.ok(!done.includes('class="ghost approve"'));
+  });
+
+  test('approve のメッセージの型がある', () => {
+    const message: ToExtension = { type: 'approve' };
+    assert.strictEqual(message.type, 'approve');
   });
 });

@@ -35,9 +35,12 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  approve: 'Approve',
   statusLabels: {
+    draft: 'Draft',
     running: 'Running',
     waiting: 'Waiting for input',
+    review: 'Review',
     done: 'Done',
     failed: 'Failed',
     interrupted: 'Interrupted',

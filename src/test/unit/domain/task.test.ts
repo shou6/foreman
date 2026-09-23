@@ -109,3 +109,36 @@ suite('createTask', () => {
     assert.strictEqual(createTask({ ...base, parentTaskId: 'task-0' }).parentTaskId, 'task-0');
   });
 });
+
+suite('transition: 下書きとレビュー待ち（M10）', () => {
+  const allowed: [TaskStatus, TaskEvent, TaskStatus][] = [
+    ['draft', 'start', 'running'],
+    ['done', 'changes-recorded', 'review'],
+    ['review', 'approve', 'done'],
+    ['review', 'prompt', 'running'],
+  ];
+  for (const [from, event, to] of allowed) {
+    test(`${from} + ${event} → ${to}`, () => {
+      assert.strictEqual(transition(from, event), to);
+    });
+  }
+
+  test('下書きには指示を送れず、実行中は承認できない', () => {
+    assert.throws(() => transition('draft', 'prompt'), TaskStateError);
+    assert.throws(() => transition('running', 'approve'), TaskStateError);
+    assert.throws(() => transition('running', 'start'), TaskStateError);
+  });
+
+  test('createTask に draft を渡すと下書きになり、指示は draftPrompt に入る', () => {
+    const task = createTask({
+      id: 't',
+      prompt: 'later',
+      cwd: 'D:\\w',
+      createdAt: '2026-09-24T00:00:00.000Z',
+      draft: true,
+    });
+    assert.strictEqual(task.status, 'draft');
+    assert.strictEqual(task.draftPrompt, 'later');
+    assert.strictEqual(task.title, 'later');
+  });
+});

@@ -8,6 +8,7 @@ import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
+import { randomNonce } from './nonce';
 import { statusLabel } from './taskTreeView';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
@@ -27,6 +28,8 @@ export interface TaskPanelDeps {
   /** タスクを Markdown に書き出す */
   exportTask: (taskId: string) => Promise<void>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
+  /** レビュー待ちの承認（worktree ならマージも行う） */
+  approve: (taskId: string) => Promise<void>;
   checkpoint: {
     rewind(taskId: string, turn: number): Promise<void>;
     fork(taskId: string, turn: number): Promise<void>;
@@ -188,6 +191,14 @@ export class TaskPanels implements vscode.Disposable {
         case 'fork':
           await this.deps.checkpoint.fork(taskId, message.turn);
           return;
+        case 'approve':
+          this.post(taskId, { type: 'finishing', kind: 'merge' });
+          try {
+            await this.deps.approve(taskId);
+          } finally {
+            this.post(taskId, { type: 'finishing', kind: undefined });
+          }
+          return;
         case 'removeAttachment': {
           const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
           this.attachments.set(taskId, next);
@@ -266,8 +277,10 @@ export class TaskPanels implements vscode.Disposable {
           'Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.'
         ),
         statusLabels: {
+          draft: statusLabel('draft'),
           running: statusLabel('running'),
           waiting: statusLabel('waiting'),
+          review: statusLabel('review'),
           done: statusLabel('done'),
           failed: statusLabel('failed'),
           interrupted: statusLabel('interrupted'),
@@ -283,6 +296,7 @@ export class TaskPanels implements vscode.Disposable {
         turn: vscode.l10n.t('Turn {0}', '{0}'),
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
+        approve: vscode.l10n.t('Approve'),
       },
     };
   }
@@ -337,13 +351,4 @@ function withDefaultReason(decision: PermissionDecision): PermissionDecision {
     return { behavior: 'deny', message: vscode.l10n.t('Denied by the user in Foreman.') };
   }
   return decision;
-}
-
-function randomNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
-  for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
 }

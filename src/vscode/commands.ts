@@ -15,6 +15,13 @@ export interface CommandDeps {
   worktrees: WorktreeService;
   worktreeActions: WorktreeActions;
   checkpoints: { fork(taskId: string, turn?: number): Promise<void> };
+  review: {
+    approve(taskId: string): Promise<void>;
+    start(taskId: string): Promise<void>;
+    editDraft(taskId: string): Promise<void>;
+    newDraft(folder: string): Promise<import('../domain/task').Task | undefined>;
+  };
+  openBoard: () => void;
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
   /** タスクの作成後に呼ぶ（タイトル付けなど）。待たない */
@@ -168,6 +175,41 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         }
       })();
     }),
+    vscode.commands.registerCommand('foreman.approveTask', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        void withError(() => deps.review.approve(id))();
+      }
+    }),
+    vscode.commands.registerCommand('foreman.startTask', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        void withError(() => deps.review.start(id))();
+      }
+    }),
+    vscode.commands.registerCommand('foreman.editDraft', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        void withError(() => deps.review.editDraft(id))();
+      }
+    }),
+    vscode.commands.registerCommand(
+      'foreman.newDraft',
+      withError(async () => {
+        const folder = vscode.workspace.workspaceFolders?.[0];
+        if (folder === undefined) {
+          void vscode.window.showErrorMessage(
+            vscode.l10n.t('Open a folder before creating a task.')
+          );
+          return;
+        }
+        const task = await deps.review.newDraft(folder.uri.fsPath);
+        if (task !== undefined) {
+          deps.afterCreate(task);
+        }
+      })
+    ),
+    vscode.commands.registerCommand('foreman.openBoard', () => deps.openBoard()),
     vscode.commands.registerCommand('foreman.discardTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {

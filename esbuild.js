@@ -59,8 +59,19 @@ const webview = {
   jsxImportSource: 'preact',
 };
 
+/** タスクボード（Webview）。board.css は dist/board.css に出る */
+const board = {
+  ...webview,
+  entryPoints: ['src/webview/board/main.tsx'],
+  outfile: 'dist/board.js',
+};
+
 async function main() {
-  const contexts = await Promise.all([esbuild.context(extension), esbuild.context(webview)]);
+  const contexts = await Promise.all([
+    esbuild.context(extension),
+    esbuild.context(webview),
+    esbuild.context(board),
+  ]);
   if (watch) {
     await Promise.all(contexts.map((ctx) => ctx.watch()));
   } else {

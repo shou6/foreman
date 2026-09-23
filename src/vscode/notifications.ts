@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
-import { notificationFor, type NotificationSetting } from '../domain/notifications';
+import {
+  notificationFor,
+  type NotificationKind,
+  type NotificationSetting,
+} from '../domain/notifications';
 import type { Task } from '../domain/task';
 
 /** 入力待ちと完了・失敗を VS Code の通知で知らせる。通知からタスク画面を開ける */
@@ -25,7 +29,7 @@ export class Notifications implements vscode.Disposable {
     );
   }
 
-  private async show(task: Task, kind: 'waiting' | 'done' | 'failed'): Promise<void> {
+  private async show(task: Task, kind: NotificationKind): Promise<void> {
     const openLabel = vscode.l10n.t('Open');
     let choice: string | undefined;
     switch (kind) {
@@ -38,6 +42,12 @@ export class Notifications implements vscode.Disposable {
       case 'done':
         choice = await vscode.window.showInformationMessage(
           vscode.l10n.t('Task "{0}" finished.', task.title),
+          openLabel
+        );
+        break;
+      case 'review':
+        choice = await vscode.window.showInformationMessage(
+          vscode.l10n.t('Task "{0}" has changes to review.', task.title),
           openLabel
         );
         break;

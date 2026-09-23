@@ -47,6 +47,8 @@ export interface PanelStrings {
   turn: string;
   rewindHere: string;
   forkHere: string;
+  /** レビュー待ちの変更を確認済みにする */
+  approve: string;
 }
 
 export interface PanelState {
@@ -118,7 +120,9 @@ export type ToExtension =
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */
   | { type: 'rewind'; turn: number }
   /** 指定のターンの直後から新しいタスクを切り出す。FR-TASK-12 */
-  | { type: 'fork'; turn: number };
+  | { type: 'fork'; turn: number }
+  /** レビュー待ちの変更を確認済みにする（worktree ならマージ） */
+  | { type: 'approve' };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;
