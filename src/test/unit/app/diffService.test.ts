@@ -283,3 +283,18 @@ suite('DiffService: 戻す', () => {
     });
   });
 });
+
+suite('DiffService: パスの正規化', () => {
+  test('Windows ではドライブ文字の大小が違っても、作業ディレクトリからの相対にする', async () => {
+    const h = harness({ ['d:\\work\\a.txt']: 'x\n' });
+    await h.service.create({ prompt: 'p', cwd: CWD });
+    h.runner.last.emit({ type: 'file-edit', phase: 'before', path: 'd:\\work\\a.txt' });
+    await settle();
+    h.fs.change('d:\\work\\a.txt', 'y\n');
+    h.runner.last.emit({ type: 'file-edit', phase: 'after', path: 'd:\\work\\a.txt' });
+    await settle();
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    assert.strictEqual((await changesOf(h))[0]?.path, 'a.txt');
+  });
+});

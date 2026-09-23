@@ -240,6 +240,8 @@ export class DiffService {
 
   private relative(cwd: string, path: string): string {
     const prefix = cwd.endsWith(this.deps.sep) ? cwd : cwd + this.deps.sep;
-    return path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    // Windows はパスの大小を区別しないので、ドライブ文字の違いなどで相対にできないことを避ける
+    const fold = (s: string): string => (this.deps.sep === '\\' ? s.toLowerCase() : s);
+    return fold(path).startsWith(fold(prefix)) ? path.slice(prefix.length) : path;
   }
 }
