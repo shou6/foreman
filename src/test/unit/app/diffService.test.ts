@@ -311,3 +311,52 @@ suite('DiffService: 一時ファイル', () => {
     assert.deepStrictEqual(await changesOf(h), []);
   });
 });
+
+suite('DiffService: スナップショットの後片付け', () => {
+  test('タスクを消すと、ほかのタスクから参照されないスナップショットを消す', async () => {
+    const runner = new FakeAgentRunner();
+    const store = new InMemoryTaskStore();
+    let n = 0;
+    const service = new TaskService({
+      runner,
+      store,
+      newId: () => `task-${++n}`,
+      now: () => '2026-09-23T10:00:00.000Z',
+      approve: async () => ({ behavior: 'allow' }),
+    });
+    const fs = new FakeFileSystem({ [A]: 'shared\n' });
+    const snapshots = new InMemorySnapshotStore();
+    new DiffService({ service, fs, snapshots, sep: '\\' });
+
+    // task-1: shared → only1
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    fs.change(A, 'only1\n');
+    runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    // task-2: only1 → shared（shared は両方から参照される）
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    fs.change(A, 'shared\n');
+    runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+
+    const shared = await snapshots.save('shared\n');
+    const only1 = await snapshots.save('only1\n');
+    await service.delete('task-1');
+    await settle();
+    assert.strictEqual(snapshots.contents.has(shared), true);
+    assert.strictEqual(snapshots.contents.has(only1), true, 'task-2 の変更前として残る');
+
+    await service.delete('task-2');
+    await settle();
+    assert.strictEqual(snapshots.contents.has(shared), false);
+    assert.strictEqual(snapshots.contents.has(only1), false);
+  });
+});

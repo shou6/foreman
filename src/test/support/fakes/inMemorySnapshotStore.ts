@@ -14,4 +14,12 @@ export class InMemorySnapshotStore implements SnapshotStore {
   async load(hash: string): Promise<string | undefined> {
     return this.contents.get(hash);
   }
+
+  async list(): Promise<string[]> {
+    return [...this.contents.keys()];
+  }
+
+  async delete(hash: string): Promise<void> {
+    this.contents.delete(hash);
+  }
 }

@@ -19,6 +19,13 @@ const STRINGS = {
   revert: 'Revert',
   reverted: 'Reverted',
   unknownBefore: 'Previous content unknown',
+  statusLabels: {
+    running: 'Running',
+    waiting: 'Waiting for input',
+    done: 'Replied',
+    failed: 'Failed',
+    interrupted: 'Interrupted',
+  },
   model: 'Model',
   defaultModel: 'Default',
   attachments: 'Attachments',
@@ -83,5 +90,13 @@ suite('webview: 添付とモデル', () => {
       { type: 'removeAttachment', path: 'D:\\w\\a.ts' },
     ];
     assert.strictEqual(messages.length, 5);
+  });
+});
+
+suite('webview: 状態の表示名', () => {
+  test('状態のバッジは翻訳した表示名を出す', () => {
+    const html = render(<App state={state({ status: 'done' })} post={() => {}} />);
+    assert.ok(html.includes('>Replied<'));
+    assert.ok(!html.includes('>done<'));
   });
 });

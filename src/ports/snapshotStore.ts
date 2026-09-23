@@ -6,4 +6,7 @@ export interface SnapshotStore {
   /** 内容を保存し、ハッシュを返す */
   save(content: string): Promise<string>;
   load(hash: string): Promise<string | undefined>;
+  /** 保存しているハッシュの一覧（後片付け用） */
+  list(): Promise<string[]>;
+  delete(hash: string): Promise<void>;
 }

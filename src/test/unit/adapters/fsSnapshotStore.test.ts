@@ -39,3 +39,15 @@ suite('FsSnapshotStore', () => {
     assert.ok(fs.existsSync(dir));
   });
 });
+
+suite('FsSnapshotStore: 後片付け', () => {
+  test('一覧と削除', async () => {
+    const store = new FsSnapshotStore(tmp());
+    const a = await store.save('a');
+    const b = await store.save('b');
+    assert.deepStrictEqual((await store.list()).sort(), [a, b].sort());
+    await store.delete(a);
+    assert.deepStrictEqual(await store.list(), [b]);
+    await store.delete(a);
+  });
+});

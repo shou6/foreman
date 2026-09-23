@@ -20,6 +20,13 @@ const STRINGS = {
   revert: 'Revert',
   reverted: 'Reverted',
   unknownBefore: 'Previous content unknown',
+  statusLabels: {
+    running: 'Running',
+    waiting: 'Waiting for input',
+    done: 'Replied',
+    failed: 'Failed',
+    interrupted: 'Interrupted',
+  },
   model: 'Model',
   defaultModel: 'Default',
   attachments: 'Attachments',
