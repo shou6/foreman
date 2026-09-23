@@ -77,11 +77,16 @@ export class GitCli implements Git {
       return [];
     }
     const result: string[] = [];
-    // 引数の長さの上限を避けて、少しずつ問い合わせる
+    // 引数の長さの上限を避けて、少しずつ問い合わせる。git には / 区切りで渡す
     for (let i = 0; i < paths.length; i += 100) {
       const chunk = paths.slice(i, i + 100);
       try {
-        const out = await this.run(dir, 'check-ignore', '--', ...chunk);
+        const out = await this.run(
+          dir,
+          'check-ignore',
+          '--',
+          ...chunk.map((p) => p.replace(/\\/g, '/'))
+        );
         const hits = new Set(
           out
             .split(/\r?\n/)
@@ -98,6 +103,10 @@ export class GitCli implements Git {
       }
     }
     return result;
+  }
+
+  async prune(repo: string): Promise<void> {
+    await this.run(repo, 'worktree', 'prune');
   }
 
   async ensureExcluded(repo: string, pattern: string): Promise<void> {

@@ -14,6 +14,9 @@ export interface WorktreeServiceDeps {
   sep: string;
   /** ブランチ名の接頭辞（設定）。省略時は foreman/ */
   branchPrefix?: () => string;
+  /** dir の直下のフォルダ名。登録の無い worktree のフォルダを見つけるのに使う */
+  listDirs?: (dir: string) => Promise<string[]>;
+  removeDir?: (dir: string) => Promise<void>;
 }
 
 /** タスクごとの git worktree の作成・マージ・破棄（FR-TASK-10、要件定義書 5.1） */
@@ -73,16 +76,31 @@ export class WorktreeService {
     return this.remove(worktree);
   }
 
-  /** .foreman/worktrees の下にあって、どのタスクも使っていない worktree を消す */
+  /**
+   * .foreman/worktrees の下にあって、どのタスクも使っていない worktree を消す。
+   * 削除に失敗して git の登録だけ外れたフォルダも消し、登録を整理する
+   */
   async cleanupOrphans(repo: string, inUse: readonly string[]): Promise<void> {
     const prefix = worktreePath(repo, '', this.deps.sep);
+    const registered = new Set<string>();
     for (const path of await this.deps.git.listWorktrees(repo)) {
+      registered.add(path);
       if (path.startsWith(prefix) && path !== repo && !inUse.includes(path)) {
         const name = path.slice(prefix.length);
         await this.deps.git.removeWorktree(repo, path, true);
         await this.deps.git.deleteBranch(repo, this.branch(name));
       }
     }
+    if (this.deps.listDirs !== undefined && this.deps.removeDir !== undefined) {
+      const dir = prefix.slice(0, -this.deps.sep.length);
+      for (const name of await this.deps.listDirs(dir)) {
+        const path = prefix + name;
+        if (!inUse.includes(path) && !registered.has(path)) {
+          await this.deps.removeDir(path);
+        }
+      }
+    }
+    await this.deps.git.prune(repo);
   }
 
   /** 設定の接頭辞を付けたブランチ名。接頭辞が空なら名前だけ、/ で終わらなければ足す */

@@ -105,6 +105,10 @@ export class FakeGit implements Git {
     return paths.filter((p) => this.ignoredPaths.includes(p));
   }
 
+  async prune(_repo: string): Promise<void> {
+    this.calls.push('prune');
+  }
+
   async ensureExcluded(repo: string, pattern: string): Promise<void> {
     const list = this.excluded.get(repo) ?? [];
     if (!list.includes(pattern)) {

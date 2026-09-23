@@ -87,6 +87,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     git,
     sep: path.sep,
     branchPrefix: () => readSettings().worktreeBranchPrefix,
+    listDirs: async (dir) => {
+      try {
+        return (await fs.promises.readdir(dir, { withFileTypes: true }))
+          .filter((e) => e.isDirectory())
+          .map((e) => e.name);
+      } catch {
+        return [];
+      }
+    },
+    removeDir: (dir) => fs.promises.rm(dir, { recursive: true, force: true }),
   });
   const worktreeActions = new WorktreeActions(service, worktrees);
   const panels = new TaskPanels({

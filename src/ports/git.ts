@@ -22,6 +22,8 @@ export interface Git {
   merge(repo: string, branch: string, message: string): Promise<void>;
   /** paths（dir からの相対）のうち、Git が無視するもの。Git でない場所なら空 */
   ignored(dir: string, paths: readonly string[]): Promise<string[]>;
+  /** フォルダが消えている worktree の登録を外す */
+  prune(repo: string): Promise<void>;
   /** .git/info/exclude に pattern を足す（既にあれば何もしない） */
   ensureExcluded(repo: string, pattern: string): Promise<void>;
 }
