@@ -298,3 +298,16 @@ suite('DiffService: パスの正規化', () => {
     assert.strictEqual((await changesOf(h))[0]?.path, 'a.txt');
   });
 });
+
+suite('DiffService: 一時ファイル', () => {
+  test('ターン中に作られて消えた、変更前も不明なファイルは記録しない', async () => {
+    const h = harness();
+    await h.service.create({ prompt: 'p', cwd: CWD });
+    await settle();
+    h.fs.change('D:\\work\\README.md.tmp.1234', 'partial');
+    h.fs.change('D:\\work\\README.md.tmp.1234', undefined);
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    assert.deepStrictEqual(await changesOf(h), []);
+  });
+});

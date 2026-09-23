@@ -182,6 +182,10 @@ export class DiffService {
       if (entry.beforeKnown && entry.before === entry.after) {
         continue;
       }
+      // ターン中に作られて消えた一時ファイル（編集ツールの書き込み用など）は変更ではない
+      if (!entry.beforeKnown && entry.after === undefined) {
+        continue;
+      }
       const kind: FileChange['kind'] =
         entry.after === undefined
           ? 'deleted'
