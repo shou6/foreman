@@ -6,7 +6,8 @@ import * as vscode from 'vscode';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
 import { resolveClaudePath } from './adapters/claudePath';
 import { FsSnapshotStore } from './adapters/fsSnapshotStore';
-import { InMemoryTaskStore } from './adapters/inMemoryTaskStore';
+import { FsTaskStore } from './adapters/fsTaskStore';
+import { FsTranscriptStore } from './adapters/fsTranscriptStore';
 import { NodeFileSystem } from './adapters/nodeFileSystem';
 import { ApprovalService } from './app/approvalService';
 import { DiffService } from './app/diffService';
@@ -24,9 +25,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const output = vscode.window.createOutputChannel('Foreman');
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
 
-  // ワークスペースごとの保存先。フォルダを開いていない時は拡張機能全体の保存先
-  const storage = context.storageUri ?? context.globalStorageUri;
-  const snapshots = new FsSnapshotStore(path.join(storage.fsPath, 'snapshots'));
+  // ワークスペースごとの保存先（実装計画書 4.5）。フォルダを開いていない時は拡張機能全体の保存先
+  const storage = (context.storageUri ?? context.globalStorageUri).fsPath;
+  const snapshots = new FsSnapshotStore(path.join(storage, 'snapshots'));
+  const transcriptStore = new FsTranscriptStore(path.join(storage, 'transcripts'));
 
   const runner = new AgentSdkRunner({
     query: sdk.query,
@@ -36,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
-    store: new InMemoryTaskStore(),
+    store: new FsTaskStore(path.join(storage, 'tasks')),
     newId: () => randomUUID(),
     now: () => new Date().toISOString(),
     approve: (taskId, request) => approvals.request(taskId, request),
@@ -47,7 +49,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       approvals.cancel(task.id);
     }
   });
-  const transcripts = new Transcripts(service);
+  // 前回の履歴を読んでから、前回の終了で途中だったタスクを中断に直す（中断の記録が履歴にも残る）
+  const transcripts = new Transcripts(service, transcriptStore, await transcriptStore.loadAll());
+  await service.recover();
   const diffs = new DiffService({ service, fs: new NodeFileSystem(), snapshots, sep: path.sep });
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
@@ -73,7 +77,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       provideTextDocumentContent: async (uri) =>
         uri.query === '' ? '' : ((await snapshots.load(uri.query)) ?? ''),
     }),
-    { dispose: () => service.dispose() }
+    { dispose: () => service.dispose() },
+    { dispose: () => void transcriptStore.flush() }
   );
   registerCommands(context, { service, panels, settings: readSettings });
 }

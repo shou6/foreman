@@ -78,11 +78,24 @@ export class TaskService {
     return this.deps.store.load(id);
   }
 
-  /** 起動時に呼ぶ。前回の終了で実行中や入力待ちのまま残ったタスクを中断に直す */
+  /**
+   * 起動時に呼ぶ。前回の終了で実行中や入力待ちのまま残ったタスクを中断に直し、
+   * そのターンの中断を表示側にも伝える
+   */
   async recover(): Promise<void> {
     for (const task of await this.deps.store.list()) {
       if (task.status === 'running' || task.status === 'waiting') {
-        await this.commit({ ...task, status: transition(task.status, 'host-exit') });
+        const reason = 'VS Code was closed';
+        const event: RunnerEvent = { type: 'turn-end', ok: false, interrupted: true, reason };
+        await this.commit(this.endTurn(task, 'host-exit', { ok: false, reason }));
+        const notification: TaskEventNotification = {
+          taskId: task.id,
+          turn: task.turns.length - 1,
+          event,
+        };
+        for (const listener of this.eventListeners) {
+          listener(notification);
+        }
       }
     }
   }
