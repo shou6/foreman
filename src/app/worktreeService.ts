@@ -28,13 +28,16 @@ export class WorktreeService {
     return this.deps.git.repoRoot(dir);
   }
 
-  /** リポジトリ内の .foreman/worktrees/<名前> に、今のブランチから worktree を作る */
-  async create(dir: string, title: string, taskId: string): Promise<Worktree> {
+  /**
+   * リポジトリ内の .foreman/worktrees/<名前> に worktree を作る。
+   * 元は今のブランチ。baseBranch を渡すとそのブランチから切る（切り出し用）
+   */
+  async create(dir: string, title: string, taskId: string, baseBranch?: string): Promise<Worktree> {
     const repo = await this.deps.git.repoRoot(dir);
     if (repo === undefined) {
       throw new Error(`"${dir}" is not a Git repository`);
     }
-    const base = await this.deps.git.currentBranch(repo);
+    const base = baseBranch ?? (await this.deps.git.currentBranch(repo));
     if (base === undefined) {
       throw new Error('The repository is not on a branch (detached HEAD)');
     }
@@ -48,6 +51,11 @@ export class WorktreeService {
     await this.deps.git.ensureExcluded(repo, WORKTREE_DIR.split('/')[0] + '/');
     await this.deps.git.addWorktree(repo, worktree.path, worktree.branch, base);
     return worktree;
+  }
+
+  /** 作業中の変更をブランチにコミットする（切り出しで親の状態を引き継ぐ時に使う） */
+  commitWork(worktree: Worktree, title: string): Promise<void> {
+    return this.deps.git.commitAll(worktree.path, `foreman: ${title}`);
   }
 
   /** 未マージの変更（未コミットの変更）があるか。フォルダが無ければ false */

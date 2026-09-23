@@ -13,6 +13,7 @@ export interface CommandDeps {
   settings: () => Settings;
   worktrees: WorktreeService;
   worktreeActions: WorktreeActions;
+  checkpoints: { fork(taskId: string, turn?: number): Promise<void> };
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
   /** タスクの作成後に呼ぶ（タイトル付けなど）。待たない */
@@ -170,6 +171,15 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         const id = taskIdOf(arg) ?? (await pickTask());
         if (id !== undefined) {
           await deps.exportTask(id);
+        }
+      })();
+    }),
+    // 一覧の右クリック「ここから切り出す」。最後のターンから分岐する（FR-TASK-12）
+    vscode.commands.registerCommand('foreman.forkTask', (arg: unknown) => {
+      void withError(async () => {
+        const id = taskIdOf(arg) ?? (await pickTask());
+        if (id !== undefined) {
+          await deps.checkpoints.fork(id);
         }
       })();
     }),

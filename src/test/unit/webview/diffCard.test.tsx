@@ -41,6 +41,9 @@ const STRINGS = {
   merging: 'Merging…',
   discarding: 'Discarding…',
   alwaysScope: '"Always allow" would allow',
+  turn: 'Turn {0}',
+  rewindHere: 'Rewind to here',
+  forkHere: 'Fork from here',
 };
 
 const CHANGES: FileChange[] = [

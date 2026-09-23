@@ -23,6 +23,7 @@
   "config.useWorktree": "新しいタスクを既定で git worktree の中で動かす。タスクごとに選び直せる。",
   "config.worktreeBranchPrefix": "タスクの worktree のブランチ名に付ける接頭辞（例：`foreman/`）。",
   "command.exportTask": "タスクを Markdown に書き出す",
+  "command.forkTask": "タスクを切り出す",
   "config.toolCalls": "タスク画面でのツールの呼び出しの見せ方。",
   "config.toolCalls.collapsed": "まとまりごとに 1 行の要約にたたむ。クリックで開く。",
   "config.toolCalls.expanded": "すべての呼び出しを開いて見せる。",

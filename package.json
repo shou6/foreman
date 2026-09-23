@@ -119,6 +119,12 @@
         "title": "%command.exportTask%",
         "category": "Foreman",
         "icon": "$(export)"
+      },
+      {
+        "command": "foreman.forkTask",
+        "title": "%command.forkTask%",
+        "category": "Foreman",
+        "icon": "$(git-branch)"
       }
     ],
     "menus": {
@@ -180,6 +186,11 @@
           "command": "foreman.exportTask",
           "when": "view == foreman.tasks && viewItem != group",
           "group": "export@1"
+        },
+        {
+          "command": "foreman.forkTask",
+          "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted)/",
+          "group": "export@2"
         }
       ],
       "explorer/context": [

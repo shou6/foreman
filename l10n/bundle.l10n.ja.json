@@ -62,5 +62,19 @@
   "Merging…": "マージ中…",
   "Discarding…": "破棄中…",
   "Exported to {0}": "{0} に書き出しました",
-  "\"Always allow\" would allow": "「常に許可」で許可する内容"
+  "\"Always allow\" would allow": "「常に許可」で許可する内容",
+  "Turn {0}": "ターン {0}",
+  "Rewind to here": "ここに戻す",
+  "Fork from here": "ここから切り出す",
+  "Stop the task before rewinding.": "戻す前にタスクを止めてください。",
+  "Files only": "ファイルだけ",
+  "Files and conversation": "ファイルと会話",
+  "Rewind to the end of turn {0}": "ターン {0} の終わりに戻す",
+  "Files: revert every change after this turn. Conversation: later turns are dropped and the next prompt continues from here in a forked session.": "ファイル: このターンより後の変更をすべて戻します。会話: 後のターンを消し、次の指示はここから分岐したセッションで続けます。",
+  "Rewound, but {0} file(s) could not be reverted because their previous content is unknown: {1}": "戻しましたが、変更前の内容が不明な {0} 件のファイルは戻せませんでした: {1}",
+  "Rewound to the end of turn {0}.": "ターン {0} の終わりに戻しました。",
+  "This task has no session to fork.": "このタスクには切り出せるセッションがありません。",
+  "Fork \"{0}\"": "「{0}」を切り出す",
+  "Fork \"{0}\" from turn {1}": "「{0}」をターン {1} から切り出す",
+  "What should the new task do?": "新しいタスクで何をしますか？"
 }

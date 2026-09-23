@@ -43,6 +43,10 @@ export interface PanelStrings {
   discarding: string;
   /** 「常に許可」で許可する内容の見出し */
   alwaysScope: string;
+  /** チェックポイントの行。{0} にターンの番号（1 始まり）が入る */
+  turn: string;
+  rewindHere: string;
+  forkHere: string;
 }
 
 export interface PanelState {
@@ -110,7 +114,11 @@ export type ToExtension =
   | { type: 'merge' }
   | { type: 'discard' }
   /** タスクを Markdown に書き出す */
-  | { type: 'export' };
+  | { type: 'export' }
+  /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */
+  | { type: 'rewind'; turn: number }
+  /** 指定のターンの直後から新しいタスクを切り出す。FR-TASK-12 */
+  | { type: 'fork'; turn: number };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;

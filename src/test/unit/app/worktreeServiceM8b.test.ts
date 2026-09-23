@@ -94,3 +94,14 @@ suite('WorktreeService: 既に無い worktree', () => {
     assert.strictEqual(await service.hasChanges(wt), false);
   });
 });
+
+suite('WorktreeService.create: 元のブランチの指定', () => {
+  test('base を渡すと、今のブランチではなくそのブランチから worktree を切る（切り出し用）', async () => {
+    const git = new FakeGit(REPO, 'main');
+    git.repos.get(REPO)!.branches.add('foreman/parent-aaaaaa');
+    const service = new WorktreeService({ git, sep: '\\' });
+    const wt = await service.create(REPO, 'child', 'bbbbbb0000', 'foreman/parent-aaaaaa');
+    assert.strictEqual(wt.base, 'foreman/parent-aaaaaa');
+    assert.ok(git.calls.includes(`addWorktree ${wt.path} ${wt.branch} foreman/parent-aaaaaa`));
+  });
+});

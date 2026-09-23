@@ -25,6 +25,7 @@ import { SNAPSHOT_SCHEME, TaskPanels } from './vscode/taskPanel';
 import { TaskTreeProvider } from './vscode/taskTreeView';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
+import { CheckpointActions } from './vscode/checkpointActions';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -103,6 +104,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     removeDir: (dir) => fs.promises.rm(dir, { recursive: true, force: true }),
   });
   const worktreeActions = new WorktreeActions(service, worktrees);
+  // panels と autoTitle は後で作るので、参照は遅延で解く
+  let panelsRef: TaskPanels | undefined;
+  let autoTitleRef: AutoTitle | undefined;
+  const checkpoints = new CheckpointActions({
+    service,
+    diffs,
+    worktrees,
+    get autoTitle() {
+      if (autoTitleRef === undefined) {
+        throw new Error('AutoTitle is not ready');
+      }
+      return autoTitleRef;
+    },
+    newId: () => randomUUID(),
+    openPanel: async (taskId) => panelsRef?.open(taskId),
+  });
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
@@ -114,7 +131,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       discard: (taskId) => worktreeActions.discard(taskId),
     },
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
+    checkpoint: {
+      rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
+      fork: (taskId, turn) => checkpoints.fork(taskId, turn),
+    },
   });
+  panelsRef = panels;
   const tree = new TaskTreeProvider(service);
 
   context.subscriptions.push(
@@ -145,9 +167,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         cwd: os.tmpdir(),
       }),
   });
+  autoTitleRef = autoTitle;
   registerCommands(context, {
     service,
     panels,
+    checkpoints,
     settings: readSettings,
     worktrees,
     worktreeActions,

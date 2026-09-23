@@ -26,6 +26,11 @@ export interface TaskPanelDeps {
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
   exportTask: (taskId: string) => Promise<void>;
+  /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
+  checkpoint: {
+    rewind(taskId: string, turn: number): Promise<void>;
+    fork(taskId: string, turn: number): Promise<void>;
+  };
 }
 
 /** タスク画面（WebviewPanel）。タスクごとに 1 つだけ開き、既に開いていれば前面に出す */
@@ -177,6 +182,12 @@ export class TaskPanels implements vscode.Disposable {
         case 'export':
           await this.deps.exportTask(taskId);
           return;
+        case 'rewind':
+          await this.deps.checkpoint.rewind(taskId, message.turn);
+          return;
+        case 'fork':
+          await this.deps.checkpoint.fork(taskId, message.turn);
+          return;
         case 'removeAttachment': {
           const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
           this.attachments.set(taskId, next);
@@ -269,6 +280,9 @@ export class TaskPanels implements vscode.Disposable {
         merging: vscode.l10n.t('Merging…'),
         discarding: vscode.l10n.t('Discarding…'),
         alwaysScope: vscode.l10n.t('"Always allow" would allow'),
+        turn: vscode.l10n.t('Turn {0}', '{0}'),
+        rewindHere: vscode.l10n.t('Rewind to here'),
+        forkHere: vscode.l10n.t('Fork from here'),
       },
     };
   }

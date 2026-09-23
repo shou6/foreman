@@ -51,9 +51,9 @@ function state(overrides: Partial<PanelState>): PanelState {
     status: 'done',
     items: [
       { kind: 'prompt', turn: 0, text: 'p' },
-      { kind: 'tool', turn: 0, id: '1', name: 'Read', input: { file_path: 'a.ts' }, status: 'ok' },
-      { kind: 'tool', turn: 0, id: '2', name: 'Bash', input: { command: 'ls' }, status: 'error' },
-      { kind: 'tool', turn: 0, id: '3', name: 'Grep', input: { pattern: 'x' }, status: 'ok' },
+      { kind: 'turn-end', turn: 0, ok: true },
+      { kind: 'prompt', turn: 1, text: 'q' },
+      { kind: 'turn-end', turn: 1, ok: true },
     ],
     changes: {},
     diffs: {},
@@ -66,41 +66,41 @@ function state(overrides: Partial<PanelState>): PanelState {
   };
 }
 
-suite('webview: ツールの呼び出しのたたみ', () => {
-  test('既定ではたたみ、件数と成否とツール名の要約を出す', () => {
+suite('webview: チェックポイント', () => {
+  test('正常に終わったターンごとに、番号と「ここに戻す」「ここから切り出す」を出す', () => {
     const html = render(<App state={state({})} post={() => {}} />);
-    assert.ok(/<details[^>]*class="tool-group[^"]*"(?![^>]*\bopen\b)/.test(html), 'たたまれている');
-    assert.ok(html.includes('3 tool calls'));
-    assert.ok(html.includes('✓2'));
-    assert.ok(html.includes('✗1'));
-    assert.ok(html.includes('Read, Bash, Grep'));
+    assert.strictEqual(html.split('class="checkpoint"').length - 1, 2);
+    assert.ok(html.includes('Turn 1'));
+    assert.ok(html.includes('Turn 2'));
+    assert.ok(html.includes('Rewind to here'));
+    assert.ok(html.includes('Fork from here'));
   });
 
-  test('設定で開いた状態にできる', () => {
-    const html = render(<App state={state({ toolCallsExpanded: true })} post={() => {}} />);
-    assert.ok(/<details[^>]*class="tool-group[^"]*"[^>]*\bopen\b/.test(html));
-  });
-
-  test('実行中のツールがあるグループは、たたみの設定でも開く', () => {
+  test('失敗や中断で終わったターンには出さない', () => {
     const html = render(
       <App
         state={state({
-          status: 'running',
           items: [
             { kind: 'prompt', turn: 0, text: 'p' },
-            { kind: 'tool', turn: 0, id: '1', name: 'Read', input: {}, status: 'running' },
+            { kind: 'turn-end', turn: 0, ok: false, interrupted: true, reason: 'stopped' },
           ],
         })}
         post={() => {}}
       />
     );
-    assert.ok(/<details[^>]*class="tool-group[^"]*"[^>]*\bopen\b/.test(html));
+    assert.ok(!html.includes('class="checkpoint"'));
   });
 
-  test('見出しにエクスポートのボタンがあり、export のメッセージの型がある', () => {
-    const html = render(<App state={state({})} post={() => {}} />);
-    assert.ok(html.includes('>Export<'));
-    const message: ToExtension = { type: 'export' };
-    assert.strictEqual(message.type, 'export');
+  test('実行中は押せない', () => {
+    const html = render(<App state={state({ status: 'running' })} post={() => {}} />);
+    assert.ok(/<button[^>]*class="link rewind"[^>]*disabled/.test(html));
+  });
+
+  test('rewind と fork のメッセージの型がある', () => {
+    const messages: ToExtension[] = [
+      { type: 'rewind', turn: 0 },
+      { type: 'fork', turn: 1 },
+    ];
+    assert.strictEqual(messages.length, 2);
   });
 });

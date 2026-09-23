@@ -115,6 +115,27 @@ export function App({ state, post }: AppProps) {
               expanded={state.toolCallsExpanded}
               strings={state.strings}
             />
+            {block.kind === 'turn-end' && block.ok && (
+              <div class="checkpoint" key={`checkpoint-${block.turn}`}>
+                <span class="checkpoint-turn">
+                  {state.strings.turn.replace('{0}', String(block.turn + 1))}
+                </span>
+                <button
+                  class="link rewind"
+                  disabled={busy}
+                  onClick={() => post({ type: 'rewind', turn: block.turn })}
+                >
+                  {state.strings.rewindHere}
+                </button>
+                <button
+                  class="link fork"
+                  disabled={busy}
+                  onClick={() => post({ type: 'fork', turn: block.turn })}
+                >
+                  {state.strings.forkHere}
+                </button>
+              </div>
+            )}
             {block.kind === 'turn-end' && (state.changes[block.turn]?.length ?? 0) > 0 && (
               <DiffCard
                 key={`changes-${block.turn}`}

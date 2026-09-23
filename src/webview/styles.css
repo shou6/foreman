@@ -727,3 +727,32 @@ body.dragging .composer {
   color: var(--vscode-descriptionForeground);
   word-break: break-all;
 }
+
+/* チェックポイント（ターンの区切り）。薄い線と小さな操作 */
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.checkpoint::before {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+}
+
+.checkpoint .link {
+  color: var(--vscode-descriptionForeground);
+}
+
+.checkpoint .link:hover:not(:disabled) {
+  color: var(--vscode-textLink-foreground);
+}
+
+.checkpoint .link:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
