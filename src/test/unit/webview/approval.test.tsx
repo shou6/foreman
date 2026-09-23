@@ -35,6 +35,8 @@ const STRINGS = {
   worktree: 'worktree',
   merge: 'Merge into {0}',
   discard: 'Discard',
+  toolCalls: '{0} tool calls',
+  export: 'Export',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {
@@ -48,6 +50,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     attachments: [],
     models: [],
     maxWidthEm: 72,
+    toolCallsExpanded: false,
     strings: STRINGS,
     ...overrides,
   };

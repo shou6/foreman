@@ -27,6 +27,8 @@ const STRINGS = {
   worktree: 'worktree',
   merge: 'Merge into {0}',
   discard: 'Discard',
+  toolCalls: '{0} tool calls',
+  export: 'Export',
   statusLabels: {
     running: 'Running',
     waiting: 'Waiting for input',
@@ -47,6 +49,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     attachments: [],
     models: ['claude-opus-5'],
     maxWidthEm: 72,
+    toolCallsExpanded: false,
     strings: STRINGS,
     ...overrides,
   };

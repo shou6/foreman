@@ -33,6 +33,8 @@ const STRINGS = {
   worktree: 'worktree',
   merge: 'Merge into {0}',
   discard: 'Discard',
+  toolCalls: '{0} tool calls',
+  export: 'Export',
 };
 
 const initial: PanelState = {
@@ -45,6 +47,7 @@ const initial: PanelState = {
   attachments: [],
   models: [],
   maxWidthEm: 72,
+  toolCallsExpanded: false,
   strings: STRINGS,
 };
 
