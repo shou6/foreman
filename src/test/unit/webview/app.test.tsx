@@ -22,7 +22,7 @@ const STRINGS = {
   statusLabels: {
     running: 'Running',
     waiting: 'Waiting for input',
-    done: 'Replied',
+    done: 'Done',
     failed: 'Failed',
     interrupted: 'Interrupted',
   },

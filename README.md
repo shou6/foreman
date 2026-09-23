@@ -10,7 +10,7 @@ Foreman uses the `claude` CLI that is already installed and logged in on your ma
 
 ## Features
 
-- **Tasks, not one chat**: each task is its own Claude Code session. The sidebar groups them by state: running, waiting for input, replied, failed or interrupted.
+- **Tasks, not one chat**: each task is its own Claude Code session. The sidebar groups them by state: running, waiting for input, done, failed or interrupted.
 - **Task view in an editor tab**: streamed output, tool calls, follow-up prompts (Ctrl+Enter) and a model switch. Open it next to your code.
 - **Approvals in the task view**: allow or deny each tool call, add a reason, or choose "always allow in this task". Questions from Claude appear as choices.
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file with one click. This works in folders that are not Git repositories.

@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import type { TranscriptItem } from '../domain/transcript';
+import { renderMarkdown } from './markdown';
 import {
   diffKey,
   type DiffLine,
@@ -184,7 +185,12 @@ function BlockView({ block }: { block: Block }) {
     case 'prompt':
       return <div class="item prompt">{block.text}</div>;
     case 'text':
-      return <div class="item text">{block.text}</div>;
+      return (
+        <div
+          class="item text markdown"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(block.text) }}
+        />
+      );
     case 'tools':
       return (
         <div class="tool-group item">

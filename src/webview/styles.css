@@ -544,3 +544,78 @@ body.dragging .composer {
 .diff-line[data-kind='del'] {
   background: var(--vscode-diffEditor-removedLineBackground);
 }
+
+/* Markdown の出力 */
+.item.markdown {
+  white-space: normal;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1em 0 0.4em;
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown table {
+  margin: 0.5em 0;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.5em;
+}
+
+.markdown code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.markdown pre {
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown table {
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  padding: 0.2em 0.6em;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.markdown a {
+  color: var(--vscode-textLink-foreground);
+}
+
+.markdown blockquote {
+  margin: 0.5em 0;
+  padding: 0.2em 0.8em;
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  background: var(--vscode-textBlockQuote-background);
+}

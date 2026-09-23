@@ -23,7 +23,7 @@ export function statusLabel(status: TaskStatus): string {
     case 'waiting':
       return vscode.l10n.t('Waiting for input');
     case 'done':
-      return vscode.l10n.t('Replied');
+      return vscode.l10n.t('Done');
     case 'failed':
       return vscode.l10n.t('Failed');
     case 'interrupted':

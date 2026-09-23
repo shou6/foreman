@@ -23,7 +23,7 @@ const STRINGS = {
   statusLabels: {
     running: 'Running',
     waiting: 'Waiting for input',
-    done: 'Replied',
+    done: 'Done',
     failed: 'Failed',
     interrupted: 'Interrupted',
   },
@@ -97,7 +97,7 @@ suite('webview: 添付とモデル', () => {
 suite('webview: 状態の表示名', () => {
   test('状態のバッジは翻訳した表示名を出す', () => {
     const html = render(<App state={state({ status: 'done' })} post={() => {}} />);
-    assert.ok(html.includes('>Replied<'));
+    assert.ok(html.includes('>Done<'));
     assert.ok(!html.includes('>done<'));
   });
 });
