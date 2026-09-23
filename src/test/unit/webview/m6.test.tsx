@@ -15,6 +15,7 @@ const STRINGS = {
   answer: 'Answer',
   waiting: 'Waiting for your input',
   changes: 'Changes',
+  files: 'files',
   openDiff: 'Open in diff editor',
   revert: 'Revert',
   reverted: 'Reverted',
