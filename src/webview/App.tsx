@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { attachmentKey } from '../domain/attachments';
+import { attachmentKey, promptWithAttachments } from '../domain/attachments';
+import { applyPreset, matchPresets } from '../domain/presets';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import { answersToInput, questionsOf, type Question } from '../domain/question';
 import { describeSuggestions } from '../domain/suggestions';
@@ -60,14 +61,17 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
   }
   // 動いている間と、承認・質問に答えていない間は次の指示を送れない
   const busy = state.turnOpen || state.pending !== undefined;
+  // 先頭の /名前 はプリセットの本文に置き換えてから送る
+  const composed = applyPreset(draft.trim(), state.presets).prompt;
   const submit = (): void => {
-    const prompt = draft.trim();
-    if (prompt === '') {
+    if (composed.trim() === '') {
       return;
     }
-    post({ type: 'send', prompt, attachments: state.attachments });
+    post({ type: 'send', prompt: composed, attachments: state.attachments });
     setDraft('');
   };
+  const candidates = matchPresets(draft, state.presets);
+  const presetNames = state.presets.map((p) => '/' + p.name).join(' ');
   const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
   const modelOptions =
     state.model !== undefined && !state.models.includes(state.model)
@@ -222,6 +226,25 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
             {state.strings.addFile}
           </button>
         </div>
+        <ContextPanel
+          prompt={composed}
+          attachments={state.attachments}
+          context={state.context}
+          model={state.activeModel ?? state.model}
+          strings={state.strings}
+        />
+        {candidates.length > 0 && (
+          <ul class="preset-list">
+            {candidates.map((p) => (
+              <li key={p.name}>
+                <button class="link preset" onClick={() => setDraft('/' + p.name + ' ')}>
+                  /{p.name}
+                </button>
+                <span class="preset-prompt">{p.prompt.split('\n')[0]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         {state.pending !== undefined ? (
           <div class="waiting-note">{state.strings.waiting}</div>
         ) : (
@@ -230,7 +253,13 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
             rows={3}
             value={draft}
             disabled={busy}
-            placeholder={state.strings.dropHint}
+            placeholder={
+              presetNames === ''
+                ? state.strings.dropHint
+                : state.strings.presetsHint.replace('{0}', presetNames) +
+                  ' ' +
+                  state.strings.dropHint
+            }
             onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -273,6 +302,50 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         </div>
       </footer>
     </div>
+  );
+}
+
+interface ContextPanelProps {
+  prompt: string;
+  attachments: Attachment[];
+  context: PanelState['context'];
+  model: string | undefined;
+  strings: PanelStrings;
+}
+
+/** Context パネル（FR-VIEW-9）。次に Claude へ送る文と、セッションの条件をそのまま見せる */
+function ContextPanel({ prompt, attachments, context, model, strings }: ContextPanelProps) {
+  const preview =
+    prompt.trim() === '' && attachments.length === 0
+      ? undefined
+      : promptWithAttachments(prompt, attachments);
+  return (
+    <details class="context-panel">
+      <summary class="context-summary">{strings.contextPanel}</summary>
+      {preview === undefined ? (
+        <div class="context-empty">{strings.contextEmpty}</div>
+      ) : (
+        <pre class="context-preview">{preview}</pre>
+      )}
+      <dl class="context-facts">
+        <dt>{strings.directory}</dt>
+        <dd>{context.cwd}</dd>
+        {model !== undefined && (
+          <>
+            <dt>{strings.model}</dt>
+            <dd>{model}</dd>
+          </>
+        )}
+        <dt>{strings.permissionMode}</dt>
+        <dd>{context.permissionMode}</dd>
+        {context.alwaysAllowed.length > 0 && (
+          <>
+            <dt>{strings.alwaysAllowedList}</dt>
+            <dd>{context.alwaysAllowed.join(', ')}</dd>
+          </>
+        )}
+      </dl>
+    </details>
   );
 }
 

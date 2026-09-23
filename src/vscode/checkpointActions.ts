@@ -5,6 +5,7 @@ import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
+import { applyPreset } from '../domain/presets';
 import type { Settings } from './settings';
 
 export interface CheckpointDeps {
@@ -89,7 +90,7 @@ export class CheckpointActions {
     }
     const child = await this.deps.service.fork(taskId, {
       id,
-      prompt: prompt.trim(),
+      prompt: applyPreset(prompt.trim(), this.deps.settings().presets).prompt,
       cwd: parent.worktree?.repo ?? parent.cwd,
       worktree,
       fromTurn: turn,

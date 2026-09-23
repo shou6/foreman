@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import { chooseWorktree } from './chooseWorktree';
+import { applyPreset } from '../domain/presets';
 import { isTurnOpen, type Worktree } from '../domain/task';
 import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
@@ -108,7 +109,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         const settings = deps.settings();
         const task = await service.create({
           id: taskId,
-          prompt: prompt.trim(),
+          prompt: applyPreset(prompt.trim(), settings.presets).prompt,
           cwd: folder.uri.fsPath,
           worktree,
           model: settings.defaultModel,

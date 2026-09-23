@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { NotificationSetting } from '../domain/notifications';
 import type { PermissionMode } from '../domain/task';
+import { DEFAULT_PRESETS, normalizePresets, type Preset } from '../domain/presets';
 
 export interface Settings {
   claudePath: string | undefined;
@@ -19,6 +20,8 @@ export interface Settings {
   autoTitle: boolean;
   /** タイトル付けに使うモデル */
   titleModel: string;
+  /** 指示のプリセット。/名前 で本文に置き換わる */
+  presets: Preset[];
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -41,5 +44,6 @@ export function readSettings(): Settings {
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
     autoTitle: config.get<boolean>('autoTitle', true),
     titleModel: text('titleModel') ?? 'claude-haiku-4-5',
+    presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
   };
 }

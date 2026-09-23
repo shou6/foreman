@@ -3,6 +3,7 @@ import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
+import { applyPreset } from '../domain/presets';
 import type { Settings } from './settings';
 
 export interface ReviewDeps {
@@ -44,7 +45,7 @@ export class ReviewActions {
     }
     const settings = this.deps.settings();
     return this.deps.service.createDraft({
-      prompt: prompt.trim(),
+      prompt: applyPreset(prompt.trim(), settings.presets).prompt,
       cwd: folder,
       model: settings.defaultModel,
       permissionMode: settings.defaultPermissionMode,

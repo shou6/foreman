@@ -389,6 +389,41 @@
           "type": "string",
           "default": "claude-haiku-4-5",
           "description": "%config.titleModel%"
+        },
+        "foreman.presets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "prompt"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "%config.presets.name%"
+              },
+              "prompt": {
+                "type": "string",
+                "description": "%config.presets.prompt%"
+              }
+            }
+          },
+          "default": [
+            {
+              "name": "fix",
+              "prompt": "Fix the following problem. Find the root cause before changing code, explain it briefly, then make the smallest change that fixes it and verify it.\n\n{input}"
+            },
+            {
+              "name": "test",
+              "prompt": "Write tests for the following. Follow the existing test conventions of this project, cover the main path and the edge cases, and run the tests.\n\n{input}"
+            },
+            {
+              "name": "review",
+              "prompt": "Review the following changes as a careful colleague. Point out bugs, risky assumptions and missing tests first, then style. Do not change code unless asked.\n\n{input}"
+            }
+          ],
+          "markdownDescription": "%config.presets%"
         }
       }
     }

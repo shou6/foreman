@@ -11,6 +11,7 @@ import { readSettings } from './settings';
 import { attachmentKey, uniqueAttachments, type Attachment } from '../domain/attachments';
 import { canMerge, isTurnOpen } from '../domain/task';
 import { contextUsage, turnTokens, type TurnTokens } from '../domain/usage';
+import { describeSuggestions } from '../domain/suggestions';
 import { randomNonce } from './nonce';
 import { statusLabel } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
@@ -348,6 +349,12 @@ export class TaskPanels implements vscode.Disposable {
       maxWidthEm: readSettings().taskViewWidth,
       worktree: task.worktree,
       toolCallsExpanded: readSettings().toolCallsExpanded,
+      presets: readSettings().presets,
+      context: {
+        cwd: task.cwd,
+        permissionMode: task.permissionMode,
+        alwaysAllowed: describeSuggestions(task.alwaysAllowed),
+      },
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
@@ -391,6 +398,12 @@ export class TaskPanels implements vscode.Disposable {
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
         export: vscode.l10n.t('Export'),
         rename: vscode.l10n.t('Rename'),
+        contextPanel: vscode.l10n.t('What Claude will receive'),
+        contextEmpty: vscode.l10n.t('Type a prompt to preview what will be sent.'),
+        presetsHint: vscode.l10n.t('Presets: {0}', '{0}'),
+        permissionMode: vscode.l10n.t('Permission mode'),
+        alwaysAllowedList: vscode.l10n.t('Always allowed in this task'),
+        directory: vscode.l10n.t('Directory'),
         merging: vscode.l10n.t('Merging…'),
         discarding: vscode.l10n.t('Discarding…'),
         alwaysScope: vscode.l10n.t('"Always allow" would allow'),

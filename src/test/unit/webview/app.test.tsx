@@ -44,6 +44,12 @@ const STRINGS = {
   toolCalls: '{0} tool calls',
   export: 'Export',
   rename: 'Rename',
+  contextPanel: 'What Claude will receive',
+  contextEmpty: 'Type a prompt to preview what will be sent.',
+  presetsHint: 'Presets: {0}',
+  permissionMode: 'Permission mode',
+  alwaysAllowedList: 'Always allowed in this task',
+  directory: 'Directory',
   merging: 'Merging…',
   discarding: 'Discarding…',
   alwaysScope: '"Always allow" would allow',
@@ -70,6 +76,8 @@ function state(overrides: Partial<PanelState>): PanelState {
     models: [],
     maxWidthEm: 72,
     toolCallsExpanded: false,
+    presets: [],
+    context: { cwd: 'D:\w', permissionMode: 'default', alwaysAllowed: [] },
     strings: STRINGS,
     ...overrides,
   };
@@ -210,5 +218,66 @@ suite('webview: 入力の途中の保持と画像の貼り付け', () => {
   test('pasteImage のメッセージの型がある', () => {
     const message: ToExtension = { type: 'pasteImage', mime: 'image/png', data: 'AAAA' };
     assert.strictEqual(message.type, 'pasteImage');
+  });
+});
+
+suite('webview: 指示のプリセット（M13）', () => {
+  const presets = [
+    { name: 'fix', prompt: 'Fix: {input}' },
+    { name: 'test', prompt: 'Test: {input}' },
+  ];
+
+  test('入力が / で始まる間は、候補の一覧を出す', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets })}
+        post={() => {}}
+        initialDraft="/t"
+      />
+    );
+    const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
+    assert.ok(list.length > 0, '候補の一覧が無い');
+    assert.ok(list.includes('/test'));
+    assert.ok(!list.includes('/fix'));
+  });
+
+  test('入力が / で始まらなければ候補を出さない。入力欄の案内にプリセットの名前が入る', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets })}
+        post={() => {}}
+        initialDraft="hello"
+      />
+    );
+    assert.ok(!html.includes('class="preset-list"'));
+    assert.ok(html.includes('/fix /test'));
+  });
+});
+
+suite('webview: Context パネル（M13）', () => {
+  test('次に送る内容（プリセットと添付を展開した文）と、セッションの情報を出す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          presets: [{ name: 'fix', prompt: 'Fix: {input}' }],
+          attachments: [{ kind: 'file', path: 'D:\\w\\a.ts' }],
+          context: {
+            cwd: 'D:\\w',
+            permissionMode: 'acceptEdits',
+            alwaysAllowed: ['Bash(npm test)'],
+          },
+        })}
+        post={() => {}}
+        initialDraft="/fix the bug"
+      />
+    );
+    assert.ok(html.includes('class="context-panel'));
+    assert.ok(html.includes('Fix: the bug'));
+    assert.ok(html.includes('Attached files:'));
+    assert.ok(html.includes('D:\\w\\a.ts'));
+    assert.ok(html.includes('acceptEdits'));
+    assert.ok(html.includes('Bash(npm test)'));
   });
 });

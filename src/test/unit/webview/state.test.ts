@@ -43,6 +43,12 @@ const STRINGS = {
   toolCalls: '{0} tool calls',
   export: 'Export',
   rename: 'Rename',
+  contextPanel: 'What Claude will receive',
+  contextEmpty: 'Type a prompt to preview what will be sent.',
+  presetsHint: 'Presets: {0}',
+  permissionMode: 'Permission mode',
+  alwaysAllowedList: 'Always allowed in this task',
+  directory: 'Directory',
   merging: 'Merging…',
   discarding: 'Discarding…',
   alwaysScope: '"Always allow" would allow',
@@ -68,6 +74,8 @@ const initial: PanelState = {
   models: [],
   maxWidthEm: 72,
   toolCallsExpanded: false,
+  presets: [],
+  context: { cwd: 'D:\w', permissionMode: 'default', alwaysAllowed: [] },
   strings: STRINGS,
 };
 
@@ -130,6 +138,8 @@ suite('reduce: truncate', () => {
         models: [],
         maxWidthEm: 72,
         toolCallsExpanded: false,
+        presets: [],
+        context: { cwd: 'D:\w', permissionMode: 'default', alwaysAllowed: [] },
         strings: STRINGS,
       },
     });

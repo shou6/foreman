@@ -880,3 +880,77 @@ body.dragging .composer {
   font-size: 0.9em;
   color: var(--vscode-descriptionForeground);
 }
+
+/* 指示のプリセットの候補 */
+.preset-list {
+  margin: 0;
+  padding: 0.3em 0.6em;
+  list-style: none;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  font-size: 0.9em;
+}
+
+.preset-list li {
+  display: flex;
+  gap: 0.8em;
+  align-items: baseline;
+  padding: 0.1em 0;
+}
+
+.preset {
+  font-family: var(--vscode-editor-font-family);
+}
+
+.preset-prompt {
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Context パネル（次に送る内容） */
+.context-panel {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-summary {
+  cursor: pointer;
+}
+
+.context-empty {
+  padding: 0.3em 0 0 1em;
+}
+
+.context-preview {
+  max-height: 14em;
+  overflow: auto;
+  margin: 0.3em 0 0;
+  padding: 0.5em 0.7em;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.context-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1em 0.8em;
+  margin: 0.4em 0 0;
+}
+
+.context-facts dt {
+  font-weight: 600;
+}
+
+.context-facts dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

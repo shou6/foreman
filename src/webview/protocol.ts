@@ -1,13 +1,14 @@
 import type { PendingRequest } from '../app/approvalService';
 import type { Attachment } from '../domain/attachments';
 import type { ContextUsage, TurnTokens } from '../domain/usage';
+import type { Preset } from '../domain/presets';
 import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
-export type { Attachment, DiffLine, FileChange, PendingRequest, TranscriptDelta };
+export type { Attachment, DiffLine, FileChange, PendingRequest, Preset, TranscriptDelta };
 
 /** 画面に出す文字列。翻訳は拡張機能側で済ませて渡す（Webview からは vscode.l10n を使えない） */
 export interface PanelStrings {
@@ -49,6 +50,14 @@ export interface PanelStrings {
   export: string;
   /** 題名を押した時の説明（名前の変更） */
   rename: string;
+  /** Context パネル（次に Claude へ送る内容）の見出しと、空の時の案内 */
+  contextPanel: string;
+  contextEmpty: string;
+  /** {0} にプリセットの名前の並び */
+  presetsHint: string;
+  permissionMode: string;
+  alwaysAllowedList: string;
+  directory: string;
   merging: string;
   discarding: string;
   /** 「常に許可」で許可する内容の見出し */
@@ -100,6 +109,10 @@ export interface PanelState {
   worktree?: { branch: string; base: string };
   /** ツールの呼び出しを最初から開いて見せるか（設定 foreman.toolCalls） */
   toolCallsExpanded: boolean;
+  /** 指示のプリセット（設定 foreman.presets） */
+  presets: Preset[];
+  /** セッションの情報（Context パネルに出す） */
+  context: { cwd: string; permissionMode: string; alwaysAllowed: string[] };
   /** worktree のマージ・破棄の処理中 */
   finishing?: 'merge' | 'discard';
   strings: PanelStrings;

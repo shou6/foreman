@@ -123,5 +123,11 @@
   "Context of this task": "このタスクのコンテキスト",
   "Tokens today (all tasks)": "今日のトークン（全タスク）",
   "Rename": "名前を変更",
-  "Rename Task": "タスク名を変更"
+  "Rename Task": "タスク名を変更",
+  "What Claude will receive": "Claude に渡す内容",
+  "Type a prompt to preview what will be sent.": "指示を入力すると、送る内容がここに出ます。",
+  "Presets: {0}": "プリセット: {0}",
+  "Permission mode": "承認方式",
+  "Directory": "ディレクトリ",
+  "Always allowed in this task": "このタスクで常に許可しているもの"
 }
