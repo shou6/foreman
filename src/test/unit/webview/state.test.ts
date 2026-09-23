@@ -35,6 +35,8 @@ const STRINGS = {
   discard: 'Discard',
   toolCalls: '{0} tool calls',
   export: 'Export',
+  merging: 'Merging…',
+  discarding: 'Discarding…',
 };
 
 const initial: PanelState = {

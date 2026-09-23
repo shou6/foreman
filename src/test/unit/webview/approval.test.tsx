@@ -37,6 +37,8 @@ const STRINGS = {
   discard: 'Discard',
   toolCalls: '{0} tool calls',
   export: 'Export',
+  merging: 'Merging…',
+  discarding: 'Discarding…',
 };
 
 function state(overrides: Partial<PanelState>): PanelState {

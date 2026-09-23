@@ -1,7 +1,8 @@
 import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
-import type { PanelState, ToExtension } from '../../../webview/protocol';
+import type { PanelState } from '../../../webview/protocol';
+import { reduce } from '../../../webview/state';
 
 const STRINGS = {
   send: 'Send',
@@ -52,42 +53,29 @@ function state(overrides: Partial<PanelState>): PanelState {
     models: [],
     maxWidthEm: 72,
     toolCallsExpanded: false,
+    worktree: { branch: 'foreman/x', base: 'main' },
     strings: STRINGS,
     ...overrides,
   };
 }
 
-suite('webview: worktree', () => {
-  test('worktree を使うタスクは、見出しにブランチのチップと、マージ・破棄のボタンを出す', () => {
-    const html = render(
-      <App
-        state={state({ worktree: { branch: 'foreman/readme-abc123', base: 'main' } })}
-        post={() => {}}
-      />
-    );
-    assert.ok(html.includes('foreman/readme-abc123'));
-    assert.ok(html.includes('Merge into main'));
-    assert.ok(html.includes('Discard'));
+suite('webview: マージ中と破棄中', () => {
+  test('finishing メッセージで状態に入り、undefined で消える', () => {
+    let s = reduce(state({}), { type: 'finishing', kind: 'merge' });
+    assert.strictEqual(s?.finishing, 'merge');
+    s = reduce(s, { type: 'finishing', kind: undefined });
+    assert.strictEqual(s?.finishing, undefined);
   });
 
-  test('worktree を使わないタスクには出さない', () => {
-    const html = render(<App state={state({})} post={() => {}} />);
-    assert.ok(!html.includes('Merge into'));
-    assert.ok(!html.includes('Discard'));
-  });
-
-  test('実行中はマージと破棄を押せない', () => {
-    const html = render(
-      <App
-        state={state({ status: 'running', worktree: { branch: 'foreman/x', base: 'main' } })}
-        post={() => {}}
-      />
-    );
+  test('マージ中はボタンが「マージ中…」になり、マージも破棄も押せない', () => {
+    const html = render(<App state={state({ finishing: 'merge' })} post={() => {}} />);
+    assert.ok(html.includes('Merging…'));
     assert.ok(/<button[^>]*class="ghost merge"[^>]*disabled/.test(html));
+    assert.ok(/<button[^>]*class="ghost discard"[^>]*disabled/.test(html));
   });
 
-  test('merge と discard のメッセージの型がある', () => {
-    const messages: ToExtension[] = [{ type: 'merge' }, { type: 'discard' }];
-    assert.strictEqual(messages.length, 2);
+  test('破棄中は「破棄中…」', () => {
+    const html = render(<App state={state({ finishing: 'discard' })} post={() => {}} />);
+    assert.ok(html.includes('Discarding…'));
   });
 });
