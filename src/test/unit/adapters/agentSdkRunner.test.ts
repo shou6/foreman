@@ -647,28 +647,3 @@ suite('AgentSdkRunner: 出力の確定', () => {
     );
   });
 });
-
-suite('AgentSdkRunner: 設定の読み込み元', () => {
-  const base = {
-    cwd: 'D:\\work',
-    prompt: 'hello',
-    permissionMode: 'default' as const,
-    alwaysAllowed: [],
-    onEvent: () => {},
-    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
-  };
-
-  test('settingSources を SDK にそのまま渡す（ユーザーの hooks を外すのに使う）', () => {
-    const { query, fake } = fakeQuery();
-    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
-    runner.start({ ...base, settingSources: ['project', 'local'] });
-    assert.deepStrictEqual(fake.params[0]?.options?.settingSources, ['project', 'local']);
-  });
-
-  test('指定が無ければ SDK に渡さない（Claude Code の既定に従う）', () => {
-    const { query, fake } = fakeQuery();
-    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
-    runner.start(base);
-    assert.strictEqual(fake.params[0]?.options?.settingSources, undefined);
-  });
-});

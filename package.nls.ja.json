@@ -35,10 +35,5 @@
   "config.toolCalls.collapsed": "まとまりごとに 1 行の要約にたたむ。クリックで開く。",
   "config.toolCalls.expanded": "すべての呼び出しを開いて見せる。",
   "config.autoTitle": "タスクの作成直後に、軽いモデルで短いタイトルを付ける。タスクごとに短い問い合わせを 1 回行う。",
-  "config.titleModel": "タイトル付けに使うモデル。",
-  "config.notificationChannel": "通知の出し方。`desktop` は Local Notifier 拡張機能（shou6.vscode-local-notifier）の inbox に書き、Windows のデスクトップ通知にする。",
-  "config.notificationChannel.vscode": "VS Code の通知だけ。",
-  "config.notificationChannel.desktop": "Local Notifier によるデスクトップ通知だけ。",
-  "config.notificationChannel.both": "両方。",
-  "config.settingSources": "タスクが読む Claude Code の設定。`user`（~/.claude/settings.json）、`project`（.claude/settings.json）、`local`（.claude/settings.local.json）。`user` を外すと、個人の hooks や許可のルールが Foreman のタスクに効かなくなる。"
+  "config.titleModel": "タイトル付けに使うモデル。"
 }

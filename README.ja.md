@@ -45,8 +45,10 @@ Foreman は認証情報を読まず、保存もしない。ローカルの `clau
 | `foreman.autoTitle` / `foreman.titleModel` | 最初の指示から小さなモデルにタスク名を付けさせる |
 | `foreman.toolCalls` | タスク画面でツールの呼び出しを開いて見せるか、たたむか |
 | `foreman.taskViewWidth` | タスク画面の本文の最大の幅（`em`） |
-| `foreman.notificationChannel` | `both`（既定）、`vscode`、`desktop` のいずれか。デスクトップ通知は [Local Notifier](https://marketplace.visualstudio.com/items?itemName=shou6.vscode-local-notifier) 拡張機能を通す。Foreman と一緒にインストールされる（Windows のみ） |
-| `foreman.settingSources` | タスクが読む Claude Code の設定。`user`、`project`、`local`。`user` を外すと個人の hooks が Foreman のタスクに効かなくなる |
+
+## デスクトップ通知
+
+Foreman が出すのは VS Code の通知だけです。Windows のデスクトップ通知が欲しい時は、[Local Notifier](https://marketplace.visualstudio.com/items?itemName=shou6.vscode-local-notifier) を入れて、その hook のコマンドを Claude Code の設定に足してください。Foreman のタスクでも Claude Code の hooks はそのまま動くので、同じ設定で通知が出ます。
 
 ## 仕組み
 

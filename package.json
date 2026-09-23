@@ -33,9 +33,6 @@
     "tasks"
   ],
   "activationEvents": [],
-  "extensionDependencies": [
-    "shou6.vscode-local-notifier"
-  ],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "files": [
@@ -381,39 +378,6 @@
           "type": "string",
           "default": "claude-haiku-4-5",
           "description": "%config.titleModel%"
-        },
-        "foreman.notificationChannel": {
-          "type": "string",
-          "enum": [
-            "vscode",
-            "desktop",
-            "both"
-          ],
-          "enumDescriptions": [
-            "%config.notificationChannel.vscode%",
-            "%config.notificationChannel.desktop%",
-            "%config.notificationChannel.both%"
-          ],
-          "default": "both",
-          "markdownDescription": "%config.notificationChannel%"
-        },
-        "foreman.settingSources": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "user",
-              "project",
-              "local"
-            ]
-          },
-          "uniqueItems": true,
-          "default": [
-            "user",
-            "project",
-            "local"
-          ],
-          "markdownDescription": "%config.settingSources%"
         }
       }
     }

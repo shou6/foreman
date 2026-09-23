@@ -27,7 +27,6 @@ import { TaskPanels } from './vscode/taskPanel';
 import { SNAPSHOT_SCHEME } from './vscode/snapshotUri';
 import { SidebarView, SIDEBAR_VIEW_ID } from './vscode/sidebarView';
 import { AttachmentSources } from './vscode/attachmentSources';
-import { inboxDirOf, writeToInbox } from './adapters/localNotifierInbox';
 import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
@@ -36,8 +35,6 @@ import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
-const LOCAL_NOTIFIER_ID = 'shou6.vscode-local-notifier';
-
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
 export interface TestApi {
   service: TaskService;
@@ -74,7 +71,6 @@ export async function activate(
     newId: () => randomUUID(),
     now: () => new Date().toISOString(),
     approve: (taskId, request) => approvals.request(taskId, request),
-    settingSources: () => readSettings().settingSources,
   });
   // 待っている間に止まった・失敗した要求は片付ける
   service.onDidChange((task) => {
@@ -245,31 +241,7 @@ export async function activate(
     new Notifications(
       service,
       (taskId) => void panels.open(taskId),
-      () => readSettings().notifications,
-      () => readSettings().notificationChannel,
-      async (notification) => {
-        if (vscode.extensions.getExtension(LOCAL_NOTIFIER_ID) === undefined) {
-          throw new Error(
-            vscode.l10n.t('Install the Local Notifier extension ({0}).', LOCAL_NOTIFIER_ID)
-          );
-        }
-        const dir = inboxDirOf({
-          configured: vscode.workspace
-            .getConfiguration('localNotifier')
-            .get<string>('inboxPath', ''),
-          globalStorage: context.globalStorageUri.fsPath,
-          sep: path.sep,
-        });
-        await writeToInbox(
-          dir,
-          {
-            ...notification,
-            project: vscode.workspace.workspaceFolders?.[0]?.name,
-            source: 'Foreman',
-          },
-          { now: Date.now(), pid: process.pid }
-        );
-      }
+      () => readSettings().notifications
     ),
     sidebar,
     vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),

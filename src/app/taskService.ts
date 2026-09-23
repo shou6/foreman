@@ -13,7 +13,7 @@ import {
   type Worktree,
 } from '../domain/task';
 import { titleFromPrompt } from '../domain/taskTitle';
-import type { AgentRunner, RunHandle, SettingSource, StartOptions } from '../ports/agentRunner';
+import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { TaskStore } from '../ports/taskStore';
 
 export interface TaskServiceDeps {
@@ -25,8 +25,6 @@ export interface TaskServiceDeps {
   now: () => string;
   /** ツールの承認をユーザーに求める。画面側が実装する */
   approve: (taskId: string, request: PermissionRequest) => Promise<PermissionDecision>;
-  /** Claude Code の設定の読み込み元（設定 foreman.settingSources）。省略時は Claude Code の既定 */
-  settingSources?: () => SettingSource[] | undefined;
 }
 
 export interface CreateInput {
@@ -420,7 +418,6 @@ export class TaskService {
       model: task.model,
       permissionMode: task.permissionMode,
       alwaysAllowed: task.alwaysAllowed,
-      settingSources: this.deps.settingSources?.(),
       onPermissionRequest: (request) => this.handlePermission(task.id, request),
       onEvent: (event) => {
         const notification: TaskEventNotification = {

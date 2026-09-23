@@ -14,11 +14,7 @@ export interface StartOptions {
   resumeAt?: string;
   /** resume の時、元のセッションを変えずに新しいセッションへ分岐する */
   fork?: boolean;
-  /** Claude Code の設定の読み込み元。省略時は Claude Code の既定（すべて） */
-  settingSources?: SettingSource[];
 }
-
-export type SettingSource = 'user' | 'project' | 'local';
 
 export interface RunHandle {
   /** 同じセッションへ追加の指示を送る */

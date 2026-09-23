@@ -45,8 +45,10 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. |
 | `foreman.toolCalls` | Show tool calls expanded or collapsed in the task view. |
 | `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. |
-| `foreman.notificationChannel` | `both` (default), `vscode` or `desktop`. Desktop notifications go through the [Local Notifier](https://marketplace.visualstudio.com/items?itemName=shou6.vscode-local-notifier) extension, which is installed together with Foreman (Windows only). |
-| `foreman.settingSources` | Which Claude Code settings the tasks load: `user`, `project`, `local`. Remove `user` to keep your personal hooks out of Foreman tasks. |
+
+## Desktop notifications
+
+Foreman only shows Visual Studio Code notifications. For Windows desktop notifications, install [Local Notifier](https://marketplace.visualstudio.com/items?itemName=shou6.vscode-local-notifier) and add its hook command to your Claude Code settings. Foreman tasks run your Claude Code hooks, so the same setup covers tasks started from Foreman.
 
 ## How it works
 
