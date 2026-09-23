@@ -39,6 +39,9 @@ export interface FileChange {
   after?: string;
   source: 'edit-tool' | 'watcher';
   reverted: boolean;
+  /** 追加・削除の行数。変更前が不明なら undefined */
+  added?: number;
+  removed?: number;
 }
 
 export interface Turn {

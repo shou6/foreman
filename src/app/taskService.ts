@@ -178,6 +178,11 @@ export class TaskService {
     }
   }
 
+  /** タスクを直して保存する（差分の記録など）。タスクごとに直列に実行する */
+  patch(id: string, fn: (task: Task) => Task): Promise<void> {
+    return this.update(id, fn);
+  }
+
   private startOptions(task: Task, prompt: string): StartOptions {
     return {
       cwd: task.cwd,
