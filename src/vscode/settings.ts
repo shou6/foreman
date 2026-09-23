@@ -13,6 +13,8 @@ export interface Settings {
   useWorktree: boolean;
   /** worktree のブランチ名の接頭辞 */
   worktreeBranchPrefix: string;
+  /** ツールの呼び出しを最初から開いて見せるか */
+  toolCallsExpanded: boolean;
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -32,5 +34,6 @@ export function readSettings(): Settings {
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
+    toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
   };
 }

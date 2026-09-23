@@ -14,6 +14,7 @@ export interface CommandDeps {
   worktrees: WorktreeService;
   worktreeActions: WorktreeActions;
   newId: () => string;
+  exportTask: (taskId: string) => Promise<void>;
 }
 
 function taskIdOf(arg: unknown): string | undefined {
@@ -160,6 +161,14 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       if (id !== undefined) {
         void withError(() => worktreeActions.merge(id))();
       }
+    }),
+    vscode.commands.registerCommand('foreman.exportTask', (arg: unknown) => {
+      void withError(async () => {
+        const id = taskIdOf(arg) ?? (await pickTask());
+        if (id !== undefined) {
+          await deps.exportTask(id);
+        }
+      })();
     }),
     vscode.commands.registerCommand('foreman.discardTask', (arg: unknown) => {
       const id = taskIdOf(arg);

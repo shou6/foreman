@@ -664,3 +664,52 @@ body.dragging .composer {
   border-color: var(--vscode-button-background);
   color: var(--vscode-button-background);
 }
+
+/* ツールの呼び出しのたたみ */
+.tool-group {
+  display: block;
+}
+
+.group-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  gap: 0.6em;
+  align-items: baseline;
+}
+
+.group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.group-summary::before {
+  content: '▸';
+  width: 1em;
+}
+
+.tool-group[open] > .group-summary::before {
+  content: '▾';
+}
+
+.tool-count {
+  color: var(--vscode-foreground);
+}
+
+.tool-marks .ok {
+  color: var(--vscode-testing-iconPassed);
+}
+
+.tool-marks .failed {
+  color: var(--vscode-editorError-foreground);
+  margin-left: 0.4em;
+}
+
+.tool-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-group[open] > .tool {
+  margin-left: 1.6em;
+}

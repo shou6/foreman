@@ -21,5 +21,9 @@
   "command.mergeTask": "Merge Worktree into Base Branch",
   "command.discardTask": "Discard Worktree",
   "config.useWorktree": "Run new tasks in a git worktree by default. You can still choose per task.",
-  "config.worktreeBranchPrefix": "Prefix for the branch of each task worktree, for example `foreman/`."
+  "config.worktreeBranchPrefix": "Prefix for the branch of each task worktree, for example `foreman/`.",
+  "command.exportTask": "Export Task as Markdown",
+  "config.toolCalls": "How tool calls are shown in the task view.",
+  "config.toolCalls.collapsed": "One summary line per group; click to expand.",
+  "config.toolCalls.expanded": "Show every tool call."
 }

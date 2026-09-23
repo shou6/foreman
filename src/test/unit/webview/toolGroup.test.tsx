@@ -47,7 +47,7 @@ function state(overrides: Partial<PanelState>): PanelState {
       { kind: 'prompt', turn: 0, text: 'p' },
       { kind: 'tool', turn: 0, id: '1', name: 'Read', input: { file_path: 'a.ts' }, status: 'ok' },
       { kind: 'tool', turn: 0, id: '2', name: 'Bash', input: { command: 'ls' }, status: 'error' },
-      { kind: 'tool', turn: 0, id: '3', name: 'Grep', input: { pattern: 'x' }, status: 'running' },
+      { kind: 'tool', turn: 0, id: '3', name: 'Grep', input: { pattern: 'x' }, status: 'ok' },
     ],
     changes: {},
     diffs: {},
@@ -65,7 +65,7 @@ suite('webview: ツールの呼び出しのたたみ', () => {
     const html = render(<App state={state({})} post={() => {}} />);
     assert.ok(/<details[^>]*class="tool-group[^"]*"(?![^>]*\bopen\b)/.test(html), 'たたまれている');
     assert.ok(html.includes('3 tool calls'));
-    assert.ok(html.includes('✓1'));
+    assert.ok(html.includes('✓2'));
     assert.ok(html.includes('✗1'));
     assert.ok(html.includes('Read, Bash, Grep'));
   });

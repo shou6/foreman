@@ -36,6 +36,9 @@ export interface PanelStrings {
   /** {0} に元のブランチが入る */
   merge: string;
   discard: string;
+  /** {0} に件数が入る */
+  toolCalls: string;
+  export: string;
 }
 
 export interface PanelState {
@@ -61,6 +64,8 @@ export interface PanelState {
   maxWidthEm: number;
   /** タスクが使う worktree。無ければ undefined */
   worktree?: { branch: string; base: string };
+  /** ツールの呼び出しを最初から開いて見せるか（設定 foreman.toolCalls） */
+  toolCallsExpanded: boolean;
   strings: PanelStrings;
 }
 
@@ -96,7 +101,9 @@ export type ToExtension =
   | { type: 'removeAttachment'; path: string }
   /** worktree の変更を元のブランチへマージする / 捨てる */
   | { type: 'merge' }
-  | { type: 'discard' };
+  | { type: 'discard' }
+  /** タスクを Markdown に書き出す */
+  | { type: 'export' };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;

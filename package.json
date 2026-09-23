@@ -113,6 +113,12 @@
         "title": "%command.discardTask%",
         "category": "Foreman",
         "icon": "$(discard)"
+      },
+      {
+        "command": "foreman.exportTask",
+        "title": "%command.exportTask%",
+        "category": "Foreman",
+        "icon": "$(export)"
       }
     ],
     "menus": {
@@ -169,6 +175,11 @@
           "command": "foreman.discardTask",
           "when": "view == foreman.tasks && viewItem =~ /^(done|failed|interrupted) worktree$/",
           "group": "worktree@2"
+        },
+        {
+          "command": "foreman.exportTask",
+          "when": "view == foreman.tasks && viewItem != group",
+          "group": "export@1"
         }
       ],
       "explorer/context": [
@@ -242,6 +253,19 @@
           "type": "string",
           "default": "foreman/",
           "description": "%config.worktreeBranchPrefix%"
+        },
+        "foreman.toolCalls": {
+          "type": "string",
+          "enum": [
+            "collapsed",
+            "expanded"
+          ],
+          "enumDescriptions": [
+            "%config.toolCalls.collapsed%",
+            "%config.toolCalls.expanded%"
+          ],
+          "default": "collapsed",
+          "description": "%config.toolCalls%"
         }
       }
     }

@@ -24,6 +24,8 @@ export interface TaskPanelDeps {
   diffs: DiffService;
   /** worktree のマージと破棄（確認や後始末は呼ぶ側が行う） */
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
+  /** タスクを Markdown に書き出す */
+  exportTask: (taskId: string) => Promise<void>;
 }
 
 /** タスク画面（WebviewPanel）。タスクごとに 1 つだけ開き、既に開いていれば前面に出す */
@@ -167,6 +169,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'discard':
           await this.deps.finish.discard(taskId);
           return;
+        case 'export':
+          await this.deps.exportTask(taskId);
+          return;
         case 'removeAttachment': {
           const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
           this.attachments.set(taskId, next);
@@ -220,6 +225,7 @@ export class TaskPanels implements vscode.Disposable {
       attachments: this.attachments.get(task.id) ?? [],
       maxWidthEm: readSettings().taskViewWidth,
       worktree: task.worktree,
+      toolCallsExpanded: readSettings().toolCallsExpanded,
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
@@ -253,6 +259,8 @@ export class TaskPanels implements vscode.Disposable {
         worktree: vscode.l10n.t('worktree'),
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
         discard: vscode.l10n.t('Discard'),
+        toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
+        export: vscode.l10n.t('Export'),
       },
     };
   }

@@ -55,5 +55,8 @@
   "Merge failed: {0}": "マージに失敗しました: {0}",
   "This task does not use a worktree.": "このタスクは worktree を使っていません。",
   "Stop the task before merging or discarding its worktree.": "worktree をマージ・破棄する前に、タスクを止めてください。",
-  "Merged {0} into {1}. The worktree folder could not be removed yet; Foreman will clean it up on the next start.": "{0} を {1} にマージしました。worktree のフォルダはまだ消せなかったので、次の起動時に片付けます。"
+  "Merged {0} into {1}. The worktree folder could not be removed yet; Foreman will clean it up on the next start.": "{0} を {1} にマージしました。worktree のフォルダはまだ消せなかったので、次の起動時に片付けます。",
+  "{0} tool calls": "ツールの呼び出し {0} 件",
+  "Export": "エクスポート",
+  "Export Task": "タスクを書き出す"
 }

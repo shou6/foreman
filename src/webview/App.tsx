@@ -76,11 +76,16 @@ export function App({ state, post }: AppProps) {
           </span>
         )}
         {state.worktree !== undefined && (
+          <span class="chip" title={state.strings.worktree}>
+            {state.worktree.branch}
+          </span>
+        )}
+        <span class="head-spacer" />
+        <button class="ghost export" onClick={() => post({ type: 'export' })}>
+          {state.strings.export}
+        </button>
+        {state.worktree !== undefined && (
           <>
-            <span class="chip" title={state.strings.worktree}>
-              {state.worktree.branch}
-            </span>
-            <span class="head-spacer" />
             <button class="ghost merge" disabled={busy} onClick={() => post({ type: 'merge' })}>
               {state.strings.merge.replace('{0}', state.worktree.base)}
             </button>
@@ -93,7 +98,12 @@ export function App({ state, post }: AppProps) {
       <main class="transcript">
         {groupTools(state.items).map((block, i) => (
           <>
-            <BlockView key={i} block={block} />
+            <BlockView
+              key={i}
+              block={block}
+              expanded={state.toolCallsExpanded}
+              strings={state.strings}
+            />
             {block.kind === 'turn-end' && (state.changes[block.turn]?.length ?? 0) > 0 && (
               <DiffCard
                 key={`changes-${block.turn}`}
@@ -198,7 +208,15 @@ function dirname(path: string): string {
   return i < 0 ? '' : path.slice(0, i + 1);
 }
 
-function BlockView({ block }: { block: Block }) {
+function BlockView({
+  block,
+  expanded,
+  strings,
+}: {
+  block: Block;
+  expanded: boolean;
+  strings: PanelStrings;
+}) {
   switch (block.kind) {
     case 'prompt':
       return <div class="item prompt">{block.text}</div>;
@@ -209,9 +227,24 @@ function BlockView({ block }: { block: Block }) {
           dangerouslySetInnerHTML={{ __html: renderMarkdown(block.text) }}
         />
       );
-    case 'tools':
+    case 'tools': {
+      const ok = block.tools.filter((t) => t.status === 'ok').length;
+      const failed = block.tools.filter((t) => t.status === 'error').length;
+      const running = block.tools.some((t) => t.status === 'running');
+      const names = [...new Set(block.tools.map((t) => t.name))].join(', ');
       return (
-        <div class="tool-group item">
+        <details class="tool-group item" open={expanded || running}>
+          <summary class="group-summary">
+            <span class="tool-count">
+              {strings.toolCalls.replace('{0}', String(block.tools.length))}
+            </span>
+            <span class="tool-marks">
+              {ok > 0 && <span class="ok">✓{ok}</span>}
+              {failed > 0 && <span class="failed">✗{failed}</span>}
+              {running && <span class="running">…</span>}
+            </span>
+            <span class="tool-names">{names}</span>
+          </summary>
           {block.tools.map((tool) => (
             <details class="tool" data-status={tool.status} key={tool.id}>
               <summary>
@@ -221,8 +254,9 @@ function BlockView({ block }: { block: Block }) {
               {tool.output !== undefined && <pre class="tool-output">{tool.output}</pre>}
             </details>
           ))}
-        </div>
+        </details>
       );
+    }
     case 'turn-end':
       return block.ok ? null : (
         <div class={block.interrupted ? 'item interrupted' : 'item error'}>{block.reason}</div>

@@ -21,6 +21,7 @@ import { readSettings } from './vscode/settings';
 import { StatusBar } from './vscode/statusBar';
 import { SNAPSHOT_SCHEME, TaskPanels } from './vscode/taskPanel';
 import { TaskTreeProvider } from './vscode/taskTreeView';
+import { exportTask } from './vscode/exportTask';
 import { WorktreeActions } from './vscode/worktreeActions';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
@@ -109,6 +110,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       merge: (taskId) => worktreeActions.merge(taskId),
       discard: (taskId) => worktreeActions.discard(taskId),
     },
+    exportTask: (taskId) => exportTask(taskId, service, transcripts),
   });
   const tree = new TaskTreeProvider(service);
 
@@ -137,6 +139,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     worktrees,
     worktreeActions,
     newId: () => randomUUID(),
+    exportTask: (taskId) => exportTask(taskId, service, transcripts),
   });
 
   // タスクの無い worktree（前回の異常終了で残ったものなど）を片付ける
