@@ -44,6 +44,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -54,6 +55,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     title: 'README',
     status: 'done',
     turnOpen: false,
+    mergeable: false,
     items: [],
     changes: {},
     diffs: {},
@@ -70,12 +72,30 @@ suite('webview: worktree', () => {
   test('worktree を使うタスクは、見出しにブランチのチップと、マージ・破棄のボタンを出す', () => {
     const html = render(
       <App
-        state={state({ worktree: { branch: 'foreman/readme-abc123', base: 'main' } })}
+        state={state({
+          worktree: { branch: 'foreman/readme-abc123', base: 'main' },
+          mergeable: true,
+        })}
         post={() => {}}
       />
     );
     assert.ok(html.includes('foreman/readme-abc123'));
     assert.ok(html.includes('Merge into main'));
+    assert.ok(html.includes('Discard'));
+  });
+
+  test('マージできない（未承認か、変更が無い）間はマージのボタンを出さない。破棄は出す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'review',
+          worktree: { branch: 'foreman/x', base: 'main' },
+          mergeable: false,
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!html.includes('class="ghost merge"'));
     assert.ok(html.includes('Discard'));
   });
 
@@ -92,6 +112,7 @@ suite('webview: worktree', () => {
           status: 'running',
           turnOpen: true,
           worktree: { branch: 'foreman/x', base: 'main' },
+          mergeable: true,
         })}
         post={() => {}}
       />

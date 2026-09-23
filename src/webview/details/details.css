@@ -239,3 +239,9 @@ body {
   opacity: 0.5;
   cursor: default;
 }
+
+.finish-note {
+  align-self: center;
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+}

@@ -23,6 +23,8 @@ export interface DetailsStrings {
   merge: string;
   discard: string;
   changesTitle: string;
+  /** マージできない時の案内 */
+  notMergeable: string;
 }
 
 export interface DetailsChange {
@@ -48,6 +50,8 @@ export interface DetailsTask {
   turnOpen: boolean;
   turns: DetailsTurn[];
   worktree?: { branch: string; base: string };
+  /** 承認済みで変更があり、マージできる */
+  mergeable: boolean;
 }
 
 export interface DetailsState {

@@ -4,12 +4,10 @@ import type { WorktreeService } from '../app/worktreeService';
 import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
 import type { Settings } from './settings';
-import type { WorktreeActions } from './worktreeActions';
 
 export interface ReviewDeps {
   service: TaskService;
   worktrees: WorktreeService;
-  worktreeActions: WorktreeActions;
   settings: () => Settings;
   openPanel: (taskId: string) => Promise<void>;
   afterStart: (task: Task) => void;
@@ -19,7 +17,7 @@ export interface ReviewDeps {
 export class ReviewActions {
   constructor(private readonly deps: ReviewDeps) {}
 
-  /** 変更を確認済みにする。worktree のタスクは元のブランチへマージしてから完了にする */
+  /** 変更を確認済みにして完了にする。worktree のマージは別（右サイドバーの仕上げ） */
   async approve(taskId: string): Promise<void> {
     const task = await this.deps.service.load(taskId);
     if (task === undefined) {
@@ -30,14 +28,6 @@ export class ReviewActions {
         vscode.l10n.t('Task "{0}" has no changes waiting for review.', task.title)
       );
       return;
-    }
-    if (task.worktree !== undefined) {
-      await this.deps.worktreeActions.merge(taskId);
-      const merged = await this.deps.service.load(taskId);
-      if (merged?.worktree !== undefined) {
-        // マージに失敗した。レビュー待ちのまま残す
-        return;
-      }
     }
     await this.deps.service.approve(taskId);
   }

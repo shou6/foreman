@@ -58,6 +58,7 @@ export function App({ state, post }: AppProps) {
     post({ type: 'send', prompt, attachments: state.attachments });
     setDraft('');
   };
+  const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
   const modelOptions =
     state.model !== undefined && !state.models.includes(state.model)
       ? [state.model, ...state.models]
@@ -86,27 +87,24 @@ export function App({ state, post }: AppProps) {
         <button class="ghost export" onClick={() => post({ type: 'export' })}>
           {state.strings.export}
         </button>
-        {(state.status === 'review' ||
-          (state.status === 'waiting' && !state.turnOpen && state.pending === undefined)) && (
-          <button
-            class="ghost approve"
-            disabled={state.finishing !== undefined}
-            onClick={() => post({ type: 'approve' })}
-          >
-            {state.status === 'review' ? state.strings.approve : state.strings.markDone}
+        {state.status === 'waiting' && !state.turnOpen && state.pending === undefined && (
+          <button class="ghost approve" onClick={() => post({ type: 'approve' })}>
+            {state.strings.markDone}
           </button>
         )}
         {state.worktree !== undefined && (
           <>
-            <button
-              class="ghost merge"
-              disabled={busy || state.finishing !== undefined}
-              onClick={() => post({ type: 'merge' })}
-            >
-              {state.finishing === 'merge'
-                ? state.strings.merging
-                : state.strings.merge.replace('{0}', state.worktree.base)}
-            </button>
+            {state.mergeable && (
+              <button
+                class="ghost merge"
+                disabled={busy || state.finishing !== undefined}
+                onClick={() => post({ type: 'merge' })}
+              >
+                {state.finishing === 'merge'
+                  ? state.strings.merging
+                  : state.strings.merge.replace('{0}', state.worktree.base)}
+              </button>
+            )}
             <button
               class="ghost discard"
               disabled={busy || state.finishing !== undefined}
@@ -154,6 +152,7 @@ export function App({ state, post }: AppProps) {
                 changes={state.changes[block.turn] ?? []}
                 diffs={state.diffs}
                 strings={state.strings}
+                approvable={state.status === 'review' && block.turn === lastTurn}
                 post={post}
               />
             )}
@@ -314,14 +313,17 @@ interface DiffCardProps {
   changes: FileChange[];
   diffs: Record<string, DiffLine[]>;
   strings: PanelStrings;
+  /** レビュー待ちの最後のターンなら「承認」を出す */
+  approvable: boolean;
   post: (message: ToExtension) => void;
 }
 
 /** ターンの差分カード（FR-DIFF-1〜7）。ファイルを開くとインラインの差分を拡張機能に求める */
-function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
+function DiffCard({ turn, changes, diffs, strings, approvable, post }: DiffCardProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const added = changes.reduce((n, c) => n + (c.added ?? 0), 0);
   const removed = changes.reduce((n, c) => n + (c.removed ?? 0), 0);
+  const revertible = changes.some((c) => !c.reverted);
   return (
     <section class="diff-card">
       <div class="diff-card-head">
@@ -331,6 +333,19 @@ function DiffCard({ turn, changes, diffs, strings, post }: DiffCardProps) {
           <span class="added"> +{added}</span>
           <span class="removed"> -{removed}</span>
         </span>
+        <span class="head-spacer" />
+        <button
+          class="revert-all"
+          disabled={!revertible}
+          onClick={() => post({ type: 'revertAll', turn })}
+        >
+          {strings.revertAll}
+        </button>
+        {approvable && (
+          <button class="approve primary" onClick={() => post({ type: 'approve' })}>
+            {strings.approve}
+          </button>
+        )}
       </div>
       {changes.map((change) => {
         const key = diffKey(turn, change.path);

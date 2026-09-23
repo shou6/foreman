@@ -756,3 +756,39 @@ body.dragging .composer {
   cursor: default;
   opacity: 0.5;
 }
+
+/* 差分カードの操作（すべて戻す・承認） */
+.diff-card-head .head-spacer {
+  flex: 1;
+}
+
+.revert-all,
+.diff-card-head .approve {
+  padding: 0.15em 0.7em;
+  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.revert-all:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.revert-all:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.diff-card-head .approve.primary {
+  margin-left: 0.4em;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.diff-card-head .approve.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}

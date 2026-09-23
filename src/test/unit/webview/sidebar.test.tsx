@@ -37,6 +37,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             status: 'waiting',
             turnOpen: true,
             worktree: true,
+            mergeable: false,
             branch: 'foreman/auth',
             files: 3,
             badge: { kind: 'approval' },
@@ -52,6 +53,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             status: 'running',
             turnOpen: true,
             worktree: false,
+            mergeable: false,
             files: 1,
             badge: { kind: 'elapsed', minutes: 4 },
           },
@@ -66,6 +68,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             status: 'done',
             turnOpen: false,
             worktree: false,
+            mergeable: false,
             files: 0,
             badge: { kind: 'done' },
           },
@@ -113,6 +116,7 @@ suite('webview: 左サイドバーの一覧', () => {
     assert.strictEqual(context.foremanStatus, 'waiting');
     assert.strictEqual(context.foremanOpen, true);
     assert.strictEqual(context.foremanWorktree, true);
+    assert.strictEqual(context.foremanMergeable, false);
     assert.strictEqual(context.preventDefaultContextMenuItems, true);
   });
 

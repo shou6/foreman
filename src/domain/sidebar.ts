@@ -1,5 +1,5 @@
 import { compareForBoard } from './board';
-import { isTurnOpen, type Task, type TaskStatus } from './task';
+import { canMerge, isTurnOpen, type Task, type TaskStatus } from './task';
 
 /** 左サイドバーのグループ。手が要るものを上にする */
 export type SidebarGroupKey = 'waiting' | 'running' | 'review' | 'draft' | 'done';
@@ -33,6 +33,7 @@ export interface SidebarItem {
   status: TaskStatus;
   turnOpen: boolean;
   worktree: boolean;
+  mergeable: boolean;
   /** worktree のブランチ。無ければ undefined */
   branch?: string;
   /** 全ターンで触ったファイルの数（同じファイルは 1 つ） */
@@ -103,6 +104,7 @@ export function itemOf(task: Task, input: SidebarInput): SidebarItem {
     status: task.status,
     turnOpen: isTurnOpen(task),
     worktree: task.worktree !== undefined,
+    mergeable: canMerge(task),
     branch: task.worktree?.branch,
     files: files.size,
     badge: badgeOf(task, input),

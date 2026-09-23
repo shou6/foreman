@@ -51,6 +51,8 @@ export interface PanelStrings {
   approve: string;
   /** 返答を待っているタスクを完了にする */
   markDone: string;
+  /** ターンの変更をすべて戻す */
+  revertAll: string;
 }
 
 export interface PanelState {
@@ -59,6 +61,8 @@ export interface PanelState {
   status: TaskStatus;
   /** Claude が動いている（最後のターンが終わっていない）。waiting でも終わっていれば false */
   turnOpen: boolean;
+  /** worktree をマージできる（承認済みで、戻していない変更がある） */
+  mergeable: boolean;
   /** タスクに指定したモデル。無ければ Claude Code の既定 */
   model?: string;
   /** SDK が報告した、実際に動いているモデル */
@@ -92,6 +96,7 @@ export type ToWebview =
       type: 'task';
       status: TaskStatus;
       turnOpen: boolean;
+      mergeable: boolean;
       title: string;
       model?: string;
       activeModel?: string;
@@ -126,8 +131,10 @@ export type ToExtension =
   | { type: 'rewind'; turn: number }
   /** 指定のターンの直後から新しいタスクを切り出す。FR-TASK-12 */
   | { type: 'fork'; turn: number }
-  /** レビュー待ちの変更を確認済みにする（worktree ならマージ） */
-  | { type: 'approve' };
+  /** レビュー待ちの変更を確認済みにする（完了にする）。マージはしない */
+  | { type: 'approve' }
+  /** ターンの変更をすべて戻す */
+  | { type: 'revertAll'; turn: number };
 
 export function diffKey(turn: number, path: string): string {
   return `${turn}:${path}`;

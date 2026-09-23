@@ -105,5 +105,8 @@
   "Review the whole diff before merging the worktree into {0}.": "worktree の変更を {0} に取り込む前に、全体の差分をまとめて確認できます。",
   "Whole diff": "全体の差分",
   "Changes in this task": "このタスクの変更",
-  "{0}: all changes": "{0}: すべての変更"
+  "{0}: all changes": "{0}: すべての変更",
+  "Revert all": "すべて戻す",
+  "{0} file(s) could not be reverted because their previous content is unknown: {1}": "変更前の内容が不明な {0} 件のファイルは戻せませんでした: {1}",
+  "Approve the changes before merging. Nothing to merge yet if there are no changes.": "マージの前に変更を承認してください。変更が無ければマージするものはありません。"
 }

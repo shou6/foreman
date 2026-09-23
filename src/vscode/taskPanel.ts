@@ -8,7 +8,7 @@ import type { PermissionDecision } from '../domain/events';
 import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
-import { isTurnOpen } from '../domain/task';
+import { canMerge, isTurnOpen } from '../domain/task';
 import { randomNonce } from './nonce';
 import { statusLabel } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
@@ -29,7 +29,7 @@ export interface TaskPanelDeps {
   /** タスクを Markdown に書き出す */
   exportTask: (taskId: string) => Promise<void>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
-  /** レビュー待ちの承認（worktree ならマージも行う） */
+  /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
   checkpoint: {
     rewind(taskId: string, turn: number): Promise<void>;
@@ -63,6 +63,7 @@ export class TaskPanels implements vscode.Disposable {
             type: 'task',
             status: task.status,
             turnOpen: isTurnOpen(task),
+            mergeable: canMerge(task),
             title: task.title,
             model: task.model,
             activeModel: task.activeModel,
@@ -221,13 +222,21 @@ export class TaskPanels implements vscode.Disposable {
           await this.deps.checkpoint.fork(taskId, message.turn);
           return;
         case 'approve':
-          this.post(taskId, { type: 'finishing', kind: 'merge' });
-          try {
-            await this.deps.approve(taskId);
-          } finally {
-            this.post(taskId, { type: 'finishing', kind: undefined });
+          await this.deps.approve(taskId);
+          return;
+        case 'revertAll': {
+          const skipped = await this.deps.diffs.revertAfter(taskId, message.turn - 1);
+          if (skipped.length > 0) {
+            void vscode.window.showWarningMessage(
+              vscode.l10n.t(
+                '{0} file(s) could not be reverted because their previous content is unknown: {1}',
+                String(skipped.length),
+                skipped.join(', ')
+              )
+            );
           }
           return;
+        }
         case 'removeAttachment': {
           const next = (this.attachments.get(taskId) ?? []).filter((p) => p !== message.path);
           this.attachments.set(taskId, next);
@@ -273,6 +282,7 @@ export class TaskPanels implements vscode.Disposable {
       title: task.title,
       status: task.status,
       turnOpen: isTurnOpen(task),
+      mergeable: canMerge(task),
       model: task.model,
       activeModel: task.activeModel,
       models: MODEL_PRESETS,
@@ -329,6 +339,7 @@ export class TaskPanels implements vscode.Disposable {
         forkHere: vscode.l10n.t('Fork from here'),
         approve: vscode.l10n.t('Approve'),
         markDone: vscode.l10n.t('Mark as done'),
+        revertAll: vscode.l10n.t('Revert all'),
       },
     };
   }

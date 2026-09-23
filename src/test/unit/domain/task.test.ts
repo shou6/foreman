@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import {
+  canMerge,
   createTask,
   transition,
   TaskStateError,
@@ -143,5 +144,51 @@ suite('transition: 下書きとレビュー待ち（M10）', () => {
     assert.strictEqual(task.status, 'draft');
     assert.strictEqual(task.draftPrompt, 'later');
     assert.strictEqual(task.title, 'later');
+  });
+});
+
+suite('canMerge: マージできる条件', () => {
+  const base = {
+    id: 't',
+    title: 't',
+    cwd: 'D:\\w',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    createdAt: '',
+    updatedAt: '',
+    worktree: {
+      repo: 'D:\\w',
+      path: 'D:\\w\\.foreman\\worktrees\\t',
+      branch: 'foreman/t',
+      base: 'main',
+    },
+  };
+  const changed = [
+    {
+      index: 0,
+      prompt: 'p',
+      attachments: [],
+      startedAt: '',
+      endedAt: '',
+      changes: [
+        { path: 'a', kind: 'modified' as const, source: 'edit-tool' as const, reverted: false },
+      ],
+    },
+  ];
+
+  test('worktree があり、承認済み（完了）で、戻していない変更がある時だけ', () => {
+    assert.strictEqual(canMerge({ ...base, status: 'done', turns: changed }), true);
+    assert.strictEqual(canMerge({ ...base, status: 'review', turns: changed }), false, '未承認');
+    assert.strictEqual(canMerge({ ...base, status: 'done', turns: [] }), false, '変更が無い');
+    assert.strictEqual(
+      canMerge({ ...base, worktree: undefined, status: 'done', turns: changed }),
+      false,
+      'worktree でない'
+    );
+    const reverted = changed.map((t) => ({
+      ...t,
+      changes: t.changes.map((c) => ({ ...c, reverted: true })),
+    }));
+    assert.strictEqual(canMerge({ ...base, status: 'done', turns: reverted }), false, '全部戻した');
   });
 });

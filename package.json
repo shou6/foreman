@@ -247,7 +247,7 @@
         },
         {
           "command": "foreman.mergeTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanWorktree && !foremanOpen && foremanStatus != 'draft'",
+          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanMergeable",
           "group": "2_worktree@1"
         },
         {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
-import { isTurnOpen, type Task } from '../domain/task';
+import { canMerge, isTurnOpen, type Task } from '../domain/task';
 import type { DetailsState, FromDetails, ToDetails } from '../webview/detailsProtocol';
 import { randomNonce } from './nonce';
 import { snapshotUri } from './snapshotUri';
@@ -152,6 +152,9 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
         discard: vscode.l10n.t('Discard'),
         changesTitle: vscode.l10n.t('Changes in this task'),
+        notMergeable: vscode.l10n.t(
+          'Approve the changes before merging. Nothing to merge yet if there are no changes.'
+        ),
         statusLabels: {
           draft: statusLabel('draft'),
           running: statusLabel('running'),
@@ -205,6 +208,7 @@ export function detailsOf(task: Task): DetailsState['task'] {
     title: task.title,
     status: task.status,
     turnOpen: isTurnOpen(task),
+    mergeable: canMerge(task),
     worktree:
       task.worktree === undefined
         ? undefined

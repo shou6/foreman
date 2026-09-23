@@ -43,6 +43,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -52,6 +53,7 @@ const initial: PanelState = {
   title: 'README',
   status: 'running',
   turnOpen: true,
+  mergeable: false,
   items: [],
   changes: {},
   diffs: {},
@@ -85,6 +87,7 @@ suite('webview reduce', () => {
       type: 'task',
       status: 'done',
       turnOpen: false,
+      mergeable: false,
       title: 'New title',
       model: 'claude-sonnet-5',
     });
@@ -104,6 +107,7 @@ suite('reduce: truncate', () => {
         title: 'T',
         status: 'done',
         turnOpen: false,
+        mergeable: false,
         items: [
           { kind: 'prompt', turn: 0, text: 'a' },
           { kind: 'turn-end', turn: 0, ok: true },

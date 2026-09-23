@@ -128,7 +128,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const review = new ReviewActions({
     service,
     worktrees,
-    worktreeActions,
     settings: readSettings,
     openPanel: async (taskId) => panelsRef?.open(taskId),
     afterStart: (task) => void autoTitleRef?.onCreated(task),

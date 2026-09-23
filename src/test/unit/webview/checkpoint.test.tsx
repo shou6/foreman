@@ -44,6 +44,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -54,6 +55,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     title: 'README',
     status: 'done',
     turnOpen: false,
+    mergeable: false,
     items: [
       { kind: 'prompt', turn: 0, text: 'p' },
       { kind: 'turn-end', turn: 0, ok: true },
@@ -113,16 +115,32 @@ suite('webview: チェックポイント', () => {
 });
 
 suite('webview: 承認（レビュー待ち）', () => {
-  test('レビュー待ちの時だけ「承認」ボタンを出す', () => {
-    const review = render(<App state={state({ status: 'review' })} post={() => {}} />);
-    assert.ok(review.includes('class="ghost approve"'));
-    assert.ok(review.includes('Approve'));
-    const done = render(<App state={state({ status: 'done' })} post={() => {}} />);
-    assert.ok(!done.includes('class="ghost approve"'));
+  const changes = {
+    1: [
+      { path: 'a.txt', kind: 'modified' as const, source: 'edit-tool' as const, reverted: false },
+    ],
+  };
+
+  test('レビュー待ちの最後のターンの差分カードに「すべて戻す」と「承認」を出す。ヘッダーには出さない', () => {
+    const review = render(<App state={state({ status: 'review', changes })} post={() => {}} />);
+    assert.ok(/class="diff-card"[\s\S]*class="revert-all"/.test(review));
+    assert.ok(/class="diff-card"[\s\S]*class="approve primary"/.test(review));
+    assert.ok(!review.includes('class="ghost approve"'));
+    const done = render(<App state={state({ status: 'done', changes })} post={() => {}} />);
+    assert.ok(!done.includes('class="approve primary"'));
+    assert.ok(done.includes('class="revert-all"'), 'すべて戻すは完了後も使える');
   });
 
-  test('approve のメッセージの型がある', () => {
-    const message: ToExtension = { type: 'approve' };
-    assert.strictEqual(message.type, 'approve');
+  test('返答を待っているタスク（ターン終了後の入力待ち）は、ヘッダーに「完了にする」を出す', () => {
+    const html = render(
+      <App state={state({ status: 'waiting', turnOpen: false })} post={() => {}} />
+    );
+    assert.ok(html.includes('class="ghost approve"'));
+    assert.ok(html.includes('Mark as done'));
+  });
+
+  test('approve と revertAll のメッセージの型がある', () => {
+    const messages: ToExtension[] = [{ type: 'approve' }, { type: 'revertAll', turn: 1 }];
+    assert.strictEqual(messages.length, 2);
   });
 });

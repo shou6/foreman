@@ -75,13 +75,17 @@ export function Details({ state, post }: DetailsProps) {
               >
                 {strings.discard}
               </button>
-              <button
-                class="finish-button merge primary"
-                disabled={busy}
-                onClick={() => post({ type: 'merge' })}
-              >
-                {strings.merge.replace('{0}', task.worktree.base)}
-              </button>
+              {task.mergeable ? (
+                <button
+                  class="finish-button merge primary"
+                  disabled={busy}
+                  onClick={() => post({ type: 'merge' })}
+                >
+                  {strings.merge.replace('{0}', task.worktree.base)}
+                </button>
+              ) : (
+                <span class="finish-note">{strings.notMergeable}</span>
+              )}
             </>
           )}
         </div>

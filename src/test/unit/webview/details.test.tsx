@@ -13,6 +13,7 @@ const STRINGS = {
   reverted: 'Reverted',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   noChanges: 'No changes yet',
   finish: 'Finish the task',
   finishHint: 'Review the whole diff before merging the worktree into {0}.',
@@ -20,6 +21,7 @@ const STRINGS = {
   merge: 'Merge into {0}',
   discard: 'Discard',
   changesTitle: 'Changes in this task',
+  notMergeable: 'Approve the changes before merging.',
   statusLabels: {
     draft: 'Draft',
     running: 'Running',
@@ -38,6 +40,7 @@ function state(overrides: Partial<DetailsState> = {}): DetailsState {
       title: 'Fix README',
       status: 'review',
       turnOpen: false,
+      mergeable: false,
       turns: [
         {
           index: 0,
@@ -121,7 +124,11 @@ suite('webview: 右サイドバーのタスクの仕上げ', () => {
       <Details
         state={{
           ...state(),
-          task: { ...state().task!, worktree: { branch: 'foreman/x', base: 'main' } },
+          task: {
+            ...state().task!,
+            worktree: { branch: 'foreman/x', base: 'main' },
+            mergeable: true,
+          },
           strings: finishStrings,
         }}
         post={() => {}}
@@ -130,6 +137,26 @@ suite('webview: 右サイドバーのタスクの仕上げ', () => {
     assert.ok(html.includes('Finish the task'));
     assert.ok(html.includes('class="finish-button all-diff"'));
     assert.ok(html.includes('Merge into main'));
+    assert.ok(html.includes('class="finish-button discard"'));
+  });
+
+  test('マージできない間は、仕上げにマージのボタンを出さず案内だけにする', () => {
+    const html = render(
+      <Details
+        state={{
+          ...state(),
+          task: {
+            ...state().task!,
+            worktree: { branch: 'foreman/x', base: 'main' },
+            mergeable: false,
+          },
+          strings: { ...finishStrings, notMergeable: 'Approve the changes before merging.' },
+        }}
+        post={() => {}}
+      />
+    );
+    assert.ok(!html.includes('Merge into main'));
+    assert.ok(html.includes('Approve the changes before merging.'));
     assert.ok(html.includes('class="finish-button discard"'));
   });
 

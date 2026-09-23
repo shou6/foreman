@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
-import { isTurnOpen } from '../domain/task';
+import { canMerge, isTurnOpen } from '../domain/task';
 
 /**
  * worktree のマージ・破棄・タスク削除時の後始末。確認の対話を含むので vscode 層に置く。
@@ -28,6 +28,14 @@ export class WorktreeActions {
       return;
     }
     const { worktree } = task;
+    if (!canMerge(task)) {
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t(
+          'Approve the changes before merging. Nothing to merge yet if there are no changes.'
+        )
+      );
+      return;
+    }
     // プロセスが作業ディレクトリを掴んでいると Windows では消せないので、先に閉じる
     await this.service.close(taskId);
     let result;
@@ -40,6 +48,7 @@ export class WorktreeActions {
       return;
     }
     await this.service.patch(taskId, (t) => ({ ...t, worktree: undefined, cwd: worktree.repo }));
+    await this.finish(taskId);
     if (result.removed) {
       void vscode.window.showInformationMessage(
         vscode.l10n.t('Merged {0} into {1}.', worktree.branch, worktree.base)
@@ -79,6 +88,18 @@ export class WorktreeActions {
     await this.service.close(taskId);
     await this.worktrees.discard(worktree);
     await this.service.patch(taskId, (t) => ({ ...t, worktree: undefined, cwd: worktree.repo }));
+    await this.finish(taskId);
+  }
+
+  /** マージや破棄で作業は終わりなので、確認待ち・返答待ちのタスクは完了にする */
+  private async finish(taskId: string): Promise<void> {
+    const task = await this.service.load(taskId);
+    if (task === undefined) {
+      return;
+    }
+    if (task.status === 'review' || (task.status === 'waiting' && !isTurnOpen(task))) {
+      await this.service.approve(taskId);
+    }
   }
 
   /**

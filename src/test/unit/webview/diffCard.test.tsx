@@ -46,6 +46,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -85,6 +86,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     title: 'README',
     status: 'done',
     turnOpen: false,
+    mergeable: false,
     items: [
       { kind: 'prompt', turn: 0, text: 'p' },
       { kind: 'turn-end', turn: 0, ok: true },

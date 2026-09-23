@@ -45,6 +45,7 @@ const STRINGS = {
   turn: 'Turn {0}',
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
+  revertAll: 'Revert all',
   approve: 'Approve',
   markDone: 'Mark as done',
 };
@@ -63,6 +64,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     maxWidthEm: 72,
     toolCallsExpanded: false,
     worktree: { branch: 'foreman/x', base: 'main' },
+    mergeable: true,
     strings: STRINGS,
     ...overrides,
   };

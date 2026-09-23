@@ -195,3 +195,16 @@ export function isTurnOpen(task: Pick<Task, 'status' | 'turns'>): boolean {
   const last = task.turns[task.turns.length - 1];
   return last === undefined || last.endedAt === undefined;
 }
+
+/**
+ * worktree を元のブランチへマージできるか。
+ * 承認済み（完了）で、戻していない変更が残っている時だけ。計画だけで終わった worktree や
+ * 未承認の変更はマージの対象にしない
+ */
+export function canMerge(task: Pick<Task, 'status' | 'turns' | 'worktree'>): boolean {
+  return (
+    task.worktree !== undefined &&
+    task.status === 'done' &&
+    task.turns.some((turn) => turn.changes.some((change) => !change.reverted))
+  );
+}
