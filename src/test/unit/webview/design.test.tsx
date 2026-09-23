@@ -135,3 +135,81 @@ suite('webview: ラフに寄せた表示', () => {
     assert.ok(footer.includes('<select'));
   });
 });
+
+suite('webview: 差分カードの細部', () => {
+  test('インライン差分に変更前と変更後の行番号を出す', () => {
+    const html = render(
+      <App
+        state={state({
+          items: [
+            { kind: 'prompt', turn: 0, text: 'p' },
+            { kind: 'turn-end', turn: 0, ok: true },
+          ],
+          changes: {
+            0: [
+              {
+                path: 'a.ts',
+                kind: 'modified',
+                before: 'h',
+                after: 'h2',
+                source: 'edit-tool',
+                reverted: false,
+                added: 1,
+                removed: 1,
+              },
+            ],
+          },
+          diffs: {
+            '0:a.ts': [
+              { kind: 'same', text: 'keep' },
+              { kind: 'del', text: 'old' },
+              { kind: 'add', text: 'new' },
+            ],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('class="diff-no"'));
+    assert.ok(/data-old="2"/.test(html));
+    assert.ok(/data-new="2"/.test(html));
+  });
+
+  test('行数は操作ボタンと同じ右側のまとまりに出す', () => {
+    const html = render(
+      <App
+        state={state({
+          items: [
+            { kind: 'prompt', turn: 0, text: 'p' },
+            { kind: 'turn-end', turn: 0, ok: true },
+          ],
+          changes: {
+            0: [
+              {
+                path: 'a.ts',
+                kind: 'modified',
+                before: 'h',
+                after: 'h2',
+                source: 'edit-tool',
+                reverted: false,
+                added: 3,
+                removed: 1,
+              },
+            ],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    const actions = html.slice(html.indexOf('class="diff-file-actions"'));
+    assert.ok(actions.includes('+3'));
+    assert.ok(actions.indexOf('+3') < actions.indexOf('Open diff'));
+  });
+
+  test('画面の幅の設定を CSS 変数として出す', () => {
+    const html = render(<App state={state({ maxWidthEm: 90 })} post={() => {}} />);
+    assert.ok(html.includes('--foreman-max-width: 90em'));
+    const full = render(<App state={state({ maxWidthEm: 0 })} post={() => {}} />);
+    assert.ok(full.includes('--foreman-max-width: none'));
+  });
+});
