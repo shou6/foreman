@@ -26,5 +26,5 @@ export async function exportTask(
     return;
   }
   await vscode.workspace.fs.writeFile(target, Buffer.from(markdown, 'utf8'));
-  await vscode.window.showTextDocument(target);
+  void vscode.window.showInformationMessage(vscode.l10n.t('Exported to {0}', target.fsPath));
 }

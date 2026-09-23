@@ -41,17 +41,25 @@ export function exportTaskMarkdown(task: Task, items: readonly TranscriptItem[])
     }
     lines.push('');
     lines.push(quote(turn.prompt), '');
+    // ツールの呼び出しは続く限り 1 つの箇条書きにまとめ、前後を空行で区切る
+    let inTools = false;
     for (const item of items.filter((i) => i.turn === turn.index)) {
+      if (item.kind !== 'tool' && inTools) {
+        lines.push('');
+        inTools = false;
+      }
       switch (item.kind) {
         case 'text':
           lines.push(demote(item.text), '');
           break;
         case 'tool':
+          inTools = true;
           lines.push(`- ${mark(item.status)} ${item.name} \`${summarize(item.input)}\``);
-          if (item.output !== undefined && item.output !== '') {
+          if (item.output !== undefined && item.output.trim() !== '') {
             lines.push('', '  <details>', '  <summary>output</summary>', '', '  ```text');
             lines.push(
               ...truncate(item.output)
+                .replace(/\n+$/, '')
                 .split('\n')
                 .map((l) => '  ' + l)
             );
@@ -61,6 +69,9 @@ export function exportTaskMarkdown(task: Task, items: readonly TranscriptItem[])
         default:
           break;
       }
+    }
+    if (inTools) {
+      lines.push('');
     }
     if (turn.changes.length > 0) {
       lines.push('', '### Changes', '');
@@ -91,7 +102,15 @@ export function exportTaskMarkdown(task: Task, items: readonly TranscriptItem[])
       lines.push('');
     }
   }
-  return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+  return (
+    lines
+      .join('\n')
+      .split('\n')
+      .map((l) => l.replace(/\s+$/, ''))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trimEnd() + '\n'
+  );
 }
 
 function mark(status: 'running' | 'ok' | 'error'): string {
@@ -105,12 +124,48 @@ function quote(text: string): string {
     .join('\n');
 }
 
-/** Claude の出力の見出しを 2 段下げ、文書の見出し（# と ##）とぶつからないようにする */
+/**
+ * Claude の出力の見出しを 2 段下げ、文書の見出し（# と ##）とぶつからないようにする。
+ * 見出し・箇条書き・コードブロックの前後に空行を入れ、markdownlint に通る形にする
+ */
 function demote(text: string): string {
-  return text
-    .split('\n')
-    .map((l) => (/^#{1,4} /.test(l) ? '##' + l : l))
-    .join('\n');
+  const out: string[] = [];
+  let inFence = false;
+  const src = text.replace(/\n+$/, '').split('\n');
+  for (let i = 0; i < src.length; i++) {
+    const raw = src[i] ?? '';
+    const line = /^#{1,4} /.test(raw) && !inFence ? '##' + raw : raw;
+    const prev = out[out.length - 1];
+    const startsBlock =
+      !inFence &&
+      (/^#{1,6} /.test(line) ||
+        /^```/.test(line) ||
+        (/^([-*+]|\d+\.) /.test(line) && !(prev !== undefined && /^([-*+]|\d+\.|\s) /.test(prev))));
+    if (startsBlock && prev !== undefined && prev !== '') {
+      out.push('');
+    }
+    out.push(line);
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      if (!inFence) {
+        const next = src[i + 1];
+        if (next !== undefined && next !== '') {
+          out.push('');
+        }
+      }
+    } else if (/^#{1,6} /.test(line)) {
+      const next = src[i + 1];
+      if (next !== undefined && next !== '') {
+        out.push('');
+      }
+    } else if (/^([-*+]|\d+\.) /.test(line) && !inFence) {
+      const next = src[i + 1];
+      if (next !== undefined && next !== '' && !/^([-*+]|\d+\.|\s) /.test(next)) {
+        out.push('');
+      }
+    }
+  }
+  return out.join('\n');
 }
 
 function truncate(text: string): string {

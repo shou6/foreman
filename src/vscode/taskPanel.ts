@@ -164,10 +164,15 @@ export class TaskPanels implements vscode.Disposable {
           );
           return;
         case 'merge':
-          await this.deps.finish.merge(taskId);
-          return;
         case 'discard':
-          await this.deps.finish.discard(taskId);
+          this.post(taskId, { type: 'finishing', kind: message.type });
+          try {
+            await (message.type === 'merge'
+              ? this.deps.finish.merge(taskId)
+              : this.deps.finish.discard(taskId));
+          } finally {
+            this.post(taskId, { type: 'finishing', kind: undefined });
+          }
           return;
         case 'export':
           await this.deps.exportTask(taskId);
@@ -261,6 +266,8 @@ export class TaskPanels implements vscode.Disposable {
         discard: vscode.l10n.t('Discard'),
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
         export: vscode.l10n.t('Export'),
+        merging: vscode.l10n.t('Merging…'),
+        discarding: vscode.l10n.t('Discarding…'),
       },
     };
   }

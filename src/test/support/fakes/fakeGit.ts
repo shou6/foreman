@@ -114,6 +114,13 @@ export class FakeGit implements Git {
     return paths.filter((p) => this.ignoredPaths.includes(p));
   }
 
+  /** showHead が返す内容。テストで設定する */
+  readonly head = new Map<string, string>();
+
+  async showHead(_dir: string, path: string): Promise<string | undefined> {
+    return this.head.get(path);
+  }
+
   async prune(_repo: string): Promise<void> {
     this.calls.push('prune');
   }

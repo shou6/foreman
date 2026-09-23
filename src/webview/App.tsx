@@ -86,11 +86,21 @@ export function App({ state, post }: AppProps) {
         </button>
         {state.worktree !== undefined && (
           <>
-            <button class="ghost merge" disabled={busy} onClick={() => post({ type: 'merge' })}>
-              {state.strings.merge.replace('{0}', state.worktree.base)}
+            <button
+              class="ghost merge"
+              disabled={busy || state.finishing !== undefined}
+              onClick={() => post({ type: 'merge' })}
+            >
+              {state.finishing === 'merge'
+                ? state.strings.merging
+                : state.strings.merge.replace('{0}', state.worktree.base)}
             </button>
-            <button class="ghost discard" disabled={busy} onClick={() => post({ type: 'discard' })}>
-              {state.strings.discard}
+            <button
+              class="ghost discard"
+              disabled={busy || state.finishing !== undefined}
+              onClick={() => post({ type: 'discard' })}
+            >
+              {state.finishing === 'discard' ? state.strings.discarding : state.strings.discard}
             </button>
           </>
         )}

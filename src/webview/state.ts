@@ -30,6 +30,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       };
     case 'attachments':
       return { ...state, attachments: message.paths };
+    case 'finishing':
+      return { ...state, finishing: message.kind };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':

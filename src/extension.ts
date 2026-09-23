@@ -85,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     snapshots,
     sep: path.sep,
     isIgnored: (dir, paths) => git.ignored(dir, paths),
+    baseline: (dir, file) => git.showHead(dir, file),
   });
   const worktrees = new WorktreeService({
     git,

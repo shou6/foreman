@@ -39,6 +39,8 @@ export interface PanelStrings {
   /** {0} に件数が入る */
   toolCalls: string;
   export: string;
+  merging: string;
+  discarding: string;
 }
 
 export interface PanelState {
@@ -66,6 +68,8 @@ export interface PanelState {
   worktree?: { branch: string; base: string };
   /** ツールの呼び出しを最初から開いて見せるか（設定 foreman.toolCalls） */
   toolCallsExpanded: boolean;
+  /** worktree のマージ・破棄の処理中 */
+  finishing?: 'merge' | 'discard';
   strings: PanelStrings;
 }
 
@@ -84,6 +88,7 @@ export type ToWebview =
   | { type: 'changes'; turn: number; changes: FileChange[] }
   | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
   | { type: 'attachments'; paths: string[] }
+  | { type: 'finishing'; kind: 'merge' | 'discard' | undefined }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */

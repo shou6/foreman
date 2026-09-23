@@ -105,6 +105,14 @@ export class GitCli implements Git {
     return result;
   }
 
+  async showHead(dir: string, file: string): Promise<string | undefined> {
+    try {
+      return await this.run(dir, 'show', 'HEAD:' + file.replace(/\\/g, '/'));
+    } catch {
+      return undefined;
+    }
+  }
+
   async prune(repo: string): Promise<void> {
     await this.run(repo, 'worktree', 'prune');
   }

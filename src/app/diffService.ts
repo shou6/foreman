@@ -12,6 +12,8 @@ export interface DiffServiceDeps {
   sep: string;
   /** 監視で拾ったパス（cwd からの相対）のうち、記録しないもの（git が無視するファイルなど） */
   isIgnored?: (dir: string, paths: string[]) => Promise<string[]>;
+  /** 変更前が分からないファイルの、基準の内容（Git の HEAD など）。無ければ undefined */
+  baseline?: (dir: string, path: string) => Promise<string | undefined>;
 }
 
 /** 監視で無視するフォルダ */
@@ -207,6 +209,13 @@ export class DiffService {
           entry.before =
             previous.hash === undefined ? undefined : await this.deps.snapshots.load(previous.hash);
           entry.beforeKnown = true;
+        } else if (this.deps.baseline !== undefined) {
+          // Git にある版を変更前として使う（npm install などによる変更を普通の差分で見せる）
+          const base = await this.deps.baseline(active.cwd, relative);
+          if (base !== undefined) {
+            entry.before = base;
+            entry.beforeKnown = true;
+          }
         }
       }
       if (entry.beforeKnown && entry.before === entry.after) {
