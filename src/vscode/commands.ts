@@ -121,13 +121,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('foreman.openTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void panels.open(id);
+        return panels.open(id);
       }
     }),
     vscode.commands.registerCommand('foreman.stopTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => service.stop(id))();
+        return withError(() => service.stop(id))();
       }
     }),
     vscode.commands.registerCommand('foreman.deleteTask', (arg: unknown) => {
@@ -135,7 +135,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       if (id === undefined) {
         return;
       }
-      void withError(async () => {
+      return withError(async () => {
         const task = await service.load(id);
         if (task === undefined) {
           return;
@@ -160,11 +160,11 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('foreman.mergeTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => worktreeActions.merge(id))();
+        return withError(() => worktreeActions.merge(id))();
       }
     }),
     vscode.commands.registerCommand('foreman.exportTask', (arg: unknown) => {
-      void withError(async () => {
+      return withError(async () => {
         const id = taskIdOf(arg) ?? (await pickTask());
         if (id !== undefined) {
           await deps.exportTask(id);
@@ -173,7 +173,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }),
     // 一覧の右クリック「ここから切り出す」。最後のターンから分岐する（FR-TASK-12）
     vscode.commands.registerCommand('foreman.forkTask', (arg: unknown) => {
-      void withError(async () => {
+      return withError(async () => {
         const id = taskIdOf(arg) ?? (await pickTask());
         if (id !== undefined) {
           await deps.checkpoints.fork(id);
@@ -183,19 +183,19 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('foreman.approveTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => deps.review.approve(id))();
+        return withError(() => deps.review.approve(id))();
       }
     }),
     vscode.commands.registerCommand('foreman.startTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => deps.review.start(id))();
+        return withError(() => deps.review.start(id))();
       }
     }),
     vscode.commands.registerCommand('foreman.editDraft', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => deps.review.editDraft(id))();
+        return withError(() => deps.review.editDraft(id))();
       }
     }),
     vscode.commands.registerCommand(
@@ -218,13 +218,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand('foreman.discardTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {
-        void withError(() => worktreeActions.discard(id))();
+        return withError(() => worktreeActions.discard(id))();
       }
     }),
     // エディタの右クリック「選択範囲をタスクに添付」（FR-VIEW-12）。右クリックの時点ではエディタがアクティブ
     vscode.commands.registerCommand('foreman.attachSelectionToTask', () => {
       const item = deps.selectionOf(vscode.window.activeTextEditor);
-      void withError(async () => {
+      return withError(async () => {
         if (item === undefined) {
           return;
         }
@@ -240,7 +240,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     vscode.commands.registerCommand(
       'foreman.attachToTask',
       (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        void withError(async () => {
+        return withError(async () => {
           const targets = uris ?? (uri !== undefined ? [uri] : []);
           const active = vscode.window.activeTextEditor?.document.uri;
           const files = (targets.length > 0 ? targets : active !== undefined ? [active] : [])

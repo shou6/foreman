@@ -4,6 +4,8 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
+import { ScriptedRunner } from './adapters/scriptedRunner';
+import type { AgentRunner } from './ports/agentRunner';
 import { resolveClaudePath } from './adapters/claudePath';
 import { FsSnapshotStore } from './adapters/fsSnapshotStore';
 import { FsTaskStore } from './adapters/fsTaskStore';
@@ -36,7 +38,18 @@ import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 const LOCAL_NOTIFIER_ID = 'shou6.vscode-local-notifier';
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+/** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
+export interface TestApi {
+  service: TaskService;
+  runner: ScriptedRunner;
+  approvals: ApprovalService;
+  diffs: DiffService;
+  panels: TaskPanels;
+}
+
+export async function activate(
+  context: vscode.ExtensionContext
+): Promise<{ testApi?: TestApi } | undefined> {
   const output = vscode.window.createOutputChannel('Foreman');
   const sdk = await import('@anthropic-ai/claude-agent-sdk');
 
@@ -45,11 +58,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const snapshots = new FsSnapshotStore(path.join(storage, 'snapshots'));
   const transcriptStore = new FsTranscriptStore(path.join(storage, 'transcripts'));
 
-  const runner = new AgentSdkRunner({
-    query: sdk.query,
-    claudePath: () => locateClaude(),
-    log: (line) => output.append(line),
-  });
+  // 統合テストでは Claude を起動せず、台本の Runner を差し込む
+  const scripted = process.env.FOREMAN_SCRIPTED_RUNNER === '1' ? new ScriptedRunner() : undefined;
+  const runner: AgentRunner =
+    scripted ??
+    new AgentSdkRunner({
+      query: sdk.query,
+      claudePath: () => locateClaude(),
+      log: (line) => output.append(line),
+    });
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -267,7 +284,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     { dispose: () => void transcriptStore.flush() }
   );
   const autoTitle = new AutoTitle(service, {
-    enabled: () => readSettings().autoTitle,
+    // 台本の Runner の時（統合テスト）は Claude を呼ばない
+    enabled: () => scripted === undefined && readSettings().autoTitle,
     suggest: (prompt) =>
       suggestTitleWithSdk(sdk.query, {
         prompt,
@@ -299,6 +317,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // タスクの無い worktree（前回の異常終了で残ったものなど）を片付ける
   void cleanupWorktrees(service, worktrees, output);
+  return scripted === undefined
+    ? undefined
+    : { testApi: { service, runner: scripted, approvals, diffs, panels } };
 }
 
 export function deactivate(): void {}

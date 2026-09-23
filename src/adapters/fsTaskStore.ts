@@ -40,7 +40,7 @@ export class FsTaskStore implements TaskStore {
     const file = this.file(task.id);
     const temp = file + '.' + process.pid + '.tmp';
     await fs.writeFile(temp, JSON.stringify(task, null, 2), 'utf8');
-    await fs.rename(temp, file);
+    await renameWithRetry(temp, file);
   }
 
   async delete(id: string): Promise<void> {
@@ -66,4 +66,27 @@ export class FsTaskStore implements TaskStore {
       return undefined;
     }
   }
+}
+
+/**
+ * 一時ファイルを本来の名前に付け替える。
+ * Windows では、同じファイルを誰かが読んでいる瞬間に rename すると EPERM / EBUSY で失敗する
+ * （画面の更新のたびに一覧が読まれる）。少し待って何度か試し、それでも駄目なら直接書く
+ */
+async function renameWithRetry(temp: string, file: string): Promise<void> {
+  const delays = [10, 30, 100, 300];
+  for (const delay of delays) {
+    try {
+      await fs.rename(temp, file);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  await fs.copyFile(temp, file);
+  await fs.rm(temp, { force: true });
 }
