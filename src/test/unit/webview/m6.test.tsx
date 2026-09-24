@@ -3,65 +3,9 @@ import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
 import { reduce } from '../../../webview/state';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes',
-  files: 'files',
-  openDiff: 'Open in diff editor',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -118,11 +62,26 @@ suite('webview: 添付とモデル', () => {
     assert.ok(/<option[^>]*value="claude-custom"[^>]*selected/.test(html));
   });
 
-  test('実際に動いているモデルが指定と違えば、その名前も出す', () => {
-    const html = render(
+  test('前のターンで動いたモデルが次のモデルと違えば、入力欄に「前のターン」として小さく出す', () => {
+    const differs = render(
+      <App
+        state={state({ model: 'claude-sonnet-5', activeModel: 'claude-haiku-4-5' })}
+        post={() => {}}
+      />
+    );
+    const footer = differs.slice(differs.indexOf('<footer'));
+    assert.ok(/class="previous-model"[^>]*>Previous turn: haiku-4-5</.test(footer));
+    const same = render(
+      <App
+        state={state({ model: 'claude-sonnet-5', activeModel: 'claude-sonnet-5' })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!same.includes('class="previous-model"'));
+    const unknown = render(
       <App state={state({ model: undefined, activeModel: 'claude-opus-5[1m]' })} post={() => {}} />
     );
-    assert.ok(html.includes('claude-opus-5[1m]'));
+    assert.ok(unknown.includes('Previous turn: opus-5[1m]'));
   });
 
   test('setModel、dropped、添付つきの send の型がある', () => {

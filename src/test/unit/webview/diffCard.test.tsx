@@ -4,65 +4,9 @@ import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
 import { reduce } from '../../../webview/state';
 import type { FileChange } from '../../../domain/task';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes',
-  files: 'files',
-  openDiff: 'Open in diff editor',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 const CHANGES: FileChange[] = [
   {
@@ -129,20 +73,36 @@ suite('webview: 差分カード', () => {
     assert.deepStrictEqual(s?.diffs, { '0:src/a.ts': lines });
   });
 
-  test('ターンの終わりに、変更されたファイルと行数を並べる', () => {
+  test('ターンの終わりに、変更されたファイルと行数を並べる。行の操作はアイコン', () => {
     const html = render(<App state={state({ changes: { 0: CHANGES } })} post={() => {}} />);
     assert.ok(html.includes('class="diff-card'));
     assert.ok(html.includes('a.ts') && html.includes('src/'));
     assert.ok(html.includes('+3'));
-    assert.ok(html.includes('-1'));
-    assert.ok(html.includes('Open in diff editor'));
-    assert.ok(html.includes('Revert'));
+    assert.ok(html.includes('−1'));
+    assert.ok(
+      /class="icon-button open-diff"[^>]*title="Open diff"[^>]*><i[^>]*codicon-diff[^>]*>/.test(
+        html
+      )
+    );
+    assert.ok(
+      /class="icon-button revert"[^>]*title="Revert"[^>]*><i[^>]*codicon-discard[^>]*>/.test(html)
+    );
   });
 
-  test('変更前が不明なファイルはその旨を出し、戻すボタンを出さない', () => {
+  test('見出しはターンの番号。「すべて戻す」は枠のない控えめな操作', () => {
+    const html = render(<App state={state({ changes: { 0: CHANGES } })} post={() => {}} />);
+    assert.ok(/class="diff-card-title"[^>]*>Changes in turn 1</.test(html));
+    assert.ok(/class="revert-all"[^>]*><i[^>]*codicon-discard[^>]*><\/i>Revert all</.test(html));
+  });
+
+  test('変更前が不明なファイルは、戻せない理由を警告のアイコン付きで出し、戻すボタンを出さない', () => {
     const html = render(<App state={state({ changes: { 0: [CHANGES[1]!] } })} post={() => {}} />);
-    assert.ok(html.includes('Previous content unknown'));
-    assert.ok(!html.includes('>Revert<'));
+    assert.ok(
+      /class="unknown"[^>]*><i[^>]*codicon-warning[^>]*><\/i>Changed by the shell \(cannot revert\)/.test(
+        html
+      )
+    );
+    assert.ok(!html.includes('class="icon-button revert"'));
   });
 
   test('戻したファイルは「戻した」と出す', () => {

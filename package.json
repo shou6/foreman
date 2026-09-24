@@ -45,6 +45,8 @@
     "dist/details.css",
     "dist/sidebar.js",
     "dist/sidebar.css",
+    "dist/codicon.css",
+    "dist/codicon.ttf",
     "resources/**",
     "l10n/**",
     "package.nls.json",
@@ -239,52 +241,52 @@
       "webview/context": [
         {
           "command": "foreman.stopTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanOpen",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanOpen",
           "group": "1_state@1"
         },
         {
           "command": "foreman.startTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanStatus == 'draft'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanStatus == 'draft'",
           "group": "1_state@1"
         },
         {
           "command": "foreman.editDraft",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanStatus == 'draft'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanStatus == 'draft'",
           "group": "1_state@2"
         },
         {
           "command": "foreman.approveTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && (foremanStatus == 'review' || (foremanStatus == 'waiting' && !foremanOpen))",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && (foremanStatus == 'review' || (foremanStatus == 'waiting' && !foremanOpen))",
           "group": "1_state@2"
         },
         {
           "command": "foreman.mergeTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanMergeable",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanMergeable",
           "group": "2_worktree@1"
         },
         {
           "command": "foreman.discardTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && foremanWorktree && !foremanOpen && foremanStatus != 'draft'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanWorktree && !foremanOpen && foremanStatus != 'draft'",
           "group": "2_worktree@2"
         },
         {
           "command": "foreman.forkTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task' && !foremanOpen && foremanStatus != 'draft'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && !foremanOpen && foremanStatus != 'draft'",
           "group": "3_more@1"
         },
         {
           "command": "foreman.renameTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task'",
           "group": "3_more@0"
         },
         {
           "command": "foreman.exportTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task'",
           "group": "3_more@2"
         },
         {
           "command": "foreman.deleteTask",
-          "when": "webviewId == 'foreman.tasks' && webviewSection == 'task'",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task'",
           "group": "4_delete@1"
         }
       ],
@@ -452,6 +454,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.280",
+    "@vscode/codicons": "^0.0.46-24",
     "diff": "^8.0.4",
     "marked": "^18.0.14",
     "preact": "^10.29.8"

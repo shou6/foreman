@@ -43,17 +43,19 @@ body {
   white-space: nowrap;
 }
 
-.status[data-status='running'] {
+.status[data-kind='running'] {
   background: var(--vscode-progressBar-background);
   color: var(--vscode-button-foreground);
 }
 
-.status[data-status='waiting'] {
+.status[data-kind='approval'],
+.status[data-kind='question'],
+.status[data-kind='replied'] {
   background: var(--vscode-inputValidation-warningBackground);
   color: var(--vscode-foreground);
 }
 
-.status[data-status='review'] {
+.status[data-kind='review'] {
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
 }
@@ -83,9 +85,14 @@ body {
 
 .turn-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+/* 変更の無いターンは 1 行 */
+.turn.compact .turn-head {
+  margin-bottom: 0;
 }
 
 .turn-label {
@@ -104,6 +111,7 @@ body {
 }
 
 .no-changes {
+  flex: none;
   color: var(--vscode-disabledForeground);
   font-size: 0.9em;
 }
@@ -171,17 +179,44 @@ body {
   font-style: italic;
 }
 
+/* チェックポイント（戻す・切り出す）はアイコン */
 .checkpoint {
+  flex: none;
   display: flex;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 0.9em;
+  gap: 2px;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground);
+  color: var(--vscode-foreground);
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.icon-button .codicon {
+  font-size: 14px;
 }
 
 .changes-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 2px 12px 6px;
   font-size: 0.85em;
   font-weight: 600;
@@ -195,13 +230,73 @@ body {
   border-radius: 6px;
 }
 
+.changes-title .none {
+  font-weight: normal;
+}
+
+.finish {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finish-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .finish-title {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 1em;
 }
 
-.finish-hint {
-  margin: 0 0 8px;
+.finish-route {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85em;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+/* 仕上げの手順（承認 → 全体の差分 → マージ） */
+.finish-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.finish-step .step-icon {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.finish-step .step-icon.done {
+  color: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.step-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-label .counts {
+  display: inline-flex;
+}
+
+/* 取り消せない破棄は、区切った下段に置く */
+.finish-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
   font-size: 0.9em;
   color: var(--vscode-descriptionForeground);
 }
@@ -241,7 +336,10 @@ body {
 }
 
 .finish-note {
-  align-self: center;
-  font-size: 0.9em;
   color: var(--vscode-descriptionForeground);
+}
+
+.finish-footer .finish-button {
+  font-size: inherit;
+  color: var(--vscode-button-secondaryForeground);
 }

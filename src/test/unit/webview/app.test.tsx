@@ -2,65 +2,9 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes',
-  files: 'files',
-  openDiff: 'Open in diff editor',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -144,13 +88,25 @@ suite('webview App', () => {
 });
 
 suite('webview: 渡すもの（入力欄の添付）', () => {
-  test('選択範囲・診断・git diff・ファイルのボタンを出す', () => {
+  test('選択範囲・診断・git diff・ファイルのボタンを、入力欄と同じ枠のツールバーに、アイコンとラベルで出す', () => {
     const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
-    assert.ok(html.includes('class="pass-label"'));
-    assert.ok(html.includes('class="pass selection"'));
-    assert.ok(html.includes('class="pass diagnostics"'));
-    assert.ok(html.includes('class="pass git-diff"'));
-    assert.ok(html.includes('class="pass pick-files"'));
+    const box = html.slice(html.indexOf('class="composer-box"'));
+    const toolbar = box.slice(box.indexOf('class="composer-toolbar"'));
+    assert.ok(box.indexOf('class="prompt-input"') < box.indexOf('class="composer-toolbar"'));
+    assert.ok(
+      /class="tool selection"[^>]*>(<i[^>]*codicon-selection[^>]*><\/i>)Selection/.test(toolbar)
+    );
+    assert.ok(
+      /class="tool diagnostics"[^>]*>(<i[^>]*codicon-warning[^>]*><\/i>)Diagnostics/.test(toolbar)
+    );
+    assert.ok(
+      /class="tool git-diff"[^>]*>(<i[^>]*codicon-git-compare[^>]*><\/i>)git diff/.test(toolbar)
+    );
+    assert.ok(
+      /class="tool pick-files"[^>]*>(<i[^>]*codicon-file-add[^>]*><\/i>)File/.test(toolbar)
+    );
+    assert.ok(!html.includes('+ git diff'));
+    assert.ok(!html.includes('class="pass-label"'));
   });
 
   test('添付は種類ごとの見出しで並び、消せる', () => {
@@ -241,7 +197,7 @@ suite('webview: 指示のプリセット（M13）', () => {
     assert.ok(!list.includes('/fix'));
   });
 
-  test('入力が / で始まらなければ候補を出さない。入力欄の案内にプリセットの名前が入る', () => {
+  test('入力が / で始まらなければ候補を出さない。入力欄の案内は 1 行で、/ でプリセットを出せることを書く', () => {
     const html = render(
       <App
         state={state({ status: 'done', turnOpen: false, presets })}
@@ -250,7 +206,7 @@ suite('webview: 指示のプリセット（M13）', () => {
       />
     );
     assert.ok(!html.includes('class="preset-list"'));
-    assert.ok(html.includes('/fix /test'));
+    assert.ok(html.includes('placeholder="Follow-up (Ctrl+Enter to send · / for presets)"'));
   });
 });
 
@@ -279,5 +235,135 @@ suite('webview: Context パネル（M13）', () => {
     assert.ok(html.includes('D:\\w\\a.ts'));
     assert.ok(html.includes('acceptEdits'));
     assert.ok(html.includes('Bash(npm test)'));
+  });
+});
+
+suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
+  test('入力が空の間は送信を押せず、入力すると押せる', () => {
+    const empty = render(
+      <App state={state({ status: 'done', turnOpen: false })} post={() => {}} />
+    );
+    assert.ok(/<button[^>]*class="action send"[^>]*disabled/.test(empty));
+    const typed = render(
+      <App state={state({ status: 'done', turnOpen: false })} post={() => {}} initialDraft="go" />
+    );
+    assert.ok(/<button[^>]*class="action send"/.test(typed));
+    assert.ok(!/<button[^>]*class="action send"[^>]*disabled/.test(typed));
+  });
+
+  test('実行中も入力欄は無効にせず、次の指示を書いておける。ボタンは停止のまま', () => {
+    const html = render(
+      <App state={state({ status: 'running', turnOpen: true })} post={() => {}} />
+    );
+    const input = html.slice(html.indexOf('<textarea'), html.indexOf('</textarea>'));
+    assert.ok(!input.includes('disabled'));
+    assert.ok(
+      input.includes(
+        'placeholder="Write the next instruction while Claude works (send it after the turn ends)"'
+      )
+    );
+    assert.ok(/class="action stop"[^>]*><i[^>]*codicon-debug-stop[^>]*><\/i>Stop</.test(html));
+    assert.ok(!html.includes('class="action send"'));
+  });
+
+  test('実行中は「実行中…」の代わりに、区切り行と同じ見た目で「ターン n 実行中 · 経過」を出す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          turnStartedAt: new Date().toISOString(),
+          items: [{ kind: 'prompt', turn: 1, text: 'p' }],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/class="checkpoint running"[\s\S]*?Turn 2 running · \d+s/.test(html));
+    assert.ok(!html.includes('Running…'));
+  });
+
+  test('ファイルのドロップの案内は、入力欄の枠に出す（ドラッグ中だけ見える）', () => {
+    const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
+    const box = html.slice(html.indexOf('class="composer-box"'));
+    assert.ok(
+      /class="drop-hint"[^>]*>Drop files to attach \(hold Shift when dragging from the editor\)</.test(
+        box
+      )
+    );
+  });
+
+  test('「Claude に渡す内容」は閉じていても、ディレクトリ・承認方式・添付数を 1 行で出す', () => {
+    const none = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          context: { cwd: 'D:\w\wt', permissionMode: 'default', alwaysAllowed: [] },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(
+      /class="context-summary"[\s\S]*?What Claude will receive[\s\S]*?class="context-brief"[^>]*>D:\w\wt · Permission mode default · No attachments</.test(
+        none
+      )
+    );
+    const one = render(
+      <App
+        state={state({
+          status: 'done',
+          turnOpen: false,
+          attachments: [{ kind: 'file', path: 'a.ts' }],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(one.includes('1 attached'));
+  });
+});
+
+suite('webview: 見出しの状態（サイドバーと同じ呼び名）', () => {
+  test('返答を待つタスクは、承認待ち・質問あり・返答済みを、アイコン付きで出す', () => {
+    const replied = render(
+      <App state={state({ status: 'waiting', turnOpen: false })} post={() => {}} />
+    );
+    assert.ok(
+      /class="status"[^>]*data-kind="replied"[^>]*><i[^>]*codicon-comment[^>]*><\/i>Replied</.test(
+        replied
+      )
+    );
+    const question = render(
+      <App
+        state={state({
+          status: 'waiting',
+          turnOpen: true,
+          pending: {
+            id: 'r',
+            toolName: 'AskUserQuestion',
+            input: { questions: [{ question: 'q?', options: [] }] },
+            suggestions: [],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(
+      /class="status"[^>]*data-kind="question"[^>]*><i[^>]*codicon-question[^>]*><\/i>Question</.test(
+        question
+      )
+    );
+    const approval = render(
+      <App
+        state={state({
+          status: 'waiting',
+          turnOpen: true,
+          pending: { id: 'r', toolName: 'Bash', input: { command: 'ls' }, suggestions: [] },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(
+      /class="status"[^>]*data-kind="approval"[^>]*>(<i[^>]*><\/i>)Needs approval</.test(approval)
+    );
   });
 });

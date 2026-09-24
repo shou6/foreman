@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { TaskService } from '../app/taskService';
 import { sidebarOf } from '../domain/sidebar';
-import { contextUsage, tokensToday } from '../domain/usage';
+import { tokensToday } from '../domain/usage';
 import type { FromSidebar, SidebarState, ToSidebar } from '../webview/sidebarProtocol';
 import { randomNonce } from './nonce';
-import { statusLabel } from './statusLabel';
+import { readSettings } from './settings';
+import { pendingKinds, statusKindLabels, statusLabel, yourTurnLabel } from './statusLabel';
 
 export interface SidebarViewDeps {
   extensionUri: vscode.Uri;
@@ -71,37 +72,43 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
       return;
     }
     const tasks = await this.deps.service.list();
-    const pendingApproval = new Set(
-      tasks.filter((task) => this.deps.approvals.pending(task.id) !== undefined).map((t) => t.id)
-    );
-    const activeTaskId = this.deps.activeTaskId();
-    const active = tasks.find((task) => task.id === activeTaskId);
+    const pending = pendingKinds(tasks, (id) => this.deps.approvals.pending(id));
+    const labels = statusKindLabels();
     const state: SidebarState = {
-      groups: sidebarOf(tasks, { now: this.deps.now(), pendingApproval }),
-      activeTaskId,
-      context: active === undefined ? undefined : contextUsage(active),
+      groups: sidebarOf(tasks, {
+        now: this.deps.now(),
+        pending,
+        branchPrefix: readSettings().worktreeBranchPrefix,
+      }),
+      activeTaskId: this.deps.activeTaskId(),
       today: tokensToday(tasks, new Date(this.deps.now())),
       strings: {
         newTask: vscode.l10n.t('New task'),
         empty: vscode.l10n.t('No tasks yet. Create one to get started.'),
         groups: {
-          waiting: statusLabel('waiting'),
+          waiting: yourTurnLabel(),
           running: statusLabel('running'),
           review: statusLabel('review'),
           draft: statusLabel('draft'),
           done: statusLabel('done'),
         },
         badges: {
-          approval: vscode.l10n.t('Approval'),
-          replied: vscode.l10n.t('Replied'),
-          failed: statusLabel('failed'),
-          interrupted: statusLabel('interrupted'),
-          done: statusLabel('done'),
-          draft: statusLabel('draft'),
+          approval: labels.approval,
+          question: labels.question,
+          replied: labels.replied,
+          failed: labels.failed,
+          interrupted: labels.interrupted,
+          draft: labels.draft,
         },
         minutes: vscode.l10n.t('{0} min', '{0}'),
         files: vscode.l10n.t('{0} files', '{0}'),
-        context: vscode.l10n.t('Context of this task'),
+        ago: {
+          now: vscode.l10n.t('just now'),
+          minutes: vscode.l10n.t('{0}m ago', '{0}'),
+          hours: vscode.l10n.t('{0}h ago', '{0}'),
+          yesterday: vscode.l10n.t('yesterday'),
+          days: vscode.l10n.t('{0}d ago', '{0}'),
+        },
         today: vscode.l10n.t('Tokens today (all tasks)'),
       },
     };
@@ -116,14 +123,18 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
     const style = webview.asWebviewUri(
       vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'sidebar.css')
     );
+    const codicons = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'codicon.css')
+    );
     const nonce = randomNonce();
     return [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,
       '</head>',
       '<body>',

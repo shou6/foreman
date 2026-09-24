@@ -31,10 +31,10 @@ function task(id: string, status: TaskStatus, extra: Partial<Task> = {}): Task {
 }
 
 suite('sidebar: 一覧のグループ', () => {
-  test('入力待ち、実行中、レビュー待ち、下書き、完了の順に、空でないグループだけ並ぶ', () => {
+  test('あなたの番、実行中、レビュー待ち、下書き、完了の順に、空でないグループだけ並ぶ', () => {
     const groups = sidebarOf(
       [task('a', 'done'), task('b', 'running', { turns: [turn()] }), task('c', 'waiting')],
-      { now: NOW, pendingApproval: new Set() }
+      { now: NOW, pending: new Map() }
     );
     assert.deepStrictEqual(
       groups.map((g) => g.key),
@@ -43,28 +43,55 @@ suite('sidebar: 一覧のグループ', () => {
     assert.strictEqual(groups[0]?.items[0]?.id, 'c');
   });
 
-  test('失敗と中断は実行中のグループに入り、バッジで区別する', () => {
+  test('失敗と中断は「あなたの番」（waiting）のグループに入り、バッジで区別する', () => {
     const groups = sidebarOf([task('a', 'failed'), task('b', 'interrupted')], {
       now: NOW,
-      pendingApproval: new Set(),
+      pending: new Map(),
     });
-    assert.strictEqual(groups[0]?.key, 'running');
+    assert.strictEqual(groups[0]?.key, 'waiting');
     assert.deepStrictEqual(
       groups[0]?.items.map((i) => i.badge),
       [{ kind: 'failed' }, { kind: 'interrupted' }]
     );
   });
 
-  test('入力待ちのバッジは、承認待ちか返答ありかで分かれる', () => {
+  test('あなたの番のバッジは、承認待ち・質問あり・返答済みに分かれる', () => {
     const groups = sidebarOf(
       [
-        task('a', 'waiting', { turns: [turn()] }),
-        task('b', 'waiting', { turns: [turn({ endedAt: NOW, result: { ok: true } })] }),
+        task('a', 'waiting', { turns: [turn()], updatedAt: '2026-09-24T10:03:00.000Z' }),
+        task('q', 'waiting', { turns: [turn()], updatedAt: '2026-09-24T10:02:00.000Z' }),
+        task('b', 'waiting', {
+          turns: [turn({ endedAt: NOW, result: { ok: true } })],
+          updatedAt: '2026-09-24T10:01:00.000Z',
+        }),
       ],
-      { now: NOW, pendingApproval: new Set(['a']) }
+      {
+        now: NOW,
+        pending: new Map([
+          ['a', 'approval'],
+          ['q', 'question'],
+        ]),
+      }
     );
-    assert.deepStrictEqual(groups[0]?.items[0]?.badge, { kind: 'approval' });
-    assert.deepStrictEqual(groups[0]?.items[1]?.badge, { kind: 'replied' });
+    assert.deepStrictEqual(
+      groups[0]?.items.map((i) => i.badge),
+      [{ kind: 'approval' }, { kind: 'question' }, { kind: 'replied' }]
+    );
+    assert.deepStrictEqual(
+      groups[0]?.items.map((i) => i.kind),
+      ['approval', 'question', 'replied']
+    );
+  });
+
+  test('完了にはバッジの代わりに、終わった（最後に更新した）時刻からの経過を入れる', () => {
+    const groups = sidebarOf([task('a', 'done', { updatedAt: '2026-09-24T10:00:00.000Z' })], {
+      now: NOW,
+      pending: new Map(),
+    });
+    assert.deepStrictEqual(groups[0]?.items[0]?.badge, {
+      kind: 'ago',
+      ago: { unit: 'minutes', value: 10 },
+    });
   });
 
   test('実行中は経過分数、レビュー待ちは変更ファイル数をバッジにする', () => {
@@ -83,7 +110,7 @@ suite('sidebar: 一覧のグループ', () => {
           ],
         }),
       ],
-      { now: NOW, pendingApproval: new Set() }
+      { now: NOW, pending: new Map() }
     );
     assert.deepStrictEqual(groups.find((g) => g.key === 'running')?.items[0]?.badge, {
       kind: 'elapsed',
@@ -95,7 +122,7 @@ suite('sidebar: 一覧のグループ', () => {
     });
   });
 
-  test('2 行目にはブランチ（無ければ空）と、全ターンの変更ファイル数が入る', () => {
+  test('2 行目にはブランチ（接頭辞を外す。無ければ空）と、全ターンの変更ファイル数が入る', () => {
     const groups = sidebarOf(
       [
         task('a', 'done', {
@@ -120,10 +147,10 @@ suite('sidebar: 一覧のグループ', () => {
         }),
         task('b', 'done'),
       ],
-      { now: NOW, pendingApproval: new Set() }
+      { now: NOW, pending: new Map(), branchPrefix: 'foreman/' }
     );
     const [a, b] = groups[0]?.items ?? [];
-    assert.strictEqual(a?.branch, 'foreman/a');
+    assert.strictEqual(a?.branch, 'a');
     assert.strictEqual(a?.files, 2, '同じファイルは 1 つに数える');
     assert.strictEqual(b?.branch, undefined);
     assert.strictEqual(b?.files, 0);
@@ -136,7 +163,7 @@ suite('sidebar: 一覧のグループ', () => {
         task('b', 'done', { updatedAt: '2026-09-24T09:30:00.000Z' }),
         task('c', 'done', { order: 0 }),
       ],
-      { now: NOW, pendingApproval: new Set() }
+      { now: NOW, pending: new Map() }
     );
     assert.deepStrictEqual(
       groups[0]?.items.map((i) => i.id),

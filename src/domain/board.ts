@@ -1,7 +1,9 @@
+import { shortBranch } from './labels';
 import { elapsedMinutes } from './sidebar';
+import { statusKindOf, type PendingKind, type StatusKind } from './status';
 import { isTurnOpen, type Task, type TaskStatus } from './task';
 
-/** ボードの列（要件定義書 5.1）。失敗と中断は「実行中」の列にバッジで出す */
+/** ボードの列（要件定義書 5.1）。waiting は「あなたの番」で、失敗と中断もここにバッジで出す */
 export type BoardColumnKey = 'draft' | 'running' | 'waiting' | 'review' | 'done';
 
 export const BOARD_COLUMNS: readonly BoardColumnKey[] = [
@@ -16,12 +18,12 @@ export interface BoardCard {
   id: string;
   title: string;
   status: TaskStatus;
+  /** 状態の呼び名。あなたの番の列では理由のバッジになる */
+  kind: StatusKind;
   /** Claude が動いている（最後のターンが終わっていない） */
   turnOpen: boolean;
-  /** 失敗・中断のバッジ */
-  badge?: 'failed' | 'interrupted';
   model?: string;
-  /** worktree のブランチ */
+  /** worktree のブランチ（接頭辞を外したもの） */
   branch?: string;
   /** 最後のターンの変更ファイル数 */
   changes: number;
@@ -44,28 +46,38 @@ export function columnOf(status: TaskStatus): BoardColumnKey {
   switch (status) {
     case 'failed':
     case 'interrupted':
-      return 'running';
+      return 'waiting';
     default:
       return status;
   }
 }
 
-/** 列をまたぐ移動で行う操作。許さない移動は undefined */
+/** 列をまたぐ移動で行う操作。許さない移動は undefined。失敗・中断は同じ列でも完了にできない */
 export function moveAllowed(
-  from: BoardColumnKey,
+  status: TaskStatus,
   to: BoardColumnKey,
   turnOpen = false
 ): 'start' | 'approve' | undefined {
-  if (from === 'draft' && to === 'running') {
+  if (status === 'draft' && to === 'running') {
     return 'start';
   }
-  if ((from === 'review' || (from === 'waiting' && !turnOpen)) && to === 'done') {
+  if ((status === 'review' || (status === 'waiting' && !turnOpen)) && to === 'done') {
     return 'approve';
   }
   return undefined;
 }
 
-export function cardOf(task: Task, now?: string): BoardCard {
+export interface BoardInput {
+  /** 今の時刻（ISO）。実行中の経過時間に使う */
+  now?: string;
+  /** 承認や質問に答えていないタスクの ID → 要求の種類 */
+  pending?: ReadonlyMap<string, PendingKind>;
+  /** worktree のブランチの接頭辞。カードでは外して出す */
+  branchPrefix?: string;
+}
+
+export function cardOf(task: Task, input: BoardInput = {}): BoardCard {
+  const { now } = input;
   const last = task.turns[task.turns.length - 1];
   const totals = lineTotals(task);
   return {
@@ -78,10 +90,13 @@ export function cardOf(task: Task, now?: string): BoardCard {
     id: task.id,
     title: task.title,
     status: task.status,
+    kind: statusKindOf(task.status, isTurnOpen(task), input.pending?.get(task.id)),
     turnOpen: isTurnOpen(task),
-    badge: task.status === 'failed' || task.status === 'interrupted' ? task.status : undefined,
     model: task.activeModel ?? task.model,
-    branch: task.worktree?.branch,
+    branch:
+      task.worktree === undefined
+        ? undefined
+        : shortBranch(task.worktree.branch, input.branchPrefix),
     changes: last?.changes.length ?? 0,
     prompt: task.draftPrompt ?? last?.prompt,
     updatedAt: task.updatedAt,
@@ -89,13 +104,13 @@ export function cardOf(task: Task, now?: string): BoardCard {
 }
 
 /** タスクを列に振り分ける。列の中は order の小さい順、order が無いものは更新の新しい順 */
-export function boardOf(tasks: readonly Task[], now?: string): BoardColumn[] {
+export function boardOf(tasks: readonly Task[], input: BoardInput = {}): BoardColumn[] {
   return BOARD_COLUMNS.map((key) => ({
     key,
     cards: tasks
       .filter((task) => columnOf(task.status) === key)
       .sort(compareForBoard)
-      .map((task) => cardOf(task, now)),
+      .map((task) => cardOf(task, input)),
   }));
 }
 

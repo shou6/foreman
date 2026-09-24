@@ -14,20 +14,28 @@ body {
   min-height: 100vh;
 }
 
-/* 見出し */
+/* 見出し。1 行目に題名・状態・主な操作、2 行目にブランチと使用量 */
 .head {
   position: sticky;
   top: 0;
   z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 0.6em;
+  flex-direction: column;
+  gap: 4px;
   padding: 0.6em 1.2em;
   background: var(--vscode-editor-background);
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
+.head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+
 .title {
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: none;
@@ -47,48 +55,114 @@ body {
   text-decoration: underline dotted;
 }
 
-/* 見出しのボタンは折り返さず、狭い時は行を分ける */
-.head {
-  flex-wrap: wrap;
-}
-
-.head .ghost,
-.head .meter {
-  white-space: nowrap;
-}
-
-.status,
-.chip {
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
   padding: 0.1em 0.6em;
   border-radius: 0.8em;
   font-size: 0.8em;
   white-space: nowrap;
-}
-
-.status {
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
 }
 
-.status[data-status='running'] {
+.status .codicon {
+  font-size: 12px;
+}
+
+.status[data-kind='running'] {
   background: var(--vscode-testing-iconQueued, var(--vscode-badge-background));
   color: var(--vscode-editor-background);
 }
 
-.status[data-status='waiting'] {
+.status[data-kind='approval'],
+.status[data-kind='question'],
+.status[data-kind='replied'] {
   background: var(--vscode-editorWarning-foreground);
   color: var(--vscode-editor-background);
 }
 
-.status[data-status='failed'] {
+.status[data-kind='failed'] {
   background: var(--vscode-editorError-foreground);
   color: var(--vscode-editor-background);
 }
 
-.chip {
-  border: 1px solid var(--vscode-panel-border);
-  color: var(--vscode-descriptionForeground);
+/* 見出しの主な操作は 1 つだけ。ほかは「…」 */
+.head-action {
+  flex: none;
+  padding: 0.25em 0.8em;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  font-size: 0.9em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.head-action:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.head-action.merge {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.head-action.merge:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.head-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 0.8em;
   font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+.head-meta .branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.head-meta .codicon {
+  font-size: 12px;
+}
+
+/* アイコンだけのボタン（「…」、差分の行の操作） */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 3px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* 会話 */
@@ -180,10 +254,38 @@ body {
   color: var(--vscode-editorError-foreground);
 }
 
-.item.interrupted,
-.item.running {
+.item.interrupted {
   color: var(--vscode-descriptionForeground);
   font-style: italic;
+}
+
+/* 実行中のツール。グループを閉じたままでも、対象と経過を 1 行で見せる */
+.tool-running {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0.3em 0 0 1.6em;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.85em;
+}
+
+.tool-running .codicon {
+  font-size: 13px;
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.tool-running .tool-target {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.tool-elapsed {
+  flex: none;
+  color: var(--vscode-descriptionForeground);
 }
 
 /* 入力欄 */
@@ -203,31 +305,93 @@ body {
   border-top: 1px solid var(--vscode-panel-border);
 }
 
+/* 入力欄と「渡すもの」のツールバーを 1 つの枠にまとめる */
+.composer-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 6px;
+}
+
+.composer-box:focus-within {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
 .prompt-input {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
   padding: 0.6em;
   color: var(--vscode-input-foreground);
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border, transparent);
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  outline: none;
   font-family: inherit;
   font-size: inherit;
 }
 
-.prompt-input:focus {
-  outline: 1px solid var(--vscode-focusBorder);
+.composer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
 }
 
-.composer-row {
-  display: flex;
+.tool {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5em;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--vscode-foreground);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.tool:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.tool .codicon {
+  font-size: 14px;
 }
 
 .composer-spacer {
   flex: 1;
+}
+
+.previous-model {
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+/* ドロップの案内は、ドラッグ中だけ入力欄の枠に重ねて出す */
+.drop-hint {
+  display: none;
+}
+
+body.dragging .drop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6em;
+  border-radius: 6px;
+  background: var(--vscode-editor-background);
+  outline: 2px dashed var(--vscode-focusBorder);
+  outline-offset: -4px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+  pointer-events: none;
 }
 
 .model-select select {
@@ -241,12 +405,15 @@ body {
 }
 
 .waiting-note {
-  padding: 0.6em 0;
+  padding: 0.6em;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
 }
 
 .action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 0.4em 1em;
   border: none;
   border-radius: 4px;
@@ -257,8 +424,12 @@ body {
   cursor: pointer;
 }
 
-.action:hover {
+.action:hover:not(:disabled) {
   background: var(--vscode-button-hoverBackground);
+}
+
+.composer-toolbar .action {
+  padding: 0.3em 1em;
 }
 
 .action.stop,
@@ -268,25 +439,15 @@ body {
   background: var(--vscode-button-secondaryBackground);
 }
 
+.action.stop:hover,
+.action.deny:hover,
+.action.allow-always:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
 .action:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-/* 枠だけのボタン（差分カードの操作） */
-.ghost {
-  padding: 0.15em 0.6em;
-  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
-  border-radius: 4px;
-  background: transparent;
-  color: var(--vscode-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: 0.85em;
-  cursor: pointer;
-}
-
-.ghost:hover {
-  background: var(--vscode-toolbar-hoverBackground);
 }
 
 .link {
@@ -316,6 +477,7 @@ body {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.5em;
+  padding: 0.5em 0.6em 0;
   font-size: 0.85em;
 }
 
@@ -335,11 +497,6 @@ body {
   color: inherit;
 }
 
-body.dragging .composer {
-  outline: 2px dashed var(--vscode-focusBorder);
-  outline-offset: -4px;
-}
-
 /* 承認カードと質問カード */
 .approval,
 .question {
@@ -350,9 +507,32 @@ body.dragging .composer {
   background: var(--vscode-editorWidget-background);
 }
 
-.approval-head {
+.approval {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+/* 何をするかを問いの形で先に見せる */
+.approval-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.approval-title .codicon {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.approval-target {
+  margin: 0;
+  padding: 0.5em 0.7em;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background);
   font-family: var(--vscode-editor-font-family);
-  margin-bottom: 0.5em;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .approval-input summary {
@@ -375,7 +555,7 @@ body.dragging .composer {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  margin: 0.5em 0;
+  margin: 0;
   padding: 0.4em;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
@@ -387,42 +567,104 @@ body.dragging .composer {
 
 .approval-actions {
   display: flex;
+  align-items: center;
   gap: 0.5em;
   flex-wrap: wrap;
 }
 
-.question-group {
-  margin: 0 0 0.75em;
-  padding: 0.5em 0.75em;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 6px;
+.question:focus {
+  outline: 1px solid var(--vscode-focusBorder);
 }
 
-.question-group legend {
+.question-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin: 0 0 0.75em;
+  padding: 0;
+  border: none;
+}
+
+.question-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.2em;
+  padding: 0;
+}
+
+.question-title .codicon {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.question-text {
   font-weight: 600;
 }
 
 .question-header {
-  margin-right: 0.5em;
   padding: 0 0.4em;
   border-radius: 0.75em;
   font-size: 0.8em;
-  font-weight: normal;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
 }
 
+/* 選択肢は行全体で押せる枠。説明は 2 行目 */
 .question-option {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5em;
-  margin: 0.25em 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 0 8px;
+  padding: 0.45em 0.6em;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 4px;
   cursor: pointer;
+}
+
+.question-option:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.question-option[data-selected='true'] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.option-key {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.question-option[data-selected='true'] .option-key,
+.question-option[data-selected='true'] .option-description {
+  color: inherit;
+}
+
+.option-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .option-description {
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
+}
+
+.other-input {
+  margin-top: 0.3em;
+  padding: 0.3em 0.4em;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  font: inherit;
+}
+
+.question-keys {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
 }
 
 /* 差分カード */
@@ -436,7 +678,7 @@ body.dragging .composer {
 
 .diff-card-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.75em;
   padding: 0.5em 0.9em;
   border-bottom: 1px solid var(--vscode-panel-border);
@@ -523,10 +765,35 @@ body.dragging .composer {
   margin-right: 0.4em;
 }
 
-.diff-counts .unknown,
 .reverted {
   color: var(--vscode-descriptionForeground);
   font-style: italic;
+}
+
+/* 戻せない理由（シェルでの変更） */
+.unknown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--vscode-editorWarning-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 0.9em;
+}
+
+/* 行の操作はアイコン。ホバー中の行だけ濃くする */
+.diff-row-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0.35;
+}
+
+.diff-file-row:hover .diff-row-actions,
+.diff-row-actions:focus-within {
+  opacity: 1;
+}
+
+.diff-file-row:hover {
+  background: var(--vscode-list-hoverBackground);
 }
 
 .diff-file-actions {
@@ -681,11 +948,6 @@ body.dragging .composer {
   flex: 1;
 }
 
-.ghost.merge {
-  border-color: var(--vscode-button-background);
-  color: var(--vscode-button-background);
-}
-
 /* ツールの呼び出しのたたみ */
 .tool-group {
   display: block;
@@ -741,11 +1003,12 @@ body.dragging .composer {
   background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
 }
 
+/* 「常に許可」の範囲はボタンの中に添える */
 .always-scope {
-  margin-top: 0.5em;
+  margin-left: 0.5em;
   font-size: 0.85em;
   font-family: var(--vscode-editor-font-family);
-  color: var(--vscode-descriptionForeground);
+  opacity: 0.75;
   word-break: break-all;
 }
 
@@ -765,17 +1028,45 @@ body.dragging .composer {
   border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
 }
 
-.checkpoint .link {
-  color: var(--vscode-descriptionForeground);
+/* 戻す・切り出すは、区切り行にホバーした時だけ出す */
+.checkpoint-actions {
+  display: inline-flex;
+  gap: 2px;
+  padding: 1px;
+  border-radius: 4px;
+  background: var(--vscode-widget-border, var(--vscode-panel-border));
+  visibility: hidden;
 }
 
-.checkpoint .link:hover:not(:disabled) {
-  color: var(--vscode-textLink-foreground);
+.checkpoint:hover .checkpoint-actions,
+.checkpoint-actions:focus-within {
+  visibility: visible;
 }
 
-.checkpoint .link:disabled {
+.checkpoint-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--vscode-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.checkpoint-action:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.checkpoint-action:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.checkpoint-action .codicon {
+  font-size: 13px;
 }
 
 /* 差分カードの操作（すべて戻す・承認） */
@@ -783,20 +1074,37 @@ body.dragging .composer {
   flex: 1;
 }
 
-.revert-all,
-.diff-card-head .approve {
-  padding: 0.15em 0.7em;
-  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+/* すべて戻すは枠のない控えめな操作 */
+.revert-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.15em 0.5em;
+  border: none;
   border-radius: 2px;
-  background: var(--vscode-button-secondaryBackground);
-  color: var(--vscode-button-secondaryForeground);
+  background: none;
+  color: var(--vscode-descriptionForeground);
   font: inherit;
   font-size: 0.85em;
   cursor: pointer;
 }
 
+.revert-all .codicon {
+  font-size: 13px;
+}
+
 .revert-all:hover:not(:disabled) {
-  background: var(--vscode-button-secondaryHoverBackground);
+  background: var(--vscode-toolbar-hoverBackground);
+  color: var(--vscode-foreground);
+}
+
+.diff-card-head .approve {
+  padding: 0.25em 0.9em;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 0.9em;
+  cursor: pointer;
 }
 
 .revert-all:disabled {
@@ -812,27 +1120,6 @@ body.dragging .composer {
 
 .diff-card-head .approve.primary:hover {
   background: var(--vscode-button-hoverBackground);
-}
-
-/* 渡すもの（入力欄の添付） */
-.pass-label {
-  color: var(--vscode-descriptionForeground);
-}
-
-.pass {
-  padding: 0.05em 0.6em;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 0.8em;
-  background: transparent;
-  color: var(--vscode-descriptionForeground);
-  font: inherit;
-  font-size: 0.85em;
-  cursor: pointer;
-}
-
-.pass:hover {
-  border-color: var(--vscode-focusBorder);
-  color: var(--vscode-foreground);
 }
 
 /* コンテキストのメーター */
@@ -917,7 +1204,35 @@ body.dragging .composer {
 }
 
 .context-summary {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
   cursor: pointer;
+}
+
+.context-summary::before {
+  content: '▸';
+}
+
+.context-panel[open] > .context-summary::before {
+  content: '▾';
+}
+
+.context-summary::-webkit-details-marker {
+  display: none;
+}
+
+.context-label {
+  flex: none;
+}
+
+/* 閉じていても、ディレクトリ・承認方式・添付数を 1 行で見せる */
+.context-brief {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--vscode-editor-font-family);
 }
 
 .context-empty {
@@ -953,4 +1268,9 @@ body.dragging .composer {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 見出しの 2 行目のメーターは、行の文字の大きさに合わせる */
+.head-meta .meter {
+  font-size: inherit;
 }

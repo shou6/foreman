@@ -56,6 +56,24 @@ export function answersToInput(
   return { ...input, answers: merged };
 }
 
+/**
+ * 数字キーを選択肢の番号（0 始まり）にする。count 個の選択肢の後ろに「その他」が 1 つ付くので、
+ * count が返れば「その他」。範囲の外や数字でないキーは undefined
+ */
+export function optionKeyOf(key: string, count: number): number | undefined {
+  if (!/^[1-9]$/.test(key)) {
+    return undefined;
+  }
+  const index = Number(key) - 1;
+  return index <= count ? index : undefined;
+}
+
+/** 「その他」に書いた文を、選んだ選択肢の後ろに足す。空なら足さない */
+export function withOther(selected: readonly string[], other: string | undefined): string[] {
+  const text = other?.trim() ?? '';
+  return text === '' ? [...selected] : [...selected, text];
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }

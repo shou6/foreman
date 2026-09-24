@@ -1,4 +1,7 @@
 import { useState } from 'preact/hooks';
+import { shortModel } from '../../domain/labels';
+import { primaryActionOf } from '../../domain/status';
+import { Icon } from '../icons';
 import type {
   BoardCard,
   BoardColumn,
@@ -10,6 +13,23 @@ import type {
 interface BoardProps {
   state: BoardState | undefined;
   post: (message: FromBoard) => void;
+}
+
+/** 列の見出しのアイコン */
+const COLUMN_ICONS: Record<BoardColumnKey, string> = {
+  draft: 'circle-large-outline',
+  running: 'sync~spin',
+  waiting: 'bell',
+  review: 'git-compare',
+  done: 'check',
+};
+
+/** あなたの番の列で、理由のバッジを出す状態 */
+const REASONS = ['approval', 'question', 'replied', 'failed', 'interrupted'] as const;
+type Reason = (typeof REASONS)[number];
+
+function reasonOf(card: BoardCard): Reason | undefined {
+  return REASONS.find((r) => r === card.kind);
 }
 
 /** ドラッグ中のカード。列と ID */
@@ -65,12 +85,16 @@ export function Board({ state, post }: BoardProps) {
             }}
           >
             <h2 class="column-title">
-              <span class="dot" data-column={column.key} />
+              <Icon name={COLUMN_ICONS[column.key]} extra="column-icon" data-column={column.key} />
               {state.strings.columns[column.key]}
               <span class="count">{column.cards.length}</span>
             </h2>
             <div class="cards">
-              {column.cards.length === 0 && <div class="empty">{state.strings.empty}</div>}
+              {column.cards.length === 0 && (
+                <div class="empty">
+                  {column.key === 'done' ? state.strings.emptyDone : state.strings.empty}
+                </div>
+              )}
               {column.cards.map((card) => (
                 <Card
                   key={card.id}
@@ -104,12 +128,26 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
     e.stopPropagation();
     post(message);
   };
+  const reason = reasonOf(card);
+  const action = primaryActionOf(card.kind);
+  // 切り出す・編集・削除などは右クリックのメニュー（左サイドバーと同じコマンド）
+  const context = JSON.stringify({
+    webviewSection: 'task',
+    taskId: card.id,
+    foremanStatus: card.status,
+    foremanOpen: card.turnOpen,
+    foremanWorktree: card.branch !== undefined,
+    foremanMergeable: false,
+    preventDefaultContextMenuItems: true,
+  });
   return (
     <article
       class="card"
       data-task={card.id}
-      data-attention={column === 'waiting' ? 'true' : undefined}
+      data-column={column}
+      data-attention={reason !== undefined ? 'true' : undefined}
       data-live={card.turnOpen ? 'true' : undefined}
+      data-vscode-context={context}
       draggable
       onDragStart={(e) => {
         e.dataTransfer?.setData('text/plain', card.id);
@@ -125,68 +163,60 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
     >
       <div class="card-head">
         <span class="card-title">{card.title}</span>
-        {card.badge !== undefined && (
-          <span class={`badge ${card.badge}`}>{strings.badges[card.badge]}</span>
-        )}
+        {reason !== undefined && <span class={`badge ${reason}`}>{strings.badges[reason]}</span>}
       </div>
       {card.prompt !== undefined && card.prompt !== card.title && (
         <p class="card-prompt">{card.prompt}</p>
       )}
       <div class="card-meta">
-        {card.model !== undefined && <span class="chip">{card.model}</span>}
-        {card.branch !== undefined && <span class="chip">{card.branch}</span>}
+        {card.model !== undefined && <span>{shortModel(card.model)}</span>}
+        {card.branch !== undefined && <span>{card.branch}</span>}
         {card.elapsedMinutes !== undefined && (
-          <span class="chip elapsed">
-            {strings.minutes.replace('{0}', String(card.elapsedMinutes))}
-          </span>
+          <span>{strings.minutes.replace('{0}', String(card.elapsedMinutes))}</span>
         )}
-        {card.changes > 0 && (
-          <span class="chip changes">
-            {card.changes} {strings.files}
-          </span>
-        )}
+        {card.changes > 0 && <span>{strings.files.replace('{0}', String(card.changes))}</span>}
         {(card.added !== undefined || card.removed !== undefined) && (
           <span class="counts">
-            <span class="added">+{card.added ?? 0}</span>
-            <span class="removed">-{card.removed ?? 0}</span>
+            <span class="added">+{card.added ?? 0}</span>{' '}
+            <span class="removed">−{card.removed ?? 0}</span>
           </span>
         )}
       </div>
-      <div class="card-actions">
-        {column === 'draft' && (
-          <>
+      {action !== undefined && (
+        <div class="card-actions">
+          {action === 'start' && (
             <button class="action start" onClick={(e) => act(e, { type: 'start', id: card.id })}>
               {strings.start}
             </button>
-            <button class="action edit" onClick={(e) => act(e, { type: 'edit', id: card.id })}>
-              {strings.edit}
+          )}
+          {action === 'stop' && (
+            <button class="action stop" onClick={(e) => act(e, { type: 'stop', id: card.id })}>
+              {strings.stop}
             </button>
-          </>
-        )}
-        {card.turnOpen && (
-          <button class="action stop" onClick={(e) => act(e, { type: 'stop', id: card.id })}>
-            {strings.stop}
-          </button>
-        )}
-        {column === 'waiting' && !card.turnOpen && (
-          <button class="action approve" onClick={(e) => act(e, { type: 'approve', id: card.id })}>
-            {strings.markDone}
-          </button>
-        )}
-        {column === 'review' && (
-          <button class="action approve" onClick={(e) => act(e, { type: 'approve', id: card.id })}>
-            {strings.approve}
-          </button>
-        )}
-        {(column === 'review' || column === 'done' || card.badge !== undefined) && (
-          <button class="action fork" onClick={(e) => act(e, { type: 'fork', id: card.id })}>
-            {strings.fork}
-          </button>
-        )}
-        <button class="action delete" onClick={(e) => act(e, { type: 'delete', id: card.id })}>
-          {strings.delete}
-        </button>
-      </div>
+          )}
+          {action === 'open' && (
+            <button class="action open" onClick={(e) => act(e, { type: 'open', id: card.id })}>
+              {strings.open}
+            </button>
+          )}
+          {action === 'markDone' && (
+            <button
+              class="action markDone"
+              onClick={(e) => act(e, { type: 'approve', id: card.id })}
+            >
+              {strings.markDone}
+            </button>
+          )}
+          {action === 'approve' && (
+            <button
+              class="action approve"
+              onClick={(e) => act(e, { type: 'approve', id: card.id })}
+            >
+              {strings.approveAndDone}
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }

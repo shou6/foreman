@@ -1,4 +1,5 @@
 import { formatTokens } from '../../domain/usage';
+import { Icon, STATUS_ICONS } from '../icons';
 import type { FromSidebar, SidebarItem, SidebarState } from '../sidebarProtocol';
 
 interface SidebarProps {
@@ -22,7 +23,6 @@ export function Sidebar({ state, post }: SidebarProps) {
         {state.groups.map((group) => (
           <details key={group.key} class="group" data-group={group.key} open={group.key !== 'done'}>
             <summary class="group-head">
-              <span class="dot" data-status={group.key} />
               <span class="group-title">{strings.groups[group.key]}</span>
               <span class="count">{group.items.length}</span>
             </summary>
@@ -39,27 +39,9 @@ export function Sidebar({ state, post }: SidebarProps) {
         ))}
       </div>
       <div class="footer">
-        {state.context !== undefined && (
-          <div class="context">
-            <div class="context-head">
-              <span>{strings.context}</span>
-              <span class="context-text">
-                {state.context.window === undefined
-                  ? formatTokens(state.context.used)
-                  : `${formatTokens(state.context.used)} / ${formatTokens(state.context.window)}`}
-              </span>
-            </div>
-            <span class="meter-bar">
-              <span
-                class="meter-fill"
-                style={`width: ${Math.round((state.context.ratio ?? 0) * 100)}%`}
-              />
-            </span>
-          </div>
-        )}
         <div class="today">
           <span>{strings.today}</span>
-          <span class="context-text">{formatTokens(state.today)}</span>
+          <span class="today-text">{formatTokens(state.today)}</span>
         </div>
       </div>
     </div>
@@ -91,17 +73,21 @@ function TaskRow({ item, active, strings, post }: RowProps) {
       onClick={() => post({ type: 'open', id: item.id })}
     >
       <div class="task-line">
-        <span class="dot" data-status={item.status} />
+        <Icon name={STATUS_ICONS[item.kind]} extra="status-icon" data-kind={item.kind} />
         <span class="task-title" title={item.title}>
           {item.title}
         </span>
         <Badge badge={item.badge} strings={strings} />
       </div>
-      <div class="task-sub">
-        {item.branch !== undefined && <span class="branch">{item.branch}</span>}
-        {item.branch !== undefined && <span class="sep">·</span>}
-        <span class="files">{strings.files.replace('{0}', String(item.files))}</span>
-      </div>
+      {(item.branch !== undefined || item.files > 0) && (
+        <div class="task-sub">
+          {item.branch !== undefined && <span class="branch">{item.branch}</span>}
+          {item.branch !== undefined && item.files > 0 && <span class="sep">·</span>}
+          {item.files > 0 && (
+            <span class="files">{strings.files.replace('{0}', String(item.files))}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -120,6 +106,12 @@ function Badge({
       );
     case 'review':
       return <span class="badge review">{strings.files.replace('{0}', String(badge.files))}</span>;
+    case 'ago':
+      return (
+        <span class="ago">
+          {strings.ago[badge.ago.unit].replace('{0}', String(badge.ago.value))}
+        </span>
+      );
     default:
       return <span class={`badge ${badge.kind}`}>{strings.badges[badge.kind]}</span>;
   }

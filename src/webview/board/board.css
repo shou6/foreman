@@ -68,18 +68,30 @@ body {
   padding: 8px 12px;
   font-size: 0.9em;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--vscode-descriptionForeground);
 }
 
+/* 日本語の列名に大文字や字間は効かないので付けない。件数は文字だけ */
 .count {
-  padding: 0 6px;
-  border-radius: 8px;
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-  font-size: 0.85em;
   font-weight: normal;
+}
+
+/* 列の見出しのアイコン。実行中と入力待ちが同じ色のテーマでも、形で区別できる */
+.column-icon {
+  font-size: 14px;
+}
+
+.column-icon[data-column='running'] {
+  color: var(--vscode-testing-iconQueued, #4aa3ff);
+}
+
+.column-icon[data-column='waiting'] {
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.column-icon[data-column='review'],
+.column-icon[data-column='done'] {
+  color: var(--vscode-testing-iconPassed, #4caf50);
 }
 
 .cards {
@@ -97,6 +109,8 @@ body {
   text-align: center;
   color: var(--vscode-disabledForeground);
   font-size: 0.9em;
+  border: 1px dashed var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 4px;
 }
 
 .card {
@@ -113,12 +127,13 @@ body {
 
 .card-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
 }
 
 .card-title {
   flex: 1;
+  min-width: 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -126,19 +141,22 @@ body {
 }
 
 .badge {
+  flex: none;
   padding: 0 6px;
   border-radius: 8px;
   font-size: 0.8em;
+  border: 1px solid var(--vscode-editorWarning-foreground, #e5a50a);
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
 }
 
 .badge.failed {
-  background: var(--vscode-inputValidation-errorBackground);
-  color: var(--vscode-errorForeground);
+  border-color: var(--vscode-editorError-foreground, #f14c4c);
+  color: var(--vscode-editorError-foreground, #f14c4c);
 }
 
 .badge.interrupted {
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
+  border-color: var(--vscode-descriptionForeground);
+  color: var(--vscode-descriptionForeground);
 }
 
 .card-prompt {
@@ -151,89 +169,45 @@ body {
   overflow: hidden;
 }
 
+/* モデル・ブランチ・経過・変更は淡色の 1 行にまとめる */
 .card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
   margin-top: 6px;
-}
-
-.chip {
-  padding: 0 6px;
-  border-radius: 8px;
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
   font-size: 0.8em;
   font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
 }
 
-.chip.changes {
-  background: var(--vscode-diffEditor-insertedTextBackground, var(--vscode-badge-background));
+.card-meta:empty {
+  display: none;
 }
 
 .card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-top: 8px;
 }
 
+/* 主な操作は 1 つだけ。控えめなボタンにする */
 .action {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--vscode-textLink-foreground);
+  padding: 2px 10px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
   font: inherit;
   font-size: 0.85em;
   cursor: pointer;
 }
 
 .action:hover {
-  text-decoration: underline;
-}
-
-.action.delete {
-  margin-left: auto;
-  color: var(--vscode-descriptionForeground);
-}
-
-/* 列と状態の点 */
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--vscode-descriptionForeground);
-  vertical-align: middle;
-}
-
-.dot[data-column='running'] {
-  background: var(--vscode-testing-iconQueued, #4aa3ff);
-}
-
-.dot[data-column='waiting'] {
-  background: var(--vscode-editorWarning-foreground, #e5a50a);
-}
-
-.dot[data-column='review'] {
-  background: var(--vscode-testing-iconPassed, #4caf50);
-}
-
-.dot[data-column='done'] {
-  background: var(--vscode-testing-iconPassed, #4caf50);
-  opacity: 0.6;
-}
-
-.dot[data-column='draft'] {
-  background: transparent;
-  border: 1px solid var(--vscode-descriptionForeground);
+  background: var(--vscode-button-secondaryHoverBackground);
 }
 
 /* 手が要るカードと動いているカードの強調 */
 .card[data-attention='true'] {
   border-color: var(--vscode-editorWarning-foreground, #e5a50a);
-  box-shadow: 0 0 0 1px var(--vscode-editorWarning-foreground, #e5a50a) inset;
 }
 
 .card[data-live='true'] .card-title::before {
@@ -260,8 +234,6 @@ body {
 .counts {
   display: inline-flex;
   gap: 4px;
-  font-family: var(--vscode-editor-font-family);
-  font-size: 0.85em;
 }
 
 .counts .added {
@@ -270,10 +242,4 @@ body {
 
 .counts .removed {
   color: var(--vscode-gitDecoration-deletedResourceForeground, #f14c4c);
-}
-
-.chip.elapsed {
-  background: transparent;
-  border: 1px solid var(--vscode-testing-iconQueued, #4aa3ff);
-  color: var(--vscode-testing-iconQueued, #4aa3ff);
 }

@@ -1,20 +1,21 @@
 import * as vscode from 'vscode';
+import type { ApprovalService } from '../app/approvalService';
 import type { TaskService } from '../app/taskService';
-import { boardOf, columnOf, moveAllowed, type BoardColumnKey } from '../domain/board';
+import { boardOf, moveAllowed, type BoardColumnKey } from '../domain/board';
 import { isTurnOpen } from '../domain/task';
 import type { BoardState, FromBoard, ToBoard } from '../webview/boardProtocol';
 import { randomNonce } from './nonce';
+import { readSettings } from './settings';
+import { pendingKinds, statusKindLabels, statusLabel, yourTurnLabel } from './statusLabel';
 
 export interface BoardPanelDeps {
   extensionUri: vscode.Uri;
   service: TaskService;
+  approvals: ApprovalService;
   openTask: (taskId: string) => Promise<void>;
   newDraft: () => Promise<void>;
   start: (taskId: string) => Promise<void>;
   approve: (taskId: string) => Promise<void>;
-  editDraft: (taskId: string) => Promise<void>;
-  fork: (taskId: string) => Promise<void>;
-  delete: (taskId: string) => Promise<void>;
   onError: (error: unknown) => void;
   now: () => string;
 }
@@ -29,7 +30,8 @@ export class BoardPanel implements vscode.Disposable {
   constructor(private readonly deps: BoardPanelDeps) {
     this.subscriptions.push(
       deps.service.onDidChange(() => void this.refresh()),
-      deps.service.onDidDelete(() => void this.refresh())
+      deps.service.onDidDelete(() => void this.refresh()),
+      deps.approvals.onDidChange(() => void this.refresh())
     );
     // 実行中の経過時間を進める
     this.timer = setInterval(() => void this.refresh(), 60_000);
@@ -79,15 +81,6 @@ export class BoardPanel implements vscode.Disposable {
       case 'stop':
         await this.deps.service.stop(message.id);
         return;
-      case 'edit':
-        await this.deps.editDraft(message.id);
-        return;
-      case 'fork':
-        await this.deps.fork(message.id);
-        return;
-      case 'delete':
-        await this.deps.delete(message.id);
-        return;
       case 'move':
         await this.move(message.id, message.to);
         return;
@@ -102,7 +95,7 @@ export class BoardPanel implements vscode.Disposable {
     if (task === undefined) {
       return;
     }
-    const action = moveAllowed(columnOf(task.status), to, isTurnOpen(task));
+    const action = moveAllowed(task.status, to, isTurnOpen(task));
     if (action === 'start') {
       await this.deps.start(taskId);
     } else if (action === 'approve') {
@@ -117,30 +110,38 @@ export class BoardPanel implements vscode.Disposable {
     if (this.panel === undefined) {
       return;
     }
+    const tasks = await this.deps.service.list();
+    const labels = statusKindLabels();
     const state: BoardState = {
-      columns: boardOf(await this.deps.service.list(), this.deps.now()),
+      columns: boardOf(tasks, {
+        now: this.deps.now(),
+        pending: pendingKinds(tasks, (id) => this.deps.approvals.pending(id)),
+        branchPrefix: readSettings().worktreeBranchPrefix,
+      }),
       strings: {
         columns: {
-          draft: vscode.l10n.t('Draft'),
-          running: vscode.l10n.t('Running'),
-          waiting: vscode.l10n.t('Waiting for input'),
-          review: vscode.l10n.t('Review'),
-          done: vscode.l10n.t('Done'),
+          draft: statusLabel('draft'),
+          running: statusLabel('running'),
+          waiting: yourTurnLabel(),
+          review: statusLabel('review'),
+          done: statusLabel('done'),
         },
         badges: {
-          failed: vscode.l10n.t('Failed'),
-          interrupted: vscode.l10n.t('Interrupted'),
+          approval: labels.approval,
+          question: labels.question,
+          replied: labels.replied,
+          failed: labels.failed,
+          interrupted: labels.interrupted,
         },
         newDraft: vscode.l10n.t('New draft'),
         start: vscode.l10n.t('Start'),
-        approve: vscode.l10n.t('Approve'),
-        markDone: vscode.l10n.t('Mark as done'),
         stop: vscode.l10n.t('Stop'),
-        edit: vscode.l10n.t('Edit'),
-        fork: vscode.l10n.t('Fork'),
-        delete: vscode.l10n.t('Delete'),
-        files: vscode.l10n.t('files'),
+        open: vscode.l10n.t('Open'),
+        markDone: vscode.l10n.t('Mark as done'),
+        approveAndDone: vscode.l10n.t('Approve and finish'),
+        files: vscode.l10n.t('{0} files', '{0}'),
         empty: vscode.l10n.t('No tasks'),
+        emptyDone: vscode.l10n.t('Drag reviewed cards here to finish them'),
         minutes: vscode.l10n.t('{0} min', '{0}'),
       },
     };
@@ -155,14 +156,18 @@ export class BoardPanel implements vscode.Disposable {
     const style = webview.asWebviewUri(
       vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'board.css')
     );
+    const codicons = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'codicon.css')
+    );
     const nonce = randomNonce();
     return [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,
       '</head>',
       '<body>',

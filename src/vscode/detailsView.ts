@@ -1,16 +1,21 @@
 import * as vscode from 'vscode';
+import type { ApprovalService } from '../app/approvalService';
 import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
+import { shortBranch } from '../domain/labels';
+import { statusKindOf, type PendingKind } from '../domain/status';
 import { canMerge, isTurnOpen, type Task } from '../domain/task';
 import type { DetailsState, FromDetails, ToDetails } from '../webview/detailsProtocol';
 import { randomNonce } from './nonce';
+import { readSettings } from './settings';
 import { snapshotUri } from './snapshotUri';
-import { statusLabel } from './statusLabel';
+import { pendingKinds, statusKindLabels } from './statusLabel';
 import * as path from 'path';
 
 export interface DetailsViewDeps {
   extensionUri: vscode.Uri;
   service: TaskService;
+  approvals: ApprovalService;
   diffs: DiffService;
   /** 今見ているタスク（前面のタスク画面）。無ければ undefined */
   activeTaskId: () => string | undefined;
@@ -35,6 +40,7 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
     this.subscriptions.push(
       { dispose: deps.service.onDidChange(() => void this.refresh()) },
       { dispose: deps.service.onDidDelete(() => void this.refresh()) },
+      { dispose: deps.approvals.onDidChange(() => void this.refresh()) },
       deps.onDidChangeActive(() => void this.refresh())
     );
   }
@@ -130,40 +136,41 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
     }
     const taskId = this.deps.activeTaskId();
     const task = taskId === undefined ? undefined : await this.deps.service.load(taskId);
+    const pending =
+      task === undefined
+        ? undefined
+        : pendingKinds([task], (id) => this.deps.approvals.pending(id)).get(task.id);
     const state: DetailsState = {
-      task: task === undefined ? undefined : detailsOf(task),
+      task:
+        task === undefined
+          ? undefined
+          : detailsOf(task, pending, readSettings().worktreeBranchPrefix),
       strings: {
         noTask: vscode.l10n.t('Open a task to see its changes here.'),
-        changes: vscode.l10n.t('Changes'),
-        checkpoints: vscode.l10n.t('Checkpoints'),
         turn: vscode.l10n.t('Turn {0}', '{0}'),
         openDiff: vscode.l10n.t('Open diff'),
         revert: vscode.l10n.t('Revert'),
         reverted: vscode.l10n.t('Reverted'),
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
-        noChanges: vscode.l10n.t('No changes yet'),
-        finish: vscode.l10n.t('Finish the task'),
-        finishHint: vscode.l10n.t(
-          'Review the whole diff before merging the worktree into {0}.',
-          '{0}'
-        ),
+        noChanges: vscode.l10n.t('No changes'),
+        none: vscode.l10n.t('None'),
+        statusLabels: statusKindLabels(),
+        changesTitle: vscode.l10n.t('Changes in this task'),
+        finish: vscode.l10n.t('Finish'),
         allDiff: vscode.l10n.t('Whole diff'),
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
-        discard: vscode.l10n.t('Discard'),
-        changesTitle: vscode.l10n.t('Changes in this task'),
-        notMergeable: vscode.l10n.t(
-          'Approve the changes before merging. Nothing to merge yet if there are no changes.'
+        discardWorktree: vscode.l10n.t('Discard worktree…'),
+        stepApproved: vscode.l10n.t('Changes approved ({0} turns · {1} files)', '{0}', '{1}'),
+        stepApprove: vscode.l10n.t('Approve the changes'),
+        stepReview: vscode.l10n.t('Review the whole diff'),
+        stepMerge: vscode.l10n.t('Bring the changes into {0}', '{0}'),
+        endWithoutMerge: vscode.l10n.t('End without merging'),
+        endWithoutChanges: vscode.l10n.t('End without keeping anything'),
+        nothingToMerge: vscode.l10n.t('Nothing to merge'),
+        nothingToMergeHint: vscode.l10n.t(
+          'No files have changed in this task yet. Once there are changes, approve them to merge from here.'
         ),
-        statusLabels: {
-          draft: statusLabel('draft'),
-          running: statusLabel('running'),
-          waiting: statusLabel('waiting'),
-          review: statusLabel('review'),
-          done: statusLabel('done'),
-          failed: statusLabel('failed'),
-          interrupted: statusLabel('interrupted'),
-        },
       },
     };
     const message: ToDetails = { type: 'state', state };
@@ -177,14 +184,18 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
     const style = webview.asWebviewUri(
       vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'details.css')
     );
+    const codicons = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'codicon.css')
+    );
     const nonce = randomNonce();
     return [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,
       '</head>',
       '<body>',
@@ -202,17 +213,22 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
 }
 
 /** タスクから右サイドバーに要る分だけを取り出す */
-export function detailsOf(task: Task): DetailsState['task'] {
+export function detailsOf(
+  task: Task,
+  pending: PendingKind | undefined,
+  branchPrefix: string | undefined
+): DetailsState['task'] {
   return {
     id: task.id,
     title: task.title,
     status: task.status,
+    kind: statusKindOf(task.status, isTurnOpen(task), pending),
     turnOpen: isTurnOpen(task),
     mergeable: canMerge(task),
     worktree:
       task.worktree === undefined
         ? undefined
-        : { branch: task.worktree.branch, base: task.worktree.base },
+        : { branch: shortBranch(task.worktree.branch, branchPrefix), base: task.worktree.base },
     turns: task.turns.map((turn) => ({
       index: turn.index,
       prompt: turn.prompt,

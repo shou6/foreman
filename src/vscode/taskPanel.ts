@@ -13,7 +13,7 @@ import { canMerge, isTurnOpen } from '../domain/task';
 import { contextUsage, turnTokens, type TurnTokens } from '../domain/usage';
 import { describeSuggestions } from '../domain/suggestions';
 import { randomNonce } from './nonce';
-import { statusLabel } from './statusLabel';
+import { statusKindLabels } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
@@ -33,6 +33,8 @@ export interface TaskPanelDeps {
   exportTask: (taskId: string) => Promise<void>;
   /** タスク名の変更（入力のダイアログを含む） */
   renameTask: (taskId: string) => Promise<void>;
+  /** 見出しの「…」。ほかの操作を選んで実行する */
+  moreActions: (taskId: string) => Promise<void>;
   /** 貼り付けた画像を保存して、そのパスを返す */
   savePastedImage: (mime: string, base64: string) => Promise<string>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
@@ -77,6 +79,7 @@ export class TaskPanels implements vscode.Disposable {
             type: 'task',
             status: task.status,
             turnOpen: isTurnOpen(task),
+            turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
             mergeable: canMerge(task),
             usage: contextUsage(task),
             tokens: tokensOf(task),
@@ -266,6 +269,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'rename':
           await this.deps.renameTask(taskId);
           return;
+        case 'more':
+          await this.deps.moreActions(taskId);
+          return;
         case 'rewind':
           await this.deps.checkpoint.rewind(taskId, message.turn);
           return;
@@ -335,6 +341,7 @@ export class TaskPanels implements vscode.Disposable {
       title: task.title,
       status: task.status,
       turnOpen: isTurnOpen(task),
+      turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
       mergeable: canMerge(task),
       usage: contextUsage(task),
       tokens: tokensOf(task),
@@ -358,59 +365,67 @@ export class TaskPanels implements vscode.Disposable {
       strings: {
         send: vscode.l10n.t('Send'),
         stop: vscode.l10n.t('Stop'),
-        running: vscode.l10n.t('Running…'),
+        runningTurn: vscode.l10n.t('Turn {0} running · {1}', '{0}', '{1}'),
+        elapsedSeconds: vscode.l10n.t('{0}s', '{0}'),
+        elapsedMinutes: vscode.l10n.t('{0}m {1}s', '{0}', '{1}'),
         allow: vscode.l10n.t('Allow'),
-        allowAlways: vscode.l10n.t('Always allow in this task'),
-        deny: vscode.l10n.t('Deny'),
+        allowAlways: vscode.l10n.t('Always allow'),
+        deny: vscode.l10n.t('Deny…'),
+        denyConfirm: vscode.l10n.t('Deny'),
         denyReason: vscode.l10n.t('Reason (optional)'),
+        approvalTitles: {
+          command: vscode.l10n.t('Run this command?'),
+          edit: vscode.l10n.t('Edit this file?'),
+          web: vscode.l10n.t('Access the web?'),
+          other: vscode.l10n.t('Use {0}?', '{0}'),
+        },
+        inputDetails: vscode.l10n.t('Input details (JSON)'),
         answer: vscode.l10n.t('Answer'),
+        other: vscode.l10n.t('Other (write your own)'),
+        otherPlaceholder: vscode.l10n.t('Your answer'),
+        questionKeys: vscode.l10n.t('Press 1–{0} to choose, Enter to answer', '{0}'),
         waiting: vscode.l10n.t('Waiting for your input'),
-        changes: vscode.l10n.t('Changes in this turn'),
+        changesInTurn: vscode.l10n.t('Changes in turn {0}', '{0}'),
         files: vscode.l10n.t('files'),
         openDiff: vscode.l10n.t('Open diff'),
         revert: vscode.l10n.t('Revert'),
         reverted: vscode.l10n.t('Reverted'),
-        unknownBefore: vscode.l10n.t('Previous content unknown'),
+        unknownBefore: vscode.l10n.t('Changed by the shell (cannot revert)'),
         model: vscode.l10n.t('Model'),
         defaultModel: vscode.l10n.t('Default'),
+        previousModel: vscode.l10n.t('Previous turn: {0}', '{0}'),
         attachments: vscode.l10n.t('Attachments'),
         remove: vscode.l10n.t('Remove'),
-        pass: vscode.l10n.t('Pass along'),
+        promptHint: vscode.l10n.t('Follow-up (Ctrl+Enter to send)'),
+        promptHintPresets: vscode.l10n.t('Follow-up (Ctrl+Enter to send · / for presets)'),
+        draftHint: vscode.l10n.t(
+          'Write the next instruction while Claude works (send it after the turn ends)'
+        ),
+        dropHint: vscode.l10n.t('Drop files to attach (hold Shift when dragging from the editor)'),
         selection: vscode.l10n.t('Selection'),
         diagnostics: vscode.l10n.t('Diagnostics'),
         gitDiff: vscode.l10n.t('git diff'),
-        addFile: vscode.l10n.t('+ File'),
-        dropHint: vscode.l10n.t(
-          'Type a follow-up (Ctrl+Enter to send). Drop files here to attach; hold Shift when dragging from the editor area.'
-        ),
-        statusLabels: {
-          draft: statusLabel('draft'),
-          running: statusLabel('running'),
-          waiting: statusLabel('waiting'),
-          review: statusLabel('review'),
-          done: statusLabel('done'),
-          failed: statusLabel('failed'),
-          interrupted: statusLabel('interrupted'),
-        },
+        addFile: vscode.l10n.t('File'),
+        statusLabels: statusKindLabels(),
         worktree: vscode.l10n.t('worktree'),
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
-        discard: vscode.l10n.t('Discard'),
+        merging: vscode.l10n.t('Merging…'),
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
-        export: vscode.l10n.t('Export'),
+        more: vscode.l10n.t('More actions'),
         rename: vscode.l10n.t('Rename'),
         contextPanel: vscode.l10n.t('What Claude will receive'),
         contextEmpty: vscode.l10n.t('Type a prompt to preview what will be sent.'),
-        presetsHint: vscode.l10n.t('Presets: {0}', '{0}'),
         permissionMode: vscode.l10n.t('Permission mode'),
         alwaysAllowedList: vscode.l10n.t('Always allowed in this task'),
         directory: vscode.l10n.t('Directory'),
-        merging: vscode.l10n.t('Merging…'),
-        discarding: vscode.l10n.t('Discarding…'),
-        alwaysScope: vscode.l10n.t('"Always allow" would allow'),
+        noAttachments: vscode.l10n.t('No attachments'),
+        attachmentCount: vscode.l10n.t('{0} attached', '{0}'),
         turn: vscode.l10n.t('Turn {0}', '{0}'),
+        rewind: vscode.l10n.t('Rewind'),
+        fork: vscode.l10n.t('Fork'),
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
-        approve: vscode.l10n.t('Approve'),
+        approveAndDone: vscode.l10n.t('Approve and finish'),
         markDone: vscode.l10n.t('Mark as done'),
         revertAll: vscode.l10n.t('Revert all'),
         contextUsage: vscode.l10n.t('Context'),
@@ -435,14 +450,18 @@ export class TaskPanels implements vscode.Disposable {
     const style = webview.asWebviewUri(
       vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'webview.css')
     );
+    const codicons = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.deps.extensionUri, 'dist', 'codicon.css')
+    );
     const nonce = randomNonce();
     return [
       '<!DOCTYPE html>',
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,
       '</head>',
       '<body>',

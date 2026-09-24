@@ -3,65 +3,9 @@ import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState } from '../../../webview/protocol';
 import { reduce } from '../../../webview/state';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes in this turn',
-  files: 'files',
-  openDiff: 'Open diff',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -93,15 +37,9 @@ suite('webview: マージ中と破棄中', () => {
     assert.strictEqual(s?.finishing, undefined);
   });
 
-  test('マージ中はボタンが「マージ中…」になり、マージも破棄も押せない', () => {
+  test('マージ中は見出しのボタンが「マージ中…」になり、押せない', () => {
     const html = render(<App state={state({ finishing: 'merge' })} post={() => {}} />);
     assert.ok(html.includes('Merging…'));
-    assert.ok(/<button[^>]*class="ghost merge"[^>]*disabled/.test(html));
-    assert.ok(/<button[^>]*class="ghost discard"[^>]*disabled/.test(html));
-  });
-
-  test('破棄中は「破棄中…」', () => {
-    const html = render(<App state={state({ finishing: 'discard' })} post={() => {}} />);
-    assert.ok(html.includes('Discarding…'));
+    assert.ok(/<button[^>]*class="head-action merge"[^>]*disabled/.test(html));
   });
 });

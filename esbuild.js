@@ -1,4 +1,6 @@
 const esbuild = require('esbuild');
+const fs = require('fs');
+const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -80,7 +82,18 @@ const sidebar = {
   outfile: 'dist/sidebar.js',
 };
 
+/** Webview で使う codicon（アイコンのフォント）を dist にそのまま写す。4 つの画面で共有する */
+function copyCodicons() {
+  const from = path.join(__dirname, 'node_modules', '@vscode', 'codicons', 'dist');
+  const to = path.join(__dirname, 'dist');
+  fs.mkdirSync(to, { recursive: true });
+  for (const file of ['codicon.css', 'codicon.ttf']) {
+    fs.copyFileSync(path.join(from, file), path.join(to, file));
+  }
+}
+
 async function main() {
+  copyCodicons();
   const contexts = await Promise.all([
     esbuild.context(extension),
     esbuild.context(webview),

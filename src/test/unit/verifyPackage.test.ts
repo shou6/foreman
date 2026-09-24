@@ -91,6 +91,26 @@ suite('checkPackageFiles: Webview のバンドル', () => {
     );
   });
 
+  test('main と同じフォルダの .ttf（Webview のアイコンのフォント）も入れてよい。ほかの形式は入れない', () => {
+    const manifest = { main: './dist/extension.js' };
+    assert.deepStrictEqual(
+      checkPackageFiles(
+        [
+          'package.json',
+          'README.md',
+          'LICENSE',
+          'resources/icon.png',
+          'dist/extension.js',
+          'dist/codicon.css',
+          'dist/codicon.ttf',
+          'dist/codicon.svg',
+        ],
+        manifest
+      ),
+      { unexpected: ['dist/codicon.svg'], missing: [] }
+    );
+  });
+
   test('main が無ければ dist の中身はすべて意図しないもの', () => {
     assert.deepStrictEqual(
       checkPackageFiles(

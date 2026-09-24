@@ -9,7 +9,7 @@ body {
   user-select: none;
 }
 
-/* 一覧は上でスクロールし、下端（コンテキストと今日のトークン）は固定する */
+/* 一覧は上でスクロールし、下端（今日のトークン）は固定する */
 html,
 body {
   height: 100%;
@@ -84,42 +84,36 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* 状態は色だけでなくアイコンの形でも区別する（実行中と入力待ちが同じ色のテーマがあるため） */
+.status-icon {
   flex: none;
-  background: var(--vscode-descriptionForeground);
+  width: 16px;
+  font-size: 14px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
 }
 
-.dot[data-status='running'] {
-  background: var(--vscode-testing-iconQueued, #4aa3ff);
+.status-icon[data-kind='running'] {
+  color: var(--vscode-testing-iconQueued, #4aa3ff);
 }
 
-.dot[data-status='waiting'] {
-  background: var(--vscode-editorWarning-foreground, #e5a50a);
+.status-icon[data-kind='approval'],
+.status-icon[data-kind='question'],
+.status-icon[data-kind='replied'] {
+  color: var(--vscode-editorWarning-foreground, #e5a50a);
 }
 
-.dot[data-status='review'] {
-  background: var(--vscode-testing-iconPassed, #4caf50);
+.status-icon[data-kind='review'],
+.status-icon[data-kind='done'] {
+  color: var(--vscode-testing-iconPassed, #4caf50);
 }
 
-.dot[data-status='done'] {
-  background: var(--vscode-testing-iconPassed, #4caf50);
-  opacity: 0.6;
+.status-icon[data-kind='failed'] {
+  color: var(--vscode-editorError-foreground, #f14c4c);
 }
 
-.dot[data-status='failed'] {
-  background: var(--vscode-editorError-foreground, #f14c4c);
-}
-
-.dot[data-status='interrupted'] {
-  background: var(--vscode-descriptionForeground);
-}
-
-.dot[data-status='draft'] {
-  background: transparent;
-  border: 1px solid var(--vscode-descriptionForeground);
+.task.active .status-icon {
+  color: inherit;
 }
 
 .task {
@@ -161,11 +155,8 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
-.badge.approval {
-  border-color: var(--vscode-editorWarning-foreground, #e5a50a);
-  color: var(--vscode-editorWarning-foreground, #e5a50a);
-}
-
+.badge.approval,
+.badge.question,
 .badge.replied {
   border-color: var(--vscode-editorWarning-foreground, #e5a50a);
   color: var(--vscode-editorWarning-foreground, #e5a50a);
@@ -176,8 +167,7 @@ body {
   color: var(--vscode-testing-iconQueued, #4aa3ff);
 }
 
-.badge.review,
-.badge.done {
+.badge.review {
   border-color: var(--vscode-testing-iconPassed, #4caf50);
   color: var(--vscode-testing-iconPassed, #4caf50);
 }
@@ -192,11 +182,22 @@ body {
   border-color: currentColor;
 }
 
+/* 完了の行は、バッジの代わりに終わった時刻を控えめに出す */
+.ago {
+  flex: none;
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.task.active .ago {
+  color: inherit;
+}
+
 .task-sub {
   display: flex;
   gap: 6px;
   margin-top: 2px;
-  padding-left: 16px;
+  padding-left: 24px;
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
   font-family: var(--vscode-editor-font-family);
@@ -205,18 +206,24 @@ body {
   white-space: nowrap;
 }
 
+/* 長いブランチ名は切り詰め、ファイル数は必ず見せる */
+.task-sub .branch {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-sub .sep,
+.task-sub .files {
+  flex: none;
+}
+
 .task.active .task-sub {
   color: inherit;
   opacity: 0.8;
 }
 
-/* 下端: 今見ているタスクのコンテキスト */
-.context {
-  margin: 8px 12px 0;
-  font-size: 0.85em;
-  color: var(--vscode-descriptionForeground);
-}
-
+/* 下端: 今日のトークン（全タスク） */
 .today {
   display: flex;
   justify-content: space-between;
@@ -225,26 +232,6 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
-.context-head {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.context-text {
+.today-text {
   font-family: var(--vscode-editor-font-family);
-}
-
-.meter-bar {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--vscode-widget-border, var(--vscode-panel-border));
-  overflow: hidden;
-}
-
-.meter-fill {
-  display: block;
-  height: 100%;
-  background: var(--vscode-progressBar-background, var(--vscode-textLink-foreground));
 }

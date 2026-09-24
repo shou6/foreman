@@ -29,6 +29,7 @@ import { SidebarView, SIDEBAR_VIEW_ID } from './vscode/sidebarView';
 import { AttachmentSources } from './vscode/attachmentSources';
 import { savePastedImage } from './adapters/pastedImages';
 import { exportTask } from './vscode/exportTask';
+import { moreActions } from './vscode/moreActions';
 import { WorktreeActions } from './vscode/worktreeActions';
 import { CheckpointActions } from './vscode/checkpointActions';
 import { ReviewActions } from './vscode/reviewActions';
@@ -168,6 +169,7 @@ export async function activate(
     sources,
     savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
     renameTask: (taskId) => renameTask(service, taskId),
+    moreActions: (taskId) => moreActions(service, taskId),
     checkpoint: {
       rewind: (taskId, turn) => checkpoints.rewind(taskId, turn),
       fork: (taskId, turn) => checkpoints.fork(taskId, turn),
@@ -177,6 +179,7 @@ export async function activate(
   const board = new BoardPanel({
     extensionUri: context.extensionUri,
     service,
+    approvals,
     openTask: (taskId) => panels.open(taskId),
     newDraft: async () => {
       const folder = vscode.workspace.workspaceFolders?.[0];
@@ -191,11 +194,6 @@ export async function activate(
     },
     start: (taskId) => review.start(taskId),
     approve: (taskId) => review.approve(taskId),
-    editDraft: (taskId) => review.editDraft(taskId),
-    fork: (taskId) => checkpoints.fork(taskId),
-    delete: async (taskId) => {
-      await vscode.commands.executeCommand('foreman.deleteTask', taskId);
-    },
     onError: (error) => {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     },
@@ -204,6 +202,7 @@ export async function activate(
   const details = new DetailsView({
     extensionUri: context.extensionUri,
     service,
+    approvals,
     diffs,
     activeTaskId: () => panels.activeTaskId,
     onDidChangeActive: (listener) => panels.onDidChangeActive(listener),

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { answersToInput, questionsOf } from '../../../domain/question';
+import { answersToInput, optionKeyOf, questionsOf, withOther } from '../../../domain/question';
 import type { PermissionRequest } from '../../../domain/events';
 
 const ASK: PermissionRequest = {
@@ -74,5 +74,29 @@ suite('answersToInput', () => {
         answers: { 'Which section?': 'Usage', 'Which files?': 'README.md, README.ja.md' },
       }
     );
+  });
+});
+
+suite('optionKeyOf', () => {
+  test('1 始まりの数字キーを選択肢の番号（0 始まり）にする。最後の 1 つは「その他」', () => {
+    assert.strictEqual(optionKeyOf('1', 3), 0);
+    assert.strictEqual(optionKeyOf('3', 3), 2);
+    assert.strictEqual(optionKeyOf('4', 3), 3, '選択肢が 3 つなら 4 は「その他」');
+  });
+
+  test('範囲の外や数字でないキーは undefined', () => {
+    assert.strictEqual(optionKeyOf('5', 3), undefined);
+    assert.strictEqual(optionKeyOf('0', 3), undefined);
+    assert.strictEqual(optionKeyOf('a', 3), undefined);
+    assert.strictEqual(optionKeyOf('Enter', 3), undefined);
+  });
+});
+
+suite('withOther', () => {
+  test('「その他」に書いた文を、選んだ選択肢の後ろに足す。空なら足さない', () => {
+    assert.deepStrictEqual(withOther(['Usage'], undefined), ['Usage']);
+    assert.deepStrictEqual(withOther([], '  自分で書く  '), ['自分で書く']);
+    assert.deepStrictEqual(withOther(['README.md'], 'CHANGELOG.md'), ['README.md', 'CHANGELOG.md']);
+    assert.deepStrictEqual(withOther(['Usage'], '   '), ['Usage']);
   });
 });

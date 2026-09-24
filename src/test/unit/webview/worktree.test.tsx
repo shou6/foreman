@@ -2,65 +2,9 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes in this turn',
-  files: 'files',
-  openDiff: 'Open diff',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -84,7 +28,7 @@ function state(overrides: Partial<PanelState>): PanelState {
 }
 
 suite('webview: worktree', () => {
-  test('worktree を使うタスクは、見出しにブランチのチップと、マージ・破棄のボタンを出す', () => {
+  test('worktree を使うタスクは、見出しの 2 行目にブランチと行き先を出す。破棄は見出しに置かない', () => {
     const html = render(
       <App
         state={state({
@@ -94,12 +38,17 @@ suite('webview: worktree', () => {
         post={() => {}}
       />
     );
-    assert.ok(html.includes('foreman/readme-abc123'));
-    assert.ok(html.includes('Merge into main'));
-    assert.ok(html.includes('Discard'));
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    assert.ok(
+      /class="head-meta"[\s\S]*?codicon-git-branch[\s\S]*?foreman\/readme-abc123 → main/.test(
+        header
+      )
+    );
+    assert.ok(/class="head-action merge"[^>]*>Merge into main</.test(header));
+    assert.ok(!html.includes('Discard'));
   });
 
-  test('マージできない（未承認か、変更が無い）間はマージのボタンを出さない。破棄は出す', () => {
+  test('マージできない（未承認か、変更が無い）間はマージのボタンを出さない', () => {
     const html = render(
       <App
         state={state({
@@ -110,17 +59,16 @@ suite('webview: worktree', () => {
         post={() => {}}
       />
     );
-    assert.ok(!html.includes('class="ghost merge"'));
-    assert.ok(html.includes('Discard'));
+    assert.ok(!html.includes('class="head-action merge"'));
   });
 
   test('worktree を使わないタスクには出さない', () => {
     const html = render(<App state={state({})} post={() => {}} />);
     assert.ok(!html.includes('Merge into'));
-    assert.ok(!html.includes('Discard'));
+    assert.ok(!html.includes('codicon-git-branch'));
   });
 
-  test('実行中はマージと破棄を押せない', () => {
+  test('実行中はマージを押せない', () => {
     const html = render(
       <App
         state={state({
@@ -132,11 +80,11 @@ suite('webview: worktree', () => {
         post={() => {}}
       />
     );
-    assert.ok(/<button[^>]*class="ghost merge"[^>]*disabled/.test(html));
+    assert.ok(/<button[^>]*class="head-action merge"[^>]*disabled/.test(html));
   });
 
-  test('merge と discard のメッセージの型がある', () => {
-    const messages: ToExtension[] = [{ type: 'merge' }, { type: 'discard' }];
-    assert.strictEqual(messages.length, 2);
+  test('merge のメッセージの型がある', () => {
+    const messages: ToExtension[] = [{ type: 'merge' }];
+    assert.strictEqual(messages.length, 1);
   });
 });

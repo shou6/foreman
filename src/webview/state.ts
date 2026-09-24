@@ -15,6 +15,7 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         ...state,
         status: message.status,
         turnOpen: message.turnOpen,
+        turnStartedAt: message.turnStartedAt,
         mergeable: message.mergeable,
         usage: message.usage,
         tokens: message.tokens,

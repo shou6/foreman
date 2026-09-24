@@ -2,65 +2,9 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState } from '../../../webview/protocol';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes in this turn',
-  files: 'files',
-  openDiff: 'Open diff',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -153,19 +97,25 @@ suite('webview: ラフに寄せた表示', () => {
         post={() => {}}
       />
     );
-    assert.ok(html.includes('Changes in this turn'));
+    assert.ok(html.includes('Changes in turn 1'));
     assert.ok(html.includes('2 files'));
     assert.ok(html.includes('+37'));
-    assert.ok(html.includes('-14'));
+    assert.ok(html.includes('−14'));
     // ファイル名とフォルダを分けて出す
     assert.ok(html.includes('>a.ts<'));
     assert.ok(html.includes('src/'));
   });
 
-  test('モデルの選択は入力欄の行にあり、見出しには出さない', () => {
-    const html = render(<App state={state({})} post={() => {}} />);
+  test('モデルの選択は入力欄の行にあり、見出しにはモデルを出さない', () => {
+    const html = render(
+      <App
+        state={state({ activeModel: 'claude-haiku-4-5', model: 'claude-sonnet-5' })}
+        post={() => {}}
+      />
+    );
     const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
     assert.ok(!header.includes('<select'));
+    assert.ok(!header.includes('haiku'));
     const footer = html.slice(html.indexOf('<footer'));
     assert.ok(footer.includes('<select'));
   });

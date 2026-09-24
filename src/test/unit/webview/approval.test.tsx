@@ -3,65 +3,9 @@ import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
 import { reduce } from '../../../webview/state';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes',
-  files: 'files',
-  openDiff: 'Open in diff editor',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here to attach (hold Shift in the editor area)',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -98,7 +42,7 @@ suite('webview: 承認カード', () => {
     assert.strictEqual(s?.pending, undefined);
   });
 
-  test('ツールの承認カードに、ツール名、対象、許可・常に許可・拒否のボタンを出す', () => {
+  test('ツールの承認カードは問いかけの見出しと、対象のコードブロック、許可・常に許可・拒否…のボタンを出す', () => {
     const html = render(
       <App
         state={state({
@@ -106,18 +50,62 @@ suite('webview: 承認カード', () => {
             id: 'req-1',
             toolName: 'Bash',
             input: { command: 'npm test' },
-            suggestions: [{ type: 'addRules' }],
+            suggestions: [
+              {
+                type: 'addRules',
+                behavior: 'allow',
+                destination: 'session',
+                rules: [{ toolName: 'Bash', ruleContent: 'npm test' }],
+              },
+            ],
           },
         })}
         post={() => {}}
       />
     );
     assert.ok(html.includes('class="approval'));
-    assert.ok(html.includes('Bash'));
-    assert.ok(html.includes('npm test'));
-    assert.ok(html.includes('Allow'));
-    assert.ok(html.includes('Always allow in this task'));
-    assert.ok(html.includes('Deny'));
+    assert.ok(
+      /class="approval-title"[^>]*><i[^>]*codicon-shield[^>]*><\/i>Run this command\?/.test(html)
+    );
+    assert.ok(/<pre class="approval-target">npm test<\/pre>/.test(html));
+    assert.ok(html.includes('Input details (JSON)'));
+    assert.ok(/class="action allow"[^>]*>Allow</.test(html));
+    assert.ok(
+      /class="action allow-always"[^>]*>Always allow<span class="always-scope">Bash\(npm test\)<\/span>/.test(
+        html
+      )
+    );
+    assert.ok(/class="action deny"[^>]*>Deny…</.test(html));
+  });
+
+  test('理由の欄は「拒否…」を押すまで出さない', () => {
+    const html = render(
+      <App
+        state={state({
+          pending: { id: 'req-1', toolName: 'Bash', input: { command: 'ls' }, suggestions: [] },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!html.includes('class="deny-reason"'));
+  });
+
+  test('問いかけはツールの種類で変わる', () => {
+    const titleOf = (toolName: string, input: Record<string, unknown>): string => {
+      const html = render(
+        <App
+          state={state({ pending: { id: 'r', toolName, input, suggestions: [] } })}
+          post={() => {}}
+        />
+      );
+      return html.slice(
+        html.indexOf('class="approval-title"'),
+        html.indexOf('</div>', html.indexOf('class="approval-title"'))
+      );
+    };
+    assert.ok(titleOf('Edit', { file_path: 'a.ts' }).includes('Edit this file?'));
+    assert.ok(titleOf('WebFetch', { url: 'https://x' }).includes('Access the web?'));
+    assert.ok(titleOf('mcp__x__y', {}).includes('Use mcp__x__y?'));
   });
 
   test('提案が無ければ「常に許可」は出さない', () => {
@@ -129,10 +117,10 @@ suite('webview: 承認カード', () => {
         post={() => {}}
       />
     );
-    assert.ok(!html.includes('Always allow in this task'));
+    assert.ok(!html.includes('Always allow'));
   });
 
-  test('AskUserQuestion は質問と選択肢のカードになる', () => {
+  test('AskUserQuestion は質問のカードになる。選択肢は番号付きの行で、説明は 2 行目。最後に「その他」', () => {
     const html = render(
       <App
         state={state({
@@ -159,12 +147,21 @@ suite('webview: 承認カード', () => {
       />
     );
     assert.ok(html.includes('class="question'));
+    assert.ok(/codicon-question/.test(html));
+    assert.ok(!html.includes('codicon-shield'));
+    assert.ok(/class="question-header"[^>]*>Section</.test(html));
     assert.ok(html.includes('Which section?'));
-    assert.ok(html.includes('Usage'));
-    assert.ok(html.includes('Add to Usage'));
+    assert.ok(
+      /class="option-key"[^>]*>1<[\s\S]*?Usage[\s\S]*?class="option-description"[^>]*>Add to Usage/.test(
+        html
+      )
+    );
+    assert.ok(/class="option-key"[^>]*>2<[\s\S]*?New/.test(html));
+    assert.ok(/class="option-key"[^>]*>3<[\s\S]*?Other \(write your own\)/.test(html));
     assert.ok(html.includes('type="radio"'));
     assert.ok(html.includes('Answer'));
-    assert.ok(!html.includes('Always allow in this task'));
+    assert.ok(html.includes('Press 1–3 to choose, Enter to answer'));
+    assert.ok(!html.includes('Always allow'));
   });
 
   test('承認待ちの間は、入力欄の代わりに待っている旨を出す', () => {
@@ -186,32 +183,5 @@ suite('webview: 承認カード', () => {
       decision: { behavior: 'allow' },
     };
     assert.strictEqual(message.type, 'decision');
-  });
-});
-
-suite('webview: 常に許可の中身', () => {
-  test('提案されたルールの内容を「常に許可」の下に出す', () => {
-    const html = render(
-      <App
-        state={state({
-          pending: {
-            id: 'req-1',
-            toolName: 'Bash',
-            input: { command: 'git status' },
-            suggestions: [
-              {
-                type: 'addRules',
-                behavior: 'allow',
-                destination: 'session',
-                rules: [{ toolName: 'Bash', ruleContent: 'git status' }],
-              },
-            ],
-          },
-        })}
-        post={() => {}}
-      />
-    );
-    assert.ok(html.includes('class="always-scope"'));
-    assert.ok(html.includes('Bash(git status)'));
   });
 });

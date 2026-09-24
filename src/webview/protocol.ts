@@ -5,6 +5,7 @@ import type { Preset } from '../domain/presets';
 import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
+import type { ApprovalKind, StatusKind } from '../domain/status';
 import type { FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
@@ -14,60 +15,84 @@ export type { Attachment, DiffLine, FileChange, PendingRequest, Preset, Transcri
 export interface PanelStrings {
   send: string;
   stop: string;
-  running: string;
+  /** 実行中の区切り行。{0} にターンの番号（1 始まり）、{1} に経過 */
+  runningTurn: string;
+  /** 経過の表し方。{0} に秒 / {0} に分、{1} に秒 */
+  elapsedSeconds: string;
+  elapsedMinutes: string;
   allow: string;
+  /** 「常に許可」。後ろに許可する範囲を添える */
   allowAlways: string;
+  /** 拒否…（押すと理由の欄が開く）と、理由を書いた後の拒否 */
   deny: string;
+  denyConfirm: string;
   denyReason: string;
+  /** 承認カードの問いかけ。other の {0} にツール名 */
+  approvalTitles: Record<ApprovalKind, string>;
+  inputDetails: string;
   answer: string;
+  /** 質問の「その他」と、その入力欄の案内 */
+  other: string;
+  otherPlaceholder: string;
+  /** {0} に最後の番号 */
+  questionKeys: string;
   waiting: string;
-  changes: string;
+  /** 差分カードの見出し。{0} にターンの番号（1 始まり） */
+  changesInTurn: string;
   /** 差分カードの見出しの「n files」の files */
   files: string;
   openDiff: string;
   revert: string;
   reverted: string;
+  /** 変更前が不明（戻せない）ファイル */
   unknownBefore: string;
   model: string;
   defaultModel: string;
+  /** {0} に前のターンで動いたモデル */
+  previousModel: string;
   attachments: string;
   remove: string;
+  /** 入力欄の案内（プリセットが無い時 / ある時）と、実行中の案内 */
+  promptHint: string;
+  promptHintPresets: string;
+  draftHint: string;
+  /** ドラッグ中に入力欄の枠に出す案内 */
   dropHint: string;
-  /** 「渡すもの」の行の見出しとボタン */
-  pass: string;
+  /** 「渡すもの」のボタン */
   selection: string;
   diagnostics: string;
   gitDiff: string;
   addFile: string;
-  /** 状態の表示名 */
-  statusLabels: Record<TaskStatus, string>;
+  /** 状態の呼び名の表示名 */
+  statusLabels: Record<StatusKind, string>;
   worktree: string;
   /** {0} に元のブランチが入る */
   merge: string;
-  discard: string;
+  merging: string;
   /** {0} に件数が入る */
   toolCalls: string;
-  export: string;
+  /** 見出しの「…」（ほかの操作） */
+  more: string;
   /** 題名を押した時の説明（名前の変更） */
   rename: string;
   /** Context パネル（次に Claude へ送る内容）の見出しと、空の時の案内 */
   contextPanel: string;
   contextEmpty: string;
-  /** {0} にプリセットの名前の並び */
-  presetsHint: string;
   permissionMode: string;
   alwaysAllowedList: string;
   directory: string;
-  merging: string;
-  discarding: string;
-  /** 「常に許可」で許可する内容の見出し */
-  alwaysScope: string;
+  /** Context パネルの要約の添付数。{0} に件数 */
+  noAttachments: string;
+  attachmentCount: string;
   /** チェックポイントの行。{0} にターンの番号（1 始まり）が入る */
   turn: string;
+  /** チェックポイントの操作（短い名前と、説明） */
+  rewind: string;
+  fork: string;
   rewindHere: string;
   forkHere: string;
-  /** レビュー待ちの変更を確認済みにする */
-  approve: string;
+  /** レビュー待ちの変更を承認して完了にする */
+  approveAndDone: string;
   /** 返答を待っているタスクを完了にする */
   markDone: string;
   /** ターンの変更をすべて戻す */
@@ -82,6 +107,8 @@ export interface PanelState {
   status: TaskStatus;
   /** Claude が動いている（最後のターンが終わっていない）。waiting でも終わっていれば false */
   turnOpen: boolean;
+  /** 最後のターンの開始（ISO）。実行中の経過に使う */
+  turnStartedAt?: string;
   /** worktree をマージできる（承認済みで、戻していない変更がある） */
   mergeable: boolean;
   /** コンテキストの使用量。結果のあるターンが無ければ undefined */
@@ -125,6 +152,7 @@ export type ToWebview =
       type: 'task';
       status: TaskStatus;
       turnOpen: boolean;
+      turnStartedAt?: string;
       mergeable: boolean;
       usage?: ContextUsage;
       tokens?: Record<number, TurnTokens>;
@@ -165,6 +193,8 @@ export type ToExtension =
   | { type: 'discard' }
   /** タスクを Markdown に書き出す */
   | { type: 'export' }
+  /** 見出しの「…」。ほかの操作（名前の変更・書き出し・切り出し・削除）を選ぶ */
+  | { type: 'more' }
   /** タスク名の変更（入力は拡張機能側のダイアログ） */
   | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */

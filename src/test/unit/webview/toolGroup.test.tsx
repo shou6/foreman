@@ -2,65 +2,9 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
+import { PANEL_STRINGS } from '../../support/panelStrings';
 
-const STRINGS = {
-  send: 'Send',
-  stop: 'Stop',
-  running: 'Running…',
-  allow: 'Allow',
-  allowAlways: 'Always allow in this task',
-  deny: 'Deny',
-  denyReason: 'Reason (optional)',
-  answer: 'Answer',
-  waiting: 'Waiting for your input',
-  changes: 'Changes in this turn',
-  files: 'files',
-  openDiff: 'Open diff',
-  revert: 'Revert',
-  reverted: 'Reverted',
-  unknownBefore: 'Previous content unknown',
-  model: 'Model',
-  defaultModel: 'Default',
-  attachments: 'Attachments',
-  remove: 'Remove',
-  dropHint: 'Drop files here',
-  pass: 'Pass along',
-  selection: 'Selection',
-  diagnostics: 'Diagnostics',
-  gitDiff: 'git diff',
-  addFile: '+ File',
-  statusLabels: {
-    draft: 'Draft',
-    running: 'Running',
-    waiting: 'Waiting for input',
-    review: 'Review',
-    done: 'Done',
-    failed: 'Failed',
-    interrupted: 'Interrupted',
-  },
-  worktree: 'worktree',
-  merge: 'Merge into {0}',
-  discard: 'Discard',
-  toolCalls: '{0} tool calls',
-  export: 'Export',
-  rename: 'Rename',
-  contextPanel: 'What Claude will receive',
-  contextEmpty: 'Type a prompt to preview what will be sent.',
-  presetsHint: 'Presets: {0}',
-  permissionMode: 'Permission mode',
-  alwaysAllowedList: 'Always allowed in this task',
-  directory: 'Directory',
-  merging: 'Merging…',
-  discarding: 'Discarding…',
-  alwaysScope: '"Always allow" would allow',
-  turn: 'Turn {0}',
-  rewindHere: 'Rewind to here',
-  forkHere: 'Fork from here',
-  revertAll: 'Revert all',
-  contextUsage: 'Context',
-  approve: 'Approve',
-  markDone: 'Mark as done',
-};
+const STRINGS = PANEL_STRINGS;
 
 function state(overrides: Partial<PanelState>): PanelState {
   return {
@@ -121,11 +65,49 @@ suite('webview: ツールの呼び出しのたたみ', () => {
     assert.ok(/<details[^>]*class="tool-group[^"]*"(?![^>]*open)/.test(html), 'たたまれたまま');
   });
 
-  test('見出しにエクスポートのボタンがあり、export のメッセージの型がある', () => {
+  test('実行中のツールは、たたんだグループの外に対象付きの 1 行で見せ、要約の名前からは外す', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          items: [
+            { kind: 'prompt', turn: 0, text: 'p' },
+            { kind: 'tool', turn: 0, id: '1', name: 'Read', input: {}, status: 'ok' },
+            {
+              kind: 'tool',
+              turn: 0,
+              id: '2',
+              name: 'Edit',
+              input: { file_path: 'src/test/unit/diffCard.test.ts' },
+              status: 'running',
+            },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    const summary = html.slice(html.indexOf('class="group-summary"'), html.indexOf('</summary>'));
+    assert.ok(summary.includes('Read'));
+    assert.ok(!summary.includes('Edit'));
+    const running = html.slice(html.indexOf('</details>'));
+    assert.ok(
+      /class="tool-running"[\s\S]*?codicon-loading codicon-modifier-spin[\s\S]*?class="tool-name"[^>]*>Edit<[\s\S]*?src\/test\/unit\/diffCard.test.ts/.test(
+        running
+      )
+    );
+  });
+});
+
+suite('webview: 見出しの「…」メニュー', () => {
+  test('エクスポートなどは見出しに並べず「…」にまとめ、more のメッセージを送る', () => {
     const html = render(<App state={state({})} post={() => {}} />);
-    assert.ok(html.includes('>Export<'));
-    const message: ToExtension = { type: 'export' };
-    assert.strictEqual(message.type, 'export');
+    assert.ok(!html.includes('>Export<'));
+    assert.ok(
+      /class="icon-button more"[^>]*title="More actions"[^>]*><i[^>]*codicon-ellipsis/.test(html)
+    );
+    const message: ToExtension = { type: 'more' };
+    assert.strictEqual(message.type, 'more');
   });
 });
 
