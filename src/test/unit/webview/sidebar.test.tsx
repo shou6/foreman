@@ -46,6 +46,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             turnOpen: true,
             worktree: true,
             mergeable: false,
+            unapprovable: false,
             branch: 'auth',
             files: 3,
             kind: 'approval',
@@ -63,6 +64,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             turnOpen: true,
             worktree: false,
             mergeable: false,
+            unapprovable: false,
             files: 1,
             kind: 'running',
             badge: { kind: 'elapsed', minutes: 4 },
@@ -79,6 +81,7 @@ function state(overrides: Partial<SidebarState> = {}): SidebarState {
             turnOpen: false,
             worktree: false,
             mergeable: false,
+            unapprovable: false,
             files: 0,
             kind: 'done',
             badge: { kind: 'ago', ago: { unit: 'minutes', value: 10 } },
@@ -138,6 +141,7 @@ suite('webview: 左サイドバーの一覧', () => {
                   turnOpen: true,
                   worktree: false,
                   mergeable: false,
+                  unapprovable: false,
                   files: 0,
                   kind: 'question',
                   badge: { kind: 'question' },
@@ -149,6 +153,7 @@ suite('webview: 左サイドバーの一覧', () => {
                   turnOpen: false,
                   worktree: false,
                   mergeable: false,
+                  unapprovable: false,
                   files: 0,
                   kind: 'replied',
                   badge: { kind: 'replied' },
@@ -194,6 +199,7 @@ suite('webview: 左サイドバーの一覧', () => {
     assert.strictEqual(context.foremanOpen, true);
     assert.strictEqual(context.foremanWorktree, true);
     assert.strictEqual(context.foremanMergeable, false);
+    assert.strictEqual(context.foremanUnapprovable, false);
     assert.strictEqual(context.preventDefaultContextMenuItems, true);
   });
 

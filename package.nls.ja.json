@@ -28,6 +28,7 @@
   "command.forkTask": "タスクを切り出す",
   "command.renameTask": "タスク名を変更",
   "command.approveTask": "変更を承認",
+  "command.unapproveTask": "承認を取り消す",
   "command.startTask": "下書きを開始",
   "command.editDraft": "下書きを編集",
   "command.newDraft": "新しい下書き",

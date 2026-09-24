@@ -163,6 +163,12 @@
         "icon": "$(check)"
       },
       {
+        "command": "foreman.unapproveTask",
+        "title": "%command.unapproveTask%",
+        "category": "Foreman",
+        "icon": "$(discard)"
+      },
+      {
         "command": "foreman.startTask",
         "title": "%command.startTask%",
         "category": "Foreman",
@@ -218,6 +224,10 @@
           "when": "false"
         },
         {
+          "command": "foreman.unapproveTask",
+          "when": "false"
+        },
+        {
           "command": "foreman.startTask",
           "when": "false"
         },
@@ -258,6 +268,11 @@
           "command": "foreman.approveTask",
           "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && (foremanStatus == 'review' || (foremanStatus == 'waiting' && !foremanOpen))",
           "group": "1_state@2"
+        },
+        {
+          "command": "foreman.unapproveTask",
+          "when": "(webviewId == 'foreman.tasks' || webviewId == 'foreman.board') && webviewSection == 'task' && foremanStatus == 'done' && foremanUnapprovable",
+          "group": "1_state@3"
         },
         {
           "command": "foreman.mergeTask",

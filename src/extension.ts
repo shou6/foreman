@@ -184,6 +184,7 @@ export async function activate(
     },
     exportTask: (taskId) => exportTask(taskId, service, transcripts),
     approve: (taskId) => review.approve(taskId),
+    unapprove: (taskId) => review.unapprove(taskId),
     sources,
     savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
     renameTask: (taskId) => renameTask(service, taskId),
@@ -293,6 +294,7 @@ export async function activate(
     checkpoints,
     review: {
       approve: (taskId) => review.approve(taskId),
+      unapprove: (taskId) => review.unapprove(taskId),
       start: (taskId) => review.start(taskId),
       editDraft: (taskId) => review.editDraft(taskId),
       newDraft: (folder) => review.newDraft(folder),

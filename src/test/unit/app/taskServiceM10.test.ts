@@ -176,3 +176,51 @@ suite('TaskService: タスク名の変更', () => {
     await assert.rejects(h.service.rename('task-1', '   '), /empty/);
   });
 });
+
+suite('TaskService: 承認の取り消し', () => {
+  async function reviewTask(h: ReturnType<typeof build>): Promise<void> {
+    await h.service.create({ prompt: 'p', cwd: 'D:\w' });
+    h.runner.last.emit({ type: 'init', sessionId: 's', model: 'm' });
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await h.service.recordChanges('task-1', 0, [
+      { path: 'a.txt', kind: 'modified', source: 'edit-tool', reverted: false },
+    ]);
+  }
+
+  test('レビュー待ちから承認したタスクは、取り消すとレビュー待ちに戻る', async () => {
+    const h = build();
+    await reviewTask(h);
+    await h.service.approve('task-1');
+    assert.strictEqual((await h.service.load('task-1'))?.approvedFrom, 'review');
+    await h.service.unapprove('task-1');
+    const task = await h.service.load('task-1');
+    assert.strictEqual(task?.status, 'review');
+    assert.strictEqual(task?.approvedFrom, undefined);
+  });
+
+  test('返答済みから「完了にする」で完了にしたタスクは、取り消すと返答済み（waiting）に戻る', async () => {
+    const h = build();
+    await h.service.create({ prompt: 'p', cwd: 'D:\w' });
+    h.runner.last.emit({ type: 'init', sessionId: 's', model: 'm' });
+    h.runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await h.service.approve('task-1');
+    await h.service.unapprove('task-1');
+    assert.strictEqual((await h.service.load('task-1'))?.status, 'waiting');
+  });
+
+  test('承認していない（完了でない、または承認の前の状態が分からない）タスクは取り消せない', async () => {
+    const h = build();
+    await reviewTask(h);
+    await assert.rejects(h.service.unapprove('task-1'), /cannot be undone/);
+  });
+
+  test('完了の後に続きを指示したら、承認の前の状態は消える', async () => {
+    const h = build();
+    await reviewTask(h);
+    await h.service.approve('task-1');
+    await h.service.send('task-1', 'more');
+    assert.strictEqual((await h.service.load('task-1'))?.approvedFrom, undefined);
+  });
+});

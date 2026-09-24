@@ -28,6 +28,7 @@
   "command.forkTask": "Fork Task",
   "command.renameTask": "Rename Task",
   "command.approveTask": "Approve Changes",
+  "command.unapproveTask": "Undo Approval",
   "command.startTask": "Start Draft",
   "command.editDraft": "Edit Draft",
   "command.newDraft": "New Draft",

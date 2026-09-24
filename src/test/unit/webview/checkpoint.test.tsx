@@ -107,6 +107,26 @@ suite('webview: 承認（レビュー待ち）', () => {
     assert.ok(/class="head-action approve"[^>]*>Mark as done</.test(html));
   });
 
+  test('完了したタスクの最後の差分カードには「承認済み」の印と、取り消せる時は「取り消す」を出す', () => {
+    const undoable = render(
+      <App state={state({ status: 'done', changes, unapprovable: true })} post={() => {}} />
+    );
+    assert.ok(/class="approved-mark"[^>]*><i[^>]*codicon-pass[^>]*><\/i>Approved</.test(undoable));
+    assert.ok(/class="unapprove"[^>]*>Undo approval</.test(undoable));
+    const merged = render(
+      <App state={state({ status: 'done', changes, unapprovable: false })} post={() => {}} />
+    );
+    assert.ok(merged.includes('class="approved-mark"'));
+    assert.ok(!merged.includes('class="unapprove"'));
+    const review = render(<App state={state({ status: 'review', changes })} post={() => {}} />);
+    assert.ok(!review.includes('class="approved-mark"'));
+  });
+
+  test('unapprove のメッセージの型がある', () => {
+    const message: ToExtension = { type: 'unapprove' };
+    assert.strictEqual(message.type, 'unapprove');
+  });
+
   test('approve と revertAll のメッセージの型がある', () => {
     const messages: ToExtension[] = [{ type: 'approve' }, { type: 'revertAll', turn: 1 }];
     assert.strictEqual(messages.length, 2);

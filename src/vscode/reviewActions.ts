@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
-import { isTurnOpen, type Task, type Worktree } from '../domain/task';
+import { canUnapprove, isTurnOpen, type Task, type Worktree } from '../domain/task';
 import { chooseWorktree } from './chooseWorktree';
 import { applyPreset } from '../domain/presets';
 import type { Settings } from './settings';
@@ -31,6 +31,21 @@ export class ReviewActions {
       return;
     }
     await this.deps.service.approve(taskId);
+  }
+
+  /** 承認を取り消し、承認の前の状態に戻す。マージ・破棄した後などは取り消せない */
+  async unapprove(taskId: string): Promise<void> {
+    const task = await this.deps.service.load(taskId);
+    if (task === undefined) {
+      return;
+    }
+    if (!canUnapprove(task)) {
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t('The approval of "{0}" cannot be undone.', task.title)
+      );
+      return;
+    }
+    await this.deps.service.unapprove(taskId);
   }
 
   /** 指示を聞いて下書きを作る。セッションは起動しない */

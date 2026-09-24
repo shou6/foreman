@@ -91,7 +91,10 @@ export class WorktreeActions {
     await this.finish(taskId);
   }
 
-  /** マージや破棄で作業は終わりなので、確認待ち・返答待ちのタスクは完了にする */
+  /**
+   * マージや破棄で作業は終わりなので、確認待ち・返答待ちのタスクは完了にする。
+   * worktree はもう無いので、承認は取り消せないようにする
+   */
   private async finish(taskId: string): Promise<void> {
     const task = await this.service.load(taskId);
     if (task === undefined) {
@@ -100,6 +103,7 @@ export class WorktreeActions {
     if (task.status === 'review' || (task.status === 'waiting' && !isTurnOpen(task))) {
       await this.service.approve(taskId);
     }
+    await this.service.patch(taskId, (t) => ({ ...t, approvedFrom: undefined }));
   }
 
   /**

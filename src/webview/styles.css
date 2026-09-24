@@ -1156,6 +1156,34 @@ body.dragging .drop-hint {
   color: var(--vscode-foreground);
 }
 
+/* 完了したタスクの差分カードの印と、承認の取り消し */
+.approved-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--vscode-testing-iconPassed, #4caf50);
+}
+
+.approved-mark .codicon {
+  font-size: 13px;
+}
+
+.unapprove {
+  padding: 0.15em 0.5em;
+  border: none;
+  border-radius: 2px;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.unapprove:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
 .diff-card-head .approve {
   padding: 0.25em 0.9em;
   border: 1px solid var(--vscode-button-border, transparent);

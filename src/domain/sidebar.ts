@@ -1,7 +1,7 @@
 import { compareForBoard } from './board';
 import { shortBranch } from './labels';
 import { statusKindOf, type PendingKind, type StatusKind } from './status';
-import { canMerge, isTurnOpen, type Task, type TaskStatus } from './task';
+import { canMerge, canUnapprove, isTurnOpen, type Task, type TaskStatus } from './task';
 import { agoOf, type Ago } from './time';
 
 /** 左サイドバーのグループ。手が要るものを上にする。waiting は「あなたの番」（失敗・中断も入る） */
@@ -42,6 +42,8 @@ export interface SidebarItem {
   turnOpen: boolean;
   worktree: boolean;
   mergeable: boolean;
+  /** 承認を取り消せる */
+  unapprovable: boolean;
   /** worktree のブランチ（接頭辞を外したもの）。無ければ undefined */
   branch?: string;
   /** 全ターンで触ったファイルの数（同じファイルは 1 つ） */
@@ -112,6 +114,7 @@ export function itemOf(task: Task, input: SidebarInput): SidebarItem {
     turnOpen: isTurnOpen(task),
     worktree: task.worktree !== undefined,
     mergeable: canMerge(task),
+    unapprovable: canUnapprove(task),
     branch:
       task.worktree === undefined
         ? undefined

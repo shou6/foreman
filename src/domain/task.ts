@@ -91,6 +91,11 @@ export interface Task {
   draftPrompt?: string;
   /** ボードでの並び。小さいほど上 */
   order?: number;
+  /**
+   * 承認（完了にする）の前の状態。承認の取り消しで戻す先。完了の間だけ持ち、
+   * 完了でなくなった時と、worktree をマージ・破棄した時に消す
+   */
+  approvedFrom?: 'review' | 'waiting';
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
@@ -195,6 +200,11 @@ export function isTurnOpen(task: Pick<Task, 'status' | 'turns'>): boolean {
   }
   const last = task.turns[task.turns.length - 1];
   return last === undefined || last.endedAt === undefined;
+}
+
+/** 承認を取り消せるか。承認で完了にしたタスクだけ（承認の前の状態を覚えている） */
+export function canUnapprove(task: Pick<Task, 'status' | 'approvedFrom'>): boolean {
+  return task.status === 'done' && task.approvedFrom !== undefined;
 }
 
 /**

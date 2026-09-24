@@ -18,6 +18,7 @@ export interface CommandDeps {
   checkpoints: { fork(taskId: string, turn?: number): Promise<void> };
   review: {
     approve(taskId: string): Promise<void>;
+    unapprove(taskId: string): Promise<void>;
     start(taskId: string): Promise<void>;
     editDraft(taskId: string): Promise<void>;
     newDraft(folder: string): Promise<import('../domain/task').Task | undefined>;
@@ -193,6 +194,12 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       const id = taskIdOf(arg);
       if (id !== undefined) {
         return withError(() => deps.review.approve(id))();
+      }
+    }),
+    vscode.commands.registerCommand('foreman.unapproveTask', (arg: unknown) => {
+      const id = taskIdOf(arg);
+      if (id !== undefined) {
+        return withError(() => deps.review.unapprove(id))();
       }
     }),
     vscode.commands.registerCommand('foreman.startTask', (arg: unknown) => {

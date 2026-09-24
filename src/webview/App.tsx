@@ -138,6 +138,10 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
       : elapsedSince(`turn:${lastTurn}`);
   };
   const blocks = groupTools(state.items);
+  // 完了したタスクは、最後に変更のあったターンの差分カードに「承認済み」の印を付ける
+  const lastChangedTurn = Object.entries(state.changes)
+    .filter(([, list]) => list.length > 0)
+    .reduce((max, [turn]) => Math.max(max, Number(turn)), -1);
   // 動いている間は、最後のツールのまとまりの下に実行中の行の場所を取っておく
   const lastTools = blocks.map((b) => b.kind).lastIndexOf('tools');
   const markDone = state.status === 'waiting' && !state.turnOpen && state.pending === undefined;
@@ -262,6 +266,8 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 diffs={state.diffs}
                 strings={state.strings}
                 approvable={state.status === 'review' && block.turn === lastTurn}
+                approved={state.status === 'done' && block.turn === lastChangedTurn}
+                unapprovable={state.unapprovable === true}
                 post={post}
               />
             )}
@@ -639,11 +645,24 @@ interface DiffCardProps {
   strings: PanelStrings;
   /** レビュー待ちの最後のターンなら「承認して完了」を出す */
   approvable: boolean;
+  /** 完了したタスクの、最後に変更のあったターンなら「承認済み」の印を出す */
+  approved: boolean;
+  /** 承認を取り消せるなら、印の横に「取り消す」を出す */
+  unapprovable: boolean;
   post: (message: ToExtension) => void;
 }
 
 /** ターンの差分カード（FR-DIFF-1〜7）。ファイルを開くとインラインの差分を拡張機能に求める */
-function DiffCard({ turn, changes, diffs, strings, approvable, post }: DiffCardProps) {
+function DiffCard({
+  turn,
+  changes,
+  diffs,
+  strings,
+  approvable,
+  approved,
+  unapprovable,
+  post,
+}: DiffCardProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const added = changes.reduce((n, c) => n + (c.added ?? 0), 0);
   const removed = changes.reduce((n, c) => n + (c.removed ?? 0), 0);
@@ -671,6 +690,17 @@ function DiffCard({ turn, changes, diffs, strings, approvable, post }: DiffCardP
         {approvable && (
           <button class="approve primary" onClick={() => post({ type: 'approve' })}>
             {strings.approveAndDone}
+          </button>
+        )}
+        {approved && (
+          <span class="approved-mark">
+            <Icon name="pass" />
+            {strings.approved}
+          </span>
+        )}
+        {approved && unapprovable && (
+          <button class="unapprove" onClick={() => post({ type: 'unapprove' })}>
+            {strings.unapprove}
           </button>
         )}
       </div>

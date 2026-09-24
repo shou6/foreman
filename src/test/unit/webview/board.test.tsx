@@ -31,7 +31,14 @@ const STRINGS = {
 };
 
 function card(extra: Partial<BoardCard> & Pick<BoardCard, 'id' | 'kind' | 'status'>): BoardCard {
-  return { title: extra.id, turnOpen: false, changes: 0, updatedAt: '', ...extra };
+  return {
+    title: extra.id,
+    turnOpen: false,
+    unapprovable: false,
+    changes: 0,
+    updatedAt: '',
+    ...extra,
+  };
 }
 
 function state(overrides: Partial<BoardState> = {}): BoardState {
@@ -175,6 +182,7 @@ suite('webview: タスクボード', () => {
     assert.strictEqual(context.taskId, 'v1');
     assert.strictEqual(context.foremanStatus, 'review');
     assert.strictEqual(context.foremanOpen, false);
+    assert.strictEqual(context.foremanUnapprovable, false);
     assert.strictEqual(context.preventDefaultContextMenuItems, true);
   });
 

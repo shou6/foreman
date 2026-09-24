@@ -10,7 +10,7 @@ import type { FileChange, Task } from '../domain/task';
 import type { PanelState, ToExtension, ToWebview } from '../webview/protocol';
 import { readSettings } from './settings';
 import { attachmentKey, uniqueAttachments, type Attachment } from '../domain/attachments';
-import { canMerge, isTurnOpen } from '../domain/task';
+import { canMerge, canUnapprove, isTurnOpen } from '../domain/task';
 import { contextUsage, turnTokens, type TurnTokens } from '../domain/usage';
 import { describeSuggestions } from '../domain/suggestions';
 import { randomNonce } from './nonce';
@@ -40,6 +40,8 @@ export interface TaskPanelDeps {
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
   /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
+  /** 承認の取り消し（承認の前の状態に戻す） */
+  unapprove: (taskId: string) => Promise<void>;
   /** 「渡すもの」の材料 */
   sources: {
     selection(): Attachment | undefined;
@@ -81,6 +83,7 @@ export class TaskPanels implements vscode.Disposable {
             turnOpen: isTurnOpen(task),
             turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
             mergeable: canMerge(task),
+            unapprovable: canUnapprove(task),
             usage: contextUsage(task),
             tokens: tokensOf(task),
             title: task.title,
@@ -290,6 +293,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'approve':
           await this.deps.approve(taskId);
           return;
+        case 'unapprove':
+          await this.deps.unapprove(taskId);
+          return;
         case 'revertAll': {
           const skipped = await this.deps.diffs.revertAfter(taskId, message.turn - 1);
           if (skipped.length > 0) {
@@ -352,6 +358,7 @@ export class TaskPanels implements vscode.Disposable {
       turnOpen: isTurnOpen(task),
       turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
       mergeable: canMerge(task),
+      unapprovable: canUnapprove(task),
       usage: contextUsage(task),
       tokens: tokensOf(task),
       model: task.model,
@@ -442,6 +449,8 @@ export class TaskPanels implements vscode.Disposable {
         rewindHere: vscode.l10n.t('Rewind to here'),
         forkHere: vscode.l10n.t('Fork from here'),
         approveAndDone: vscode.l10n.t('Approve and finish'),
+        approved: vscode.l10n.t('Approved'),
+        unapprove: vscode.l10n.t('Undo approval'),
         markDone: vscode.l10n.t('Mark as done'),
         revertAll: vscode.l10n.t('Revert all'),
         contextUsage: vscode.l10n.t('Context'),

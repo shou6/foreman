@@ -103,6 +103,9 @@ export interface PanelStrings {
   forkHere: string;
   /** レビュー待ちの変更を承認して完了にする */
   approveAndDone: string;
+  /** 完了したタスクの差分カードの印と、承認の取り消し */
+  approved: string;
+  unapprove: string;
   /** 返答を待っているタスクを完了にする */
   markDone: string;
   /** ターンの変更をすべて戻す */
@@ -121,6 +124,8 @@ export interface PanelState {
   turnStartedAt?: string;
   /** worktree をマージできる（承認済みで、戻していない変更がある） */
   mergeable: boolean;
+  /** 承認を取り消せる（承認で完了にし、まだマージ・破棄していない）。無ければ false */
+  unapprovable?: boolean;
   /** コンテキストの使用量。結果のあるターンが無ければ undefined */
   usage?: ContextUsage;
   /** ターンの番号 → そのターンのトークン数 */
@@ -166,6 +171,7 @@ export type ToWebview =
       turnOpen: boolean;
       turnStartedAt?: string;
       mergeable: boolean;
+      unapprovable?: boolean;
       usage?: ContextUsage;
       tokens?: Record<number, TurnTokens>;
       title: string;
@@ -217,6 +223,8 @@ export type ToExtension =
   | { type: 'fork'; turn: number }
   /** レビュー待ちの変更を確認済みにする（完了にする）。マージはしない */
   | { type: 'approve' }
+  /** 承認を取り消し、承認の前の状態に戻す */
+  | { type: 'unapprove' }
   /** ターンの変更をすべて戻す */
   | { type: 'revertAll'; turn: number };
 

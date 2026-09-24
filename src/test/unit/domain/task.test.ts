@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
   canMerge,
+  canUnapprove,
   createTask,
   transition,
   TaskStateError,
@@ -190,5 +191,21 @@ suite('canMerge: マージできる条件', () => {
       changes: t.changes.map((c) => ({ ...c, reverted: true })),
     }));
     assert.strictEqual(canMerge({ ...base, status: 'done', turns: reverted }), false, '全部戻した');
+  });
+});
+
+suite('canUnapprove', () => {
+  const base = createTask({
+    id: 't',
+    prompt: 'p',
+    cwd: 'D:\w',
+    createdAt: '2026-09-24T00:00:00.000Z',
+  });
+
+  test('承認で完了にしたタスクだけ取り消せる（承認の前の状態を覚えている）', () => {
+    assert.strictEqual(canUnapprove({ ...base, status: 'done', approvedFrom: 'review' }), true);
+    assert.strictEqual(canUnapprove({ ...base, status: 'done', approvedFrom: 'waiting' }), true);
+    assert.strictEqual(canUnapprove({ ...base, status: 'done' }), false);
+    assert.strictEqual(canUnapprove({ ...base, status: 'review', approvedFrom: 'review' }), false);
   });
 });

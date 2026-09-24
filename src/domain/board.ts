@@ -1,7 +1,7 @@
 import { shortBranch } from './labels';
 import { elapsedMinutes } from './sidebar';
 import { statusKindOf, type PendingKind, type StatusKind } from './status';
-import { isTurnOpen, type Task, type TaskStatus } from './task';
+import { canUnapprove, isTurnOpen, type Task, type TaskStatus } from './task';
 
 /** ボードの列（要件定義書 5.1）。waiting は「あなたの番」で、失敗と中断もここにバッジで出す */
 export type BoardColumnKey = 'draft' | 'running' | 'waiting' | 'review' | 'done';
@@ -22,6 +22,8 @@ export interface BoardCard {
   kind: StatusKind;
   /** Claude が動いている（最後のターンが終わっていない） */
   turnOpen: boolean;
+  /** 承認を取り消せる */
+  unapprovable: boolean;
   model?: string;
   /** worktree のブランチ（接頭辞を外したもの） */
   branch?: string;
@@ -92,6 +94,7 @@ export function cardOf(task: Task, input: BoardInput = {}): BoardCard {
     status: task.status,
     kind: statusKindOf(task.status, isTurnOpen(task), input.pending?.get(task.id)),
     turnOpen: isTurnOpen(task),
+    unapprovable: canUnapprove(task),
     model: task.activeModel ?? task.model,
     branch:
       task.worktree === undefined

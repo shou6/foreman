@@ -78,6 +78,20 @@ suite('Scenario: 完了の定義', function () {
     await untilStatus(t, task.id, 'done');
   });
 
+  test('承認を取り消すと、承認の前の状態（入力待ち）に戻る', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const task = await t.service.create({ prompt: 'say hi', cwd: workDir() });
+    t.runner.last.emit({ type: 'init', sessionId: 'sess-u', model: 'claude-haiku-4-5' });
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'waiting');
+    await vscode.commands.executeCommand('foreman.approveTask', task.id);
+    await untilStatus(t, task.id, 'done');
+
+    await vscode.commands.executeCommand('foreman.unapproveTask', task.id);
+    await untilStatus(t, task.id, 'waiting');
+  });
+
   test('ファイルを変えたターンはレビュー待ちになり、差分カードの材料が記録される', async () => {
     const t = await api();
     await clearTasks(t);

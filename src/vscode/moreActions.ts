@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
-import { isTurnOpen } from '../domain/task';
+import { canUnapprove, isTurnOpen } from '../domain/task';
 
 interface MoreAction extends vscode.QuickPickItem {
   command: string;
@@ -22,6 +22,12 @@ export async function moreActions(service: TaskService, taskId: string): Promise
   // 左サイドバーの右クリックと同じく、動いている間と下書きは切り出せない
   if (!isTurnOpen(task) && task.status !== 'draft') {
     items.push({ label: `$(git-branch) ${vscode.l10n.t('Fork')}`, command: 'foreman.forkTask' });
+  }
+  if (canUnapprove(task)) {
+    items.push({
+      label: `$(discard) ${vscode.l10n.t('Undo approval')}`,
+      command: 'foreman.unapproveTask',
+    });
   }
   items.push({ label: `$(trash) ${vscode.l10n.t('Delete')}`, command: 'foreman.deleteTask' });
   const picked = await vscode.window.showQuickPick(items, { placeHolder: task.title });

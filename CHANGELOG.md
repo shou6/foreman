@@ -11,7 +11,7 @@ First release.
 - Task board: drag tasks between columns, one main action per card, more actions on right-click
 - Task view: streamed output, tool calls, follow-up prompts, a model per turn, and drafting the next prompt while Claude works
 - Approvals: allow, deny with a reason, or always allow in this task; answer questions from Claude with number keys, your own answer, and tabs for more than one question
-- Diff cards: per-turn file changes with line counts, inline diff, diff editor, revert (no Git required)
+- Diff cards: per-turn file changes with line counts, inline diff, diff editor, revert (no Git required), and undoing an approval
 - Pass along: selection, Problems, `git diff`, files and pasted images, from the toolbar in the input box
 - Prompt presets (`/fix`, `/test`, `/review`) and the "What Claude will receive" panel
 - Context meter and token counts per turn, plus today's total in the sidebar

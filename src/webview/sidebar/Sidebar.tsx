@@ -63,6 +63,7 @@ function TaskRow({ item, active, strings, post }: RowProps) {
     foremanOpen: item.turnOpen,
     foremanWorktree: item.worktree,
     foremanMergeable: item.mergeable,
+    foremanUnapprovable: item.unapprovable,
     preventDefaultContextMenuItems: true,
   });
   return (

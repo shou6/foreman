@@ -83,6 +83,8 @@ export const PANEL_STRINGS: PanelStrings = {
   rewindHere: 'Rewind to here',
   forkHere: 'Fork from here',
   approveAndDone: 'Approve and finish',
+  approved: 'Approved',
+  unapprove: 'Undo approval',
   markDone: 'Mark as done',
   revertAll: 'Revert all',
   contextUsage: 'Context',

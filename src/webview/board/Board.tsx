@@ -138,6 +138,7 @@ function Card({ card, column, strings, post, onDragStart, onDropBefore }: CardPr
     foremanOpen: card.turnOpen,
     foremanWorktree: card.branch !== undefined,
     foremanMergeable: false,
+    foremanUnapprovable: card.unapprovable,
     preventDefaultContextMenuItems: true,
   });
   return (

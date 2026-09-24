@@ -4,6 +4,7 @@ import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../doma
 import {
   createTask,
   isTurnOpen,
+  canUnapprove,
   transition,
   type FileChange,
   type PermissionMode,
@@ -235,7 +236,18 @@ export class TaskService {
           `Task "${id}" is ${task.status}; only review or waiting tasks can be completed`
         );
       }
-      return { ...task, status: transition(task.status, 'approve') };
+      const approvedFrom = task.status === 'review' ? 'review' : 'waiting';
+      return { ...task, status: transition(task.status, 'approve'), approvedFrom };
+    });
+  }
+
+  /** 承認を取り消し、承認の前の状態（レビュー待ちか返答待ち）に戻す */
+  async unapprove(id: string): Promise<void> {
+    await this.update(id, (task) => {
+      if (!canUnapprove(task) || task.approvedFrom === undefined) {
+        throw new Error(`The approval of task "${id}" cannot be undone`);
+      }
+      return { ...task, status: task.approvedFrom, approvedFrom: undefined };
     });
   }
 
@@ -598,6 +610,10 @@ export class TaskService {
   /** 保存してから、変更を画面へ伝える */
   private async commit(task: Task): Promise<Task> {
     const saved = { ...task, updatedAt: this.deps.now() };
+    // 承認の前の状態は、完了の間だけ持つ
+    if (saved.status !== 'done') {
+      delete saved.approvedFrom;
+    }
     await this.deps.store.save(saved);
     for (const listener of this.listeners) {
       listener(saved);
