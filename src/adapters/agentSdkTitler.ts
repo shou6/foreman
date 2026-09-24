@@ -8,7 +8,7 @@ export type TitleQueryFn = (params: {
 
 export interface TitleRequest {
   prompt: string;
-  /** 例: claude-haiku-4-5 */
+  /** 例: haiku（別名なので新しい版に追従する）、claude-haiku-4-5 */
   model: string;
   claudePath: string;
   cwd: string;

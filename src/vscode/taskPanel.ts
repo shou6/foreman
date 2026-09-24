@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { DiffService } from '../app/diffService';
+import type { ModelService } from '../app/modelService';
 import type { TaskService } from '../app/taskService';
 import type { Transcripts } from '../app/transcripts';
 import type { PermissionDecision } from '../domain/events';
@@ -18,15 +19,14 @@ import { snapshotUri } from './snapshotUri';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
 
-/** モデルの選択肢。設定や一覧に無いモデルは、指定されていれば選択肢に足す */
-export const MODEL_PRESETS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
-
 export interface TaskPanelDeps {
   extensionUri: vscode.Uri;
   service: TaskService;
   transcripts: Transcripts;
   approvals: ApprovalService;
   diffs: DiffService;
+  /** モデルの選択肢（Claude Code から取得して覚えておく） */
+  models: ModelService;
   /** worktree のマージと破棄（確認や後始末は呼ぶ側が行う） */
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
@@ -92,6 +92,15 @@ export class TaskPanels implements vscode.Disposable {
             if (turn.changes.length > 0) {
               this.post(task.id, { type: 'changes', turn: turn.index, changes: turn.changes });
             }
+          }
+        }),
+      },
+      {
+        // 一覧を取得し終えたら、開いているタスク画面の選択肢を入れ替える
+        dispose: deps.models.onDidChange(() => {
+          const { models, defaultModel } = deps.models.current();
+          for (const taskId of this.panels.keys()) {
+            this.post(taskId, { type: 'models', models, defaultModel });
           }
         }),
       },
@@ -347,7 +356,8 @@ export class TaskPanels implements vscode.Disposable {
       tokens: tokensOf(task),
       model: task.model,
       activeModel: task.activeModel,
-      models: MODEL_PRESETS,
+      models: this.deps.models.current().models,
+      defaultModel: this.deps.models.current().defaultModel,
       items: this.deps.transcripts.get(task.id),
       pending: this.deps.approvals.pending(task.id),
       changes,
@@ -398,6 +408,7 @@ export class TaskPanels implements vscode.Disposable {
         unknownBefore: vscode.l10n.t('Changed by the shell (cannot revert)'),
         model: vscode.l10n.t('Model'),
         defaultModel: vscode.l10n.t('Default'),
+        defaultModelWith: vscode.l10n.t('Default ({0})', '{0}'),
         previousModel: vscode.l10n.t('Previous turn: {0}', '{0}'),
         attachments: vscode.l10n.t('Attachments'),
         remove: vscode.l10n.t('Remove'),

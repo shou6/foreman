@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
+import { AgentSdkModelCatalog } from './adapters/agentSdkModelCatalog';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
 import { ScriptedRunner } from './adapters/scriptedRunner';
 import type { AgentRunner } from './ports/agentRunner';
@@ -16,6 +17,7 @@ import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
 import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
+import { ModelService } from './app/modelService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
 import { WorktreeService } from './app/worktreeService';
@@ -66,6 +68,21 @@ export async function activate(
       claudePath: () => locateClaude(),
       log: (line) => output.append(line),
     });
+  // モデルの選択肢は起動後に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
+  const models = new ModelService(
+    scripted !== undefined
+      ? { list: async () => [] }
+      : new AgentSdkModelCatalog({
+          query: sdk.query,
+          claudePath: () => locateClaude(),
+          cwd: () => os.tmpdir(),
+        }),
+    (error) =>
+      output.appendLine(
+        `model list failed: ${error instanceof Error ? error.message : String(error)}`
+      )
+  );
+  void models.load();
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -160,6 +177,7 @@ export async function activate(
     transcripts,
     approvals,
     diffs,
+    models,
     finish: {
       merge: (taskId) => worktreeActions.merge(taskId),
       discard: (taskId) => worktreeActions.discard(taskId),

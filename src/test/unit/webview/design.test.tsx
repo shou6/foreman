@@ -17,7 +17,7 @@ function state(overrides: Partial<PanelState>): PanelState {
     changes: {},
     diffs: {},
     attachments: [],
-    models: ['claude-opus-5'],
+    models: [{ value: 'claude-opus-5', label: 'claude-opus-5', description: '' }],
     maxWidthEm: 72,
     toolCallsExpanded: false,
     presets: [],

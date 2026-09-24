@@ -160,3 +160,15 @@ suite('Dependabot', () => {
     assert.match(config, /prefix-development:\s*["']?chore["']?/);
   });
 });
+
+suite('設定の既定値', () => {
+  test('タスク名付けのモデルは別名 haiku にし、Haiku の新しい版に自動で追従させる', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: { configuration: { properties: Record<string, { default?: unknown }> } };
+    };
+    assert.strictEqual(
+      pkg.contributes.configuration.properties['foreman.titleModel']?.default,
+      'haiku'
+    );
+  });
+});

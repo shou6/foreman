@@ -5,6 +5,7 @@ import type { Preset } from '../domain/presets';
 import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
+import type { ModelOption } from '../domain/models';
 import type { ApprovalKind, StatusKind } from '../domain/status';
 import type { FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
@@ -55,6 +56,8 @@ export interface PanelStrings {
   unknownBefore: string;
   model: string;
   defaultModel: string;
+  /** 推奨モデルが分かる時の「既定」。{0} にモデルの名前 */
+  defaultModelWith: string;
   /** {0} に前のターンで動いたモデル */
   previousModel: string;
   attachments: string;
@@ -126,8 +129,10 @@ export interface PanelState {
   model?: string;
   /** SDK が報告した、実際に動いているモデル */
   activeModel?: string;
-  /** モデルの選択肢 */
-  models: string[];
+  /** モデルの選択肢（Claude Code から取得。取得前は固定の一覧） */
+  models: ModelOption[];
+  /** 既定（モデルを指定しない時）の中身。分からなければ undefined */
+  defaultModel?: ModelOption;
   items: TranscriptItem[];
   /** 承認待ちの要求。無ければ undefined */
   pending?: PendingRequest;
@@ -173,6 +178,8 @@ export type ToWebview =
   | { type: 'diff'; turn: number; path: string; lines: DiffLine[] }
   | { type: 'attachments'; attachments: Attachment[] }
   | { type: 'finishing'; kind: 'merge' | 'discard' | undefined }
+  /** モデルの一覧を取得し終えた */
+  | { type: 'models'; models: ModelOption[]; defaultModel: ModelOption | undefined }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */

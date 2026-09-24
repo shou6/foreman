@@ -389,7 +389,7 @@
         },
         "foreman.titleModel": {
           "type": "string",
-          "default": "claude-haiku-4-5",
+          "default": "haiku",
           "description": "%config.titleModel%"
         },
         "foreman.presets": {

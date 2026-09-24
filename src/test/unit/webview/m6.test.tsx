@@ -18,7 +18,10 @@ function state(overrides: Partial<PanelState>): PanelState {
     changes: {},
     diffs: {},
     attachments: [],
-    models: ['claude-opus-5', 'claude-sonnet-5'],
+    models: [
+      { value: 'opus', label: 'Opus', description: 'Opus 5.5', resolved: 'claude-opus-5-5' },
+      { value: 'sonnet', label: 'Sonnet', description: 'Sonnet 5', resolved: 'claude-sonnet-5' },
+    ],
     maxWidthEm: 72,
     toolCallsExpanded: false,
     presets: [],
@@ -49,28 +52,37 @@ suite('webview: 添付とモデル', () => {
     assert.ok(html.includes('Remove'));
   });
 
-  test('モデルの選択肢と、既定を選ぶ項目を出す。指定中のモデルが選ばれている', () => {
-    const html = render(<App state={state({ model: 'claude-sonnet-5' })} post={() => {}} />);
-    assert.ok(html.includes('<select'));
-    assert.ok(html.includes('Default'));
-    assert.ok(/<option[^>]*value="claude-sonnet-5"[^>]*selected/.test(html));
-    assert.ok(html.includes('claude-opus-5'));
-  });
-
-  test('一覧に無いモデルが指定されていても選択肢に出す', () => {
-    const html = render(<App state={state({ model: 'claude-custom' })} post={() => {}} />);
-    assert.ok(/<option[^>]*value="claude-custom"[^>]*selected/.test(html));
-  });
-
-  test('前のターンで動いたモデルが次のモデルと違えば、入力欄に「前のターン」として小さく出す', () => {
-    const differs = render(
+  test('モデルの選択肢は画面用の名前で出し、説明はホバーで出す。指定中のモデルが選ばれている', () => {
+    const html = render(
       <App
-        state={state({ model: 'claude-sonnet-5', activeModel: 'claude-haiku-4-5' })}
+        state={state({
+          model: 'sonnet',
+          defaultModel: {
+            value: 'default',
+            label: 'Default (recommended)',
+            description: 'Opus 5.5 with 1M context',
+            resolved: 'claude-opus-5-5[1m]',
+          },
+        })}
         post={() => {}}
       />
     );
-    const footer = differs.slice(differs.indexOf('<footer'));
-    assert.ok(/class="previous-model"[^>]*>Previous turn: haiku-4-5</.test(footer));
+    assert.ok(
+      /<option[^>]*value(="")?\s[^>]*title="Opus 5.5 with 1M context"[^>]*>Default \(Opus 5.5\)</.test(
+        html
+      ),
+      '既定には推奨モデルの名前を添える'
+    );
+    assert.ok(
+      /<option[^>]*value="sonnet"[^>]*title="Sonnet 5"[^>]*selected[^>]*>Sonnet</.test(html)
+    );
+    assert.ok(/<option[^>]*value="opus"[^>]*>Opus</.test(html));
+  });
+
+  test('正式な ID（claude-sonnet-5）で指定されていても、中身が同じ選択肢（Sonnet）を選んだ状態で出し、別の選択肢は足さない', () => {
+    const html = render(<App state={state({ model: 'claude-sonnet-5' })} post={() => {}} />);
+    assert.ok(/<option[^>]*value="sonnet"[^>]*selected[^>]*>Sonnet</.test(html));
+    assert.ok(!html.includes('value="claude-sonnet-5"'));
     const same = render(
       <App
         state={state({ model: 'claude-sonnet-5', activeModel: 'claude-sonnet-5' })}
@@ -78,10 +90,56 @@ suite('webview: 添付とモデル', () => {
       />
     );
     assert.ok(!same.includes('class="previous-model"'));
+  });
+
+  test('一覧に無いモデルが指定されていても選択肢に出す', () => {
+    const html = render(<App state={state({ model: 'claude-custom' })} post={() => {}} />);
+    assert.ok(/<option[^>]*value="claude-custom"[^>]*selected/.test(html));
+  });
+
+  test('models メッセージでモデルの一覧が入れ替わる', () => {
+    const models = [{ value: 'haiku', label: 'Haiku', description: '' }];
+    const s = reduce(state({}), { type: 'models', models, defaultModel: undefined });
+    assert.deepStrictEqual(s?.models, models);
+  });
+
+  test('前のターンで動いたモデルが次のモデルと違えば、入力欄に「前のターン」として小さく出す', () => {
+    const differs = render(
+      <App state={state({ model: 'sonnet', activeModel: 'claude-haiku-4-5' })} post={() => {}} />
+    );
+    const footer = differs.slice(differs.indexOf('<footer'));
+    assert.ok(/class="previous-model"[^>]*>Previous turn: haiku-4-5</.test(footer));
+    const listed = render(
+      <App state={state({ model: 'opus', activeModel: 'claude-sonnet-5' })} post={() => {}} />
+    );
+    assert.ok(listed.includes('Previous turn: Sonnet'), '一覧にあれば画面用の名前');
+  });
+
+  test('名前（sonnet）と実際のモデル（claude-sonnet-5）が同じなら出さない。既定も実際のモデルで比べる', () => {
+    const same = render(
+      <App state={state({ model: 'sonnet', activeModel: 'claude-sonnet-5' })} post={() => {}} />
+    );
+    assert.ok(!same.includes('class="previous-model"'));
+    const byDefault = render(
+      <App
+        state={state({
+          model: undefined,
+          activeModel: 'claude-opus-5-5[1m]',
+          defaultModel: {
+            value: 'default',
+            label: 'Default',
+            description: '',
+            resolved: 'claude-opus-5-5[1m]',
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!byDefault.includes('class="previous-model"'));
     const unknown = render(
       <App state={state({ model: undefined, activeModel: 'claude-opus-5[1m]' })} post={() => {}} />
     );
-    assert.ok(unknown.includes('Previous turn: opus-5[1m]'));
+    assert.ok(unknown.includes('Previous turn: opus-5[1m]'), '既定の中身が分からなければ出す');
   });
 
   test('setModel、dropped、添付つきの send の型がある', () => {

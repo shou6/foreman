@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { attachmentKey, promptWithAttachments } from '../domain/attachments';
-import { shortModel } from '../domain/labels';
+import { defaultModelName, isSameModel, modelLabel, type ModelOption } from '../domain/models';
 import { applyPreset, matchPresets } from '../domain/presets';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
@@ -107,10 +107,20 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
   };
   const candidates = matchPresets(draft, state.presets);
   const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
-  const modelOptions =
-    state.model !== undefined && !state.models.includes(state.model)
-      ? [state.model, ...state.models]
+  // 指定のモデルに当たる選択肢。正式な ID（claude-sonnet-5）も中身で照合する（Sonnet）
+  const chosen =
+    state.model === undefined
+      ? undefined
+      : (state.models.find((m) => m.value === state.model) ??
+        state.models.find((m) => isSameModel(state.model ?? '', m)));
+  // 一覧のどれにも当たらなければ、名前のまま選択肢に足す
+  const modelOptions: ModelOption[] =
+    state.model !== undefined && chosen === undefined
+      ? [{ value: state.model, label: state.model, description: '' }, ...state.models]
       : state.models;
+  const selectedModel = chosen?.value ?? state.model;
+  // 既定で動く推奨モデルの名前（Claude Code から一覧を取得できた時だけ）
+  const defaultName = defaultModelName(state.defaultModel);
   const kind = statusKindOf(
     state.status,
     state.turnOpen,
@@ -131,10 +141,16 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
   // 動いている間は、最後のツールのまとまりの下に実行中の行の場所を取っておく
   const lastTools = blocks.map((b) => b.kind).lastIndexOf('tools');
   const markDone = state.status === 'waiting' && !state.turnOpen && state.pending === undefined;
-  // 前のターンで動いたモデルが、次に使うモデルと違う時だけ知らせる
+  // 前のターンで動いたモデルが、次に使うモデルと違う時だけ知らせる。
+  // 名前（sonnet）と実際のモデル（claude-sonnet-5）は違う形なので、選択肢の中身で比べる
+  const nextModel =
+    state.model === undefined
+      ? state.defaultModel
+      : (chosen ?? modelOptions.find((m) => m.value === state.model));
   const previousModel =
-    state.activeModel !== undefined && state.activeModel !== state.model
-      ? state.activeModel
+    state.activeModel !== undefined &&
+    (nextModel === undefined || !isSameModel(state.activeModel, nextModel))
+      ? modelLabel(state.activeModel, state.models)
       : undefined;
   return (
     <div
@@ -369,24 +385,35 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
             <span class="composer-spacer" />
             {previousModel !== undefined && (
               <span class="previous-model">
-                {state.strings.previousModel.replace('{0}', shortModel(previousModel))}
+                {state.strings.previousModel.replace('{0}', previousModel)}
               </span>
             )}
             <label class="model-select">
               <span class="sr-only">{state.strings.model}</span>
               <select
-                value={state.model ?? ''}
+                value={selectedModel ?? ''}
                 onChange={(e) => {
                   const value = (e.target as HTMLSelectElement).value;
                   post({ type: 'setModel', model: value === '' ? undefined : value });
                 }}
               >
-                <option value="" selected={state.model === undefined}>
-                  {state.strings.defaultModel}
+                <option
+                  value=""
+                  title={nonEmpty(state.defaultModel?.description)}
+                  selected={state.model === undefined}
+                >
+                  {defaultName === undefined
+                    ? state.strings.defaultModel
+                    : state.strings.defaultModelWith.replace('{0}', defaultName)}
                 </option>
                 {modelOptions.map((m) => (
-                  <option key={m} value={m} selected={m === state.model}>
-                    {m}
+                  <option
+                    key={m.value}
+                    value={m.value}
+                    title={nonEmpty(m.description)}
+                    selected={m.value === selectedModel}
+                  >
+                    {m.label}
                   </option>
                 ))}
               </select>
@@ -504,6 +531,11 @@ function attachmentChip(a: Attachment, strings: PanelStrings): string {
 
 function attachmentTitle(a: Attachment): string {
   return a.kind === 'file' ? a.path : a.kind === 'selection' ? a.text : a.text.slice(0, 500);
+}
+
+/** 空の文字列は属性に出さない */
+function nonEmpty(text: string | undefined): string | undefined {
+  return text === undefined || text === '' ? undefined : text;
 }
 
 function basename(path: string): string {

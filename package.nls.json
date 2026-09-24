@@ -9,7 +9,7 @@
   "command.stopTask": "Stop Task",
   "command.deleteTask": "Delete Task",
   "config.claudePath": "Path to the `claude` executable. Leave empty to search `PATH` and `~/.local/bin`.",
-  "config.defaultModel": "Model for new tasks (for example `claude-sonnet-5`). Leave empty to use the Claude Code default.",
+  "config.defaultModel": "Model for new tasks. An alias such as `sonnet` follows new versions; a full ID such as `claude-sonnet-5` keeps that version. Leave empty to use the model Claude Code recommends.",
   "config.notifications": "Which task events show a notification.",
   "config.notifications.all": "Waiting for input, finished and failed.",
   "config.notifications.waiting": "Only when a task waits for your input.",
@@ -36,7 +36,7 @@
   "config.toolCalls.collapsed": "One summary line per group; click to expand.",
   "config.toolCalls.expanded": "Show every tool call.",
   "config.autoTitle": "Ask a small model for a short task title right after a task is created. Uses one short request per task.",
-  "config.titleModel": "Model used to write task titles.",
+  "config.titleModel": "Model used to write task titles. The alias `haiku` follows new versions of Haiku.",
   "config.presets": "Prompt presets. Type `/name` at the start of a prompt to replace it with the preset text. `{input}` is replaced with the rest of the prompt.",
   "config.presets.name": "Name used as /name.",
   "config.presets.prompt": "Prompt text. Use {input} for the rest of what you typed."

@@ -51,6 +51,7 @@ export const PANEL_STRINGS: PanelStrings = {
   unknownBefore: 'Changed by the shell (cannot revert)',
   model: 'Model',
   defaultModel: 'Default',
+  defaultModelWith: 'Default ({0})',
   previousModel: 'Previous turn: {0}',
   attachments: 'Attachments',
   remove: 'Remove',

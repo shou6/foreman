@@ -9,7 +9,7 @@
   "command.stopTask": "タスクを停止",
   "command.deleteTask": "タスクを削除",
   "config.claudePath": "`claude` の実行ファイルの場所。空なら `PATH` と `~/.local/bin` から探す。",
-  "config.defaultModel": "新しいタスクで使うモデル（例：`claude-sonnet-5`）。空なら Claude Code の既定に従う。",
+  "config.defaultModel": "新しいタスクで使うモデル。`sonnet` のような別名は新しい版に追従し、`claude-sonnet-5` のような正式な ID はその版に固定される。空なら Claude Code の推奨モデルを使う。",
   "config.notifications": "通知を出すタスクの出来事。",
   "config.notifications.all": "入力待ち、完了、失敗。",
   "config.notifications.waiting": "入力待ちの時だけ。",
@@ -36,7 +36,7 @@
   "config.toolCalls.collapsed": "まとまりごとに 1 行の要約にたたむ。クリックで開く。",
   "config.toolCalls.expanded": "すべての呼び出しを開いて見せる。",
   "config.autoTitle": "タスクの作成直後に、軽いモデルで短いタイトルを付ける。タスクごとに短い問い合わせを 1 回行う。",
-  "config.titleModel": "タイトル付けに使うモデル。",
+  "config.titleModel": "タイトル付けに使うモデル。別名の `haiku` は Haiku の新しい版に追従する。",
   "config.presets": "指示のプリセット。指示の先頭に `/名前` と書くと本文に置き換わる。`{input}` には名前の後ろに書いた文が入る。",
   "config.presets.name": "/名前 として使う名前。",
   "config.presets.prompt": "本文。{input} に、後ろに書いた文が入る。"

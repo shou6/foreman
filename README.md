@@ -19,7 +19,7 @@ Foreman uses the `claude` CLI that is already installed and logged in on your ma
 - **Questions from Claude**: pick a choice with the mouse or the number keys, or write your own answer under "Other". When Claude asks more than one question, switch between them with tabs and send all the answers from the last tab.
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file, or every file in the turn, with one click. "Approve and finish" marks the task as done. This works in folders that are not Git repositories.
 - **Pass along**: the toolbar in the input box attaches the editor selection, the errors and warnings from Problems, the uncommitted `git diff`, or files from a picker. Paste a screenshot from the clipboard to attach it as an image. You can also right-click a file and choose "Foreman: Attach to Task", right-click in the editor for "Foreman: Attach Selection to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
-- **Model per turn**: pick the model for the next turn in the input box. If the previous turn ran on a different model, the input box says so.
+- **Model per turn**: pick the model for the next turn in the input box. The list comes from your Claude Code, so it matches your plan and version. If the previous turn ran on a different model, the input box says so.
 - **Notifications and status bar**: know when a task needs you or has finished. The status bar counts running and waiting tasks.
 - **Prompt presets and Context panel**: type `/fix`, `/test` or `/review` at the start of a prompt to expand a preset (edit them in `foreman.presets`). The "What Claude will receive" line above the input shows the directory, the permission mode and the number of attachments. Open it to see the exact text Foreman will send and the rules you always allowed.
 - **Token usage**: the task view and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens, and the sidebar shows today's total for all tasks.
@@ -58,15 +58,22 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | Setting | Purpose |
 | --- | --- |
 | `foreman.claudePath` | Path to the `claude` executable. Leave empty to search `PATH` and `~/.local/bin`. |
-| `foreman.defaultModel` | Model for new tasks, for example `claude-sonnet-5`. Leave empty for the Claude Code default. |
+| `foreman.defaultModel` | Model for new tasks. Leave empty to use the model Claude Code recommends. See [Models](#models). |
 | `foreman.defaultPermissionMode` | `default` asks before every tool call. `acceptEdits` allows file edits automatically. |
 | `foreman.notifications` | `all`, `waiting` or `none`. |
 | `foreman.useWorktree` | Preselect "in a worktree" when creating or starting a task in a Git repository. |
 | `foreman.worktreeBranchPrefix` | Prefix for worktree branches. Default `foreman/`. |
-| `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. |
+| `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. The default model is `haiku`. |
 | `foreman.toolCalls` | Show tool calls expanded or collapsed in the task view. |
 | `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. |
 | `foreman.presets` | Prompt presets used as `/name`. `{input}` is replaced with the rest of the prompt. |
+
+## Models
+
+- **No model set**: leave `foreman.defaultModel` empty, and new tasks use the model that Claude Code recommends. The input box shows it as "Default (Opus 5.5)", for example. When Claude Code starts to recommend a newer model, Foreman uses it without any change.
+- **Set a model**: write an alias such as `sonnet`, `opus` or `haiku` in `foreman.defaultModel`. An alias follows new versions of that model as your Claude Code supports them. A full ID such as `claude-sonnet-5` keeps that exact version.
+- **Per turn**: to use another model for the next turn, pick it in the input box. The list comes from your Claude Code.
+- **Task titles**: a light model writes the title of a new task from its first prompt. It uses `haiku` by default, so it follows new versions of Haiku. Change it with `foreman.titleModel`, or turn it off with `foreman.autoTitle`. Each title uses one short request.
 
 ## Desktop notifications
 

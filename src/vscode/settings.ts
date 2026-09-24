@@ -43,7 +43,7 @@ export function readSettings(): Settings {
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
     autoTitle: config.get<boolean>('autoTitle', true),
-    titleModel: text('titleModel') ?? 'claude-haiku-4-5',
+    titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
   };
 }

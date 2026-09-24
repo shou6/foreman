@@ -37,6 +37,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       return { ...state, attachments: message.attachments };
     case 'finishing':
       return { ...state, finishing: message.kind };
+    case 'models':
+      return { ...state, models: message.models, defaultModel: message.defaultModel };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':
