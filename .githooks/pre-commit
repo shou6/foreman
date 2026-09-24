@@ -1,0 +1,12 @@
+#!/bin/sh
+# コミットの前に、型検査・lint・ビルドと単体テストを通す。
+# 統合テスト（npm test）は遅いので含めない。急ぐ時は git commit --no-verify で飛ばせる。
+# 登録: npm run hooks（git config core.hooksPath .githooks）
+set -e
+cd "$(git rev-parse --show-toplevel)"
+# git はフックに GIT_DIR や GIT_INDEX_FILE を渡す。テストが一時フォルダで動かす git に効いてしまうので外す
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_AUTHOR_DATE GIT_COMMITTER_DATE
+echo "[pre-commit] npm run compile"
+npm run compile --silent
+echo "[pre-commit] npm run test:unit"
+npm run test:unit --silent
