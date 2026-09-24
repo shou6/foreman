@@ -462,7 +462,7 @@ suite('AgentSdkRunner', () => {
     assert.deepStrictEqual(await fake.canUseTool('Edit', { file_path: 'b' }, suggestions), {
       behavior: 'allow',
       updatedInput: { file_path: 'b' },
-      updatedPermissions: [{ type: 'setMode', mode: 'acceptEdits' }],
+      updatedPermissions: [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }],
     });
     assert.deepStrictEqual(await fake.canUseTool('Bash', { command: 'rm' }, []), {
       behavior: 'deny',
@@ -769,6 +769,40 @@ suite('AgentSdkRunner: 実際に使われる Effort', () => {
     assert.deepStrictEqual(
       events.filter((e) => e.type === 'effort'),
       []
+    );
+  });
+});
+
+suite('AgentSdkRunner: 常に許可の保存先', () => {
+  test('SDK が提案した保存先が設定ファイルでも、返す時は session に固定する（このタスクだけに効かせる）', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const suggestions = [
+      {
+        type: 'addRules',
+        behavior: 'allow',
+        destination: 'localSettings',
+        rules: [{ toolName: 'Bash', ruleContent: 'npm test' }],
+      },
+      { type: 'setMode', mode: 'acceptEdits', destination: 'userSettings' },
+    ];
+    runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async (request) => ({
+        behavior: 'allow-always',
+        permissions: request.suggestions,
+      }),
+    });
+    const result = (await fake.canUseTool('Bash', { command: 'npm test' }, suggestions)) as {
+      updatedPermissions: { destination: string }[];
+    };
+    assert.deepStrictEqual(
+      result.updatedPermissions.map((p) => p.destination),
+      ['session', 'session']
     );
   });
 });

@@ -281,6 +281,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 diffs={state.diffs}
                 strings={state.strings}
                 approvable={state.status === 'review' && block.turn === lastTurn}
+                revertable={block.turn === lastChangedTurn}
                 approved={state.status === 'done' && block.turn === lastChangedTurn}
                 unapprovable={state.unapprovable === true}
                 post={post}
@@ -711,6 +712,8 @@ interface DiffCardProps {
   strings: PanelStrings;
   /** レビュー待ちの最後のターンなら「承認して完了」を出す */
   approvable: boolean;
+  /** 最後に変更のあったターンなら「すべて戻す」を出す（戻すのはそのターン以降なので、前のターンには出さない） */
+  revertable: boolean;
   /** 完了したタスクの、最後に変更のあったターンなら「承認済み」の印を出す */
   approved: boolean;
   /** 承認を取り消せるなら、印の横に「取り消す」を出す */
@@ -725,6 +728,7 @@ function DiffCard({
   diffs,
   strings,
   approvable,
+  revertable,
   approved,
   unapprovable,
   post,
@@ -745,14 +749,16 @@ function DiffCard({
           <span class="removed"> −{removed}</span>
         </span>
         <span class="head-spacer" />
-        <button
-          class="revert-all"
-          disabled={!revertible}
-          onClick={() => post({ type: 'revertAll', turn })}
-        >
-          <Icon name="discard" />
-          {strings.revertAll}
-        </button>
+        {revertable && (
+          <button
+            class="revert-all"
+            disabled={!revertible}
+            onClick={() => post({ type: 'revertAll', turn })}
+          >
+            <Icon name="discard" />
+            {strings.revertAll}
+          </button>
+        )}
         {approvable && (
           <button class="approve primary" onClick={() => post({ type: 'approve' })}>
             {strings.approveAndDone}

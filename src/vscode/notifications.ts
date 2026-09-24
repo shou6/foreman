@@ -39,12 +39,6 @@ export class Notifications implements vscode.Disposable {
           openLabel
         );
         break;
-      case 'done':
-        choice = await vscode.window.showInformationMessage(
-          vscode.l10n.t('Task "{0}" finished.', task.title),
-          openLabel
-        );
-        break;
       case 'review':
         choice = await vscode.window.showInformationMessage(
           vscode.l10n.t('Task "{0}" has changes to review.', task.title),

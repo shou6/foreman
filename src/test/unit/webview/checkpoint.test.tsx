@@ -127,6 +127,22 @@ suite('webview: 承認（レビュー待ち）', () => {
     assert.strictEqual(message.type, 'unapprove');
   });
 
+  test('「すべて戻す」は最後に変更のあったターンのカードにだけ出す（それ以降のターンも戻すため）', () => {
+    const two = {
+      0: [
+        { path: 'a.txt', kind: 'modified' as const, source: 'edit-tool' as const, reverted: false },
+      ],
+      1: [
+        { path: 'b.txt', kind: 'modified' as const, source: 'edit-tool' as const, reverted: false },
+      ],
+    };
+    const html = render(<App state={state({ status: 'done', changes: two })} post={() => {}} />);
+    const first = html.slice(html.indexOf('Changes in turn 1'), html.indexOf('Changes in turn 2'));
+    const second = html.slice(html.indexOf('Changes in turn 2'));
+    assert.ok(!first.includes('class="revert-all"'));
+    assert.ok(second.includes('class="revert-all"'));
+  });
+
   test('approve と revertAll のメッセージの型がある', () => {
     const messages: ToExtension[] = [{ type: 'approve' }, { type: 'revertAll', turn: 1 }];
     assert.strictEqual(messages.length, 2);

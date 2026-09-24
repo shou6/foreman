@@ -3,7 +3,7 @@ import type { TaskService } from '../app/taskService';
 import type { WorktreeService } from '../app/worktreeService';
 import { chooseWorktree } from './chooseWorktree';
 import { applyPreset } from '../domain/presets';
-import { isTurnOpen, type Worktree } from '../domain/task';
+import { isTurnOpen, type Task, type Worktree } from '../domain/task';
 import type { Settings } from './settings';
 import type { TaskPanels } from './taskPanel';
 import { statusLabel } from './statusLabel';
@@ -53,13 +53,19 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }
   };
 
-  /** 添付先のタスクを決める。1 つならそれ、複数なら選んでもらう */
-  const pickTask = async (): Promise<string | undefined> => {
-    const tasks = (await service.list()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  /**
+   * 操作の対象のタスクを決める。1 つならそれ、複数なら選んでもらう。
+   * title は選ぶ画面の見出し、filter は候補の絞り込み（無ければ全部）
+   */
+  const pickTask = async (
+    title: string = vscode.l10n.t('Attach to which task?'),
+    filter: (task: Task) => boolean = () => true
+  ): Promise<string | undefined> => {
+    const tasks = (await service.list())
+      .filter(filter)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     if (tasks.length === 0) {
-      void vscode.window.showErrorMessage(
-        vscode.l10n.t('No tasks to attach to. Create a task first.')
-      );
+      void vscode.window.showErrorMessage(vscode.l10n.t('No tasks. Create a task first.'));
       return undefined;
     }
     if (tasks.length === 1) {
@@ -71,7 +77,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         description: statusLabel(task.status),
         id: task.id,
       })),
-      { title: vscode.l10n.t('Attach to which task?') }
+      { title }
     );
     return picked?.id;
   };
@@ -168,7 +174,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }),
     vscode.commands.registerCommand('foreman.exportTask', (arg: unknown) => {
       return withError(async () => {
-        const id = taskIdOf(arg) ?? (await pickTask());
+        const id = taskIdOf(arg) ?? (await pickTask(vscode.l10n.t('Export which task?')));
         if (id !== undefined) {
           await deps.exportTask(id);
         }
@@ -176,7 +182,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     }),
     vscode.commands.registerCommand('foreman.renameTask', (arg: unknown) => {
       return withError(async () => {
-        const id = taskIdOf(arg) ?? (await pickTask());
+        const id = taskIdOf(arg) ?? (await pickTask(vscode.l10n.t('Rename which task?')));
         if (id !== undefined) {
           await renameTask(service, id);
         }
@@ -185,7 +191,13 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
     // 一覧の右クリック「ここから切り出す」。最後のターンから分岐する（FR-TASK-12）
     vscode.commands.registerCommand('foreman.forkTask', (arg: unknown) => {
       return withError(async () => {
-        const id = taskIdOf(arg) ?? (await pickTask());
+        // 右クリックと同じく、動いている間と下書きは切り出せない
+        const id =
+          taskIdOf(arg) ??
+          (await pickTask(
+            vscode.l10n.t('Fork which task?'),
+            (task) => !isTurnOpen(task) && task.status !== 'draft'
+          ));
         if (id !== undefined) {
           await deps.checkpoints.fork(id);
         }

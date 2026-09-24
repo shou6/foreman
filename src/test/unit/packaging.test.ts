@@ -185,3 +185,19 @@ suite('設定の既定値: Effort', () => {
     assert.deepStrictEqual(effort?.enum, ['', 'low', 'medium', 'high', 'xhigh', 'max']);
   });
 });
+
+suite('コマンドの表示名', () => {
+  test('category が「Foreman」なので、title に「Foreman: 」を付けない（パレットで二重に出る）', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: { commands: { command: string; title: string; category?: string }[] };
+    };
+    const nls = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.nls.json'), 'utf8')) as Record<
+      string,
+      string
+    >;
+    for (const command of pkg.contributes.commands) {
+      const title = nls[command.title.replace(/^%|%$/g, '')] ?? command.title;
+      assert.ok(!title.startsWith('Foreman:'), `${command.command}: ${title}`);
+    }
+  });
+});

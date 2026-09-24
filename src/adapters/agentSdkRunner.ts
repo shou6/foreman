@@ -171,7 +171,11 @@ export class AgentSdkRunner implements AgentRunner {
           return {
             behavior: 'allow',
             updatedInput: input,
-            updatedPermissions: decision.permissions as PermissionUpdate[],
+            // 「このタスクでは常に許可」。SDK の提案が設定ファイル宛てでも、このセッションだけに効かせる
+            updatedPermissions: decision.permissions.map((p) => ({
+              ...p,
+              destination: 'session',
+            })) as PermissionUpdate[],
           };
         case 'deny':
           return { behavior: 'deny', message: decision.message };

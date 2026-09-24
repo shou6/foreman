@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
+import { statusCounts } from '../domain/statusCounts';
 import { contextUsage, formatTokens } from '../domain/usage';
 
-/** ステータスバーに、実行中と入力待ちの件数を出す。クリックでタスクの一覧を開く */
+/** ステータスバーに、実行中と「あなたの番」の件数を出す。クリックでタスクの一覧を開く */
 export class StatusBar implements vscode.Disposable {
   private readonly item: vscode.StatusBarItem;
   private readonly subscriptions: (() => void)[] = [];
@@ -31,10 +32,9 @@ export class StatusBar implements vscode.Disposable {
 
   async refresh(): Promise<void> {
     const tasks = await this.service.list();
-    const running = tasks.filter((t) => t.status === 'running').length;
-    const waiting = tasks.filter((t) => t.status === 'waiting').length;
+    const { running, yourTurn } = statusCounts(tasks);
     const active = tasks.find((t) => t.id === this.active.id());
-    if (running === 0 && waiting === 0 && active === undefined) {
+    if (running === 0 && yourTurn === 0 && active === undefined) {
       this.item.hide();
       return;
     }
@@ -56,14 +56,14 @@ export class StatusBar implements vscode.Disposable {
     if (running > 0) {
       parts.push(vscode.l10n.t('$(sync~spin) {0} running', String(running)));
     }
-    if (waiting > 0) {
-      parts.push(vscode.l10n.t('$(bell) {0} waiting', String(waiting)));
+    if (yourTurn > 0) {
+      parts.push(vscode.l10n.t('$(bell) {0} your turn', String(yourTurn)));
     }
     this.item.text = 'Foreman: ' + parts.join(' · ');
     this.item.tooltip = vscode.l10n.t(
-      'Foreman: {0} running, {1} waiting for input',
+      'Foreman: {0} running, {1} waiting for you',
       String(running),
-      String(waiting)
+      String(yourTurn)
     );
     this.item.show();
   }
