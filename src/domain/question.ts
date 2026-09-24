@@ -17,6 +17,9 @@ export interface Answer {
   selected: string[];
 }
 
+/** 「その他」だけを表す選択肢の名前（小文字） */
+const OTHER_LABELS = new Set(['その他', 'other']);
+
 /** Claude からの質問（AskUserQuestion ツール）の入力を、画面用の形に取り出す。形が合わなければ undefined */
 export function questionsOf(request: PermissionRequest): Question[] | undefined {
   if (request.toolName !== 'AskUserQuestion' || !Array.isArray(request.input.questions)) {
@@ -32,13 +35,16 @@ export function questionsOf(request: PermissionRequest): Question[] | undefined 
       question: q.question,
       header: typeof q.header === 'string' ? q.header : '',
       multiSelect: q.multiSelect === true,
-      options: q.options.map((o) => {
-        const option = asRecord(o);
-        return {
-          label: typeof option.label === 'string' ? option.label : '',
-          description: typeof option.description === 'string' ? option.description : '',
-        };
-      }),
+      options: q.options
+        .map((o) => {
+          const option = asRecord(o);
+          return {
+            label: typeof option.label === 'string' ? option.label : '',
+            description: typeof option.description === 'string' ? option.description : '',
+          };
+        })
+        // 自由に書ける「その他」は画面が出すので、Claude が付けた「その他」だけの選択肢は外す
+        .filter((option) => !OTHER_LABELS.has(option.label.trim().toLowerCase())),
     });
   }
   return questions;

@@ -120,6 +120,34 @@ suite('webview: 実行中のツールの行の場所を取っておく（画面�
   });
 });
 
+suite('webview: 質問の待ち', () => {
+  test('AskUserQuestion は質問のカードに出るので、実行中のツールの行には JSON を出さない', () => {
+    const html = render(
+      <App
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          items: [
+            { kind: 'prompt', turn: 0, text: 'p' },
+            {
+              kind: 'tool',
+              turn: 0,
+              id: 'q',
+              name: 'AskUserQuestion',
+              input: { questions: [] },
+              status: 'running',
+            },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!/class="tool-running"[^>]*>/.test(html));
+    // 場所だけは取っておく（空の行）
+    assert.ok(html.includes('class="tool-running idle"'));
+  });
+});
+
 suite('webview: 見出しの「…」メニュー', () => {
   test('エクスポートなどは見出しに並べず「…」にまとめ、more のメッセージを送る', () => {
     const html = render(<App state={state({})} post={() => {}} />);

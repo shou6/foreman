@@ -59,6 +59,30 @@ suite('questionsOf', () => {
     ]);
   });
 
+  test('Claude が付けた「その他」「Other」だけの選択肢は外す。自由に書ける「その他」を Foreman が出すため', () => {
+    const questions = questionsOf({
+      toolName: 'AskUserQuestion',
+      input: {
+        questions: [
+          {
+            question: 'Food?',
+            options: [
+              { label: '寿司', description: '' },
+              { label: 'その他', description: '上記以外の食べ物' },
+              { label: ' Other ', description: '' },
+              { label: 'その他の麺類', description: '' },
+            ],
+          },
+        ],
+      },
+      suggestions: [],
+    });
+    assert.deepStrictEqual(
+      questions?.[0]?.options.map((o) => o.label),
+      ['寿司', 'その他の麺類']
+    );
+  });
+
   test('ほかのツールや、形が合わない入力は undefined', () => {
     assert.strictEqual(questionsOf({ toolName: 'Edit', input: {}, suggestions: [] }), undefined);
     assert.strictEqual(

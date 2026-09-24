@@ -544,7 +544,10 @@ function BlockView({
     case 'tools': {
       const ok = block.tools.filter((t) => t.status === 'ok').length;
       const failed = block.tools.filter((t) => t.status === 'error').length;
-      const running = block.tools.filter((t) => t.status === 'running');
+      // 質問（AskUserQuestion）は質問のカードに出るので、実行中の行には出さない
+      const running = block.tools.filter(
+        (t) => t.status === 'running' && t.name !== 'AskUserQuestion'
+      );
       // 実行中のツールはグループの外に 1 行で出すので、要約の名前からは外す
       const names = [
         ...new Set(block.tools.filter((t) => t.status !== 'running').map((t) => t.name)),
