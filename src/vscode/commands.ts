@@ -114,6 +114,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
           cwd: folder.uri.fsPath,
           worktree,
           model: settings.defaultModel,
+          effort: settings.defaultEffort,
           permissionMode: settings.defaultPermissionMode,
         });
         await panels.open(task.id);

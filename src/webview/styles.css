@@ -1360,3 +1360,30 @@ body.dragging .drop-hint {
 .head-meta .meter {
   font-size: inherit;
 }
+
+/* Effort のスライダー。モデルの選択欄の横に細く置く */
+.effort-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.effort-slider input[type='range'] {
+  width: 72px;
+  margin: 0;
+  accent-color: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+/* 実際の Effort が分からない間は、つまみを薄くする */
+.effort-slider input[data-unknown='true'] {
+  opacity: 0.4;
+}
+
+.effort-value {
+  min-width: 3em;
+  color: var(--vscode-foreground);
+}

@@ -9,6 +9,7 @@ import type {
   SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk' with { 'resolution-mode': 'import' };
 import type { PermissionRequest, RunnerEvent } from '../domain/events';
+import { EFFORT_LEVELS } from '../domain/models';
 import type { PermissionMode, PermissionRule, Usage } from '../domain/task';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 
@@ -195,6 +196,7 @@ export class AgentSdkRunner implements AgentRunner {
       options: {
         cwd: options.cwd,
         model: options.model,
+        effort: options.effort,
         resume: sessionId,
         resumeSessionAt: options.resumeAt,
         forkSession: options.fork === true ? true : undefined,
@@ -210,6 +212,26 @@ export class AgentSdkRunner implements AgentRunner {
         stderr: (data) => this.deps.log?.(data),
       },
     });
+
+    // セッションが次に使う Effort を聞いて知らせる。getSettings は SDK の型定義に無い
+    // （公開された使い方ではない）ので、無い・失敗した時は何も知らせずに動き続ける
+    const reportEffort = async (): Promise<void> => {
+      const getSettings = (query as unknown as { getSettings?: () => Promise<unknown> })
+        .getSettings;
+      if (typeof getSettings !== 'function') {
+        return;
+      }
+      try {
+        const applied = asRecord(asRecord(await getSettings.call(query)).applied);
+        options.onEvent({
+          type: 'effort',
+          effort: EFFORT_LEVELS.find((level) => level === applied.effort),
+        });
+      } catch {
+        // 聞けなくても、ターンは動かせる
+      }
+    };
+    void reportEffort();
 
     let lastAssistantUuid: string | undefined;
     // 前回の確定からこれまでに流した断片の文字数。assistant の text で置き換える
@@ -254,7 +276,16 @@ export class AgentSdkRunner implements AgentRunner {
         interruptRequested = true;
         await query.interrupt();
       },
-      setModel: (model) => query.setModel(model),
+      setModel: async (model) => {
+        await query.setModel(model);
+        // モデルが変わると、使われる Effort も変わる
+        await reportEffort();
+      },
+      // Effort は途中で変えられるフラグ設定で伝える。null で Claude Code の既定に戻る
+      setEffort: async (effort) => {
+        await query.applyFlagSettings({ effortLevel: effort ?? null });
+        await reportEffort();
+      },
       close: () => prompts.end(),
       done,
     };
@@ -356,6 +387,7 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
     send: () => {},
     interrupt: async () => {},
     setModel: async () => {},
+    setEffort: async () => {},
     close: () => {},
     done: Promise.resolve(),
   };

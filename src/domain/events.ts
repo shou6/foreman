@@ -1,4 +1,4 @@
-import type { Usage } from './task';
+import type { EffortLevel, Usage } from './task';
 
 /**
  * AgentRunner から届くイベント。SDK のメッセージを表示と状態管理に必要な形へ正規化したもの。
@@ -18,6 +18,11 @@ export type RunnerEvent =
   | { type: 'tool-call'; id: string; name: string; input: Record<string, unknown> }
   /** ツールの結果 */
   | { type: 'tool-result'; id: string; ok: boolean; output: string }
+  /**
+   * セッションが次に使う Effort（指定しない時のモデルの既定や /effort の保存値を含む）。
+   * 起動した後と、モデルや Effort を変えた後に届く。対応していないモデルなら undefined
+   */
+  | { type: 'effort'; effort: EffortLevel | undefined }
   /** 編集ツールの直前・直後（差分カードの材料） */
   | { type: 'file-edit'; phase: 'before' | 'after'; path: string }
   /** ターンの終了 */

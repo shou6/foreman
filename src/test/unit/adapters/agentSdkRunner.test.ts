@@ -229,6 +229,10 @@ interface FakeQuery {
   ) => Promise<unknown>;
   /** 送られた指示（prompt の AsyncIterable を読む） */
   prompts: string[];
+  /** applyFlagSettings に渡された設定 */
+  flags: Record<string, unknown>[];
+  /** getSettings が返す、次に使う Effort。undefined なら getSettings を持たない（古い SDK） */
+  appliedEffort?: string | null;
 }
 
 function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
@@ -238,6 +242,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     params: [],
     interrupts: 0,
     models: [],
+    flags: [],
     prompts: [],
     push: (m) => {
       queue.push(m);
@@ -289,6 +294,13 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       setModel: async (model?: string) => {
         fake.models.push(model);
       },
+      applyFlagSettings: async (settings: Record<string, unknown>) => {
+        fake.flags.push(settings);
+      },
+      getSettings:
+        fake.appliedEffort === undefined
+          ? undefined
+          : async () => ({ applied: { effort: fake.appliedEffort } }),
     };
     return iterator as unknown as ReturnType<QueryFn>;
   };
@@ -668,6 +680,95 @@ suite('AgentSdkRunner: 出力の確定', () => {
     assert.strictEqual(
       events.some((e) => e.type === 'text-final'),
       false
+    );
+  });
+});
+
+suite('AgentSdkRunner: Effort', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onEvent: () => {},
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('起動時に Effort を SDK の effort に渡す。無ければ渡さない', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    runner.start({ ...base, effort: 'high' });
+    runner.start({ ...base });
+    await settle();
+    assert.strictEqual(fake.params[0]?.options?.effort, 'high');
+    assert.strictEqual(fake.params[1]?.options?.effort, undefined);
+  });
+
+  test('途中の変更は applyFlagSettings の effortLevel で伝える。既定に戻す時は null', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({ ...base });
+    await handle.setEffort('low');
+    await handle.setEffort(undefined);
+    assert.deepStrictEqual(fake.flags, [{ effortLevel: 'low' }, { effortLevel: null }]);
+  });
+});
+
+suite('AgentSdkRunner: 実際に使われる Effort', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('起動した後に、セッションが次に使う Effort を聞いて effort のイベントで知らせる', async () => {
+    const { query, fake } = fakeQuery();
+    fake.appliedEffort = 'medium';
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await settle();
+    await settle();
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'effort'),
+      [{ type: 'effort', effort: 'medium' }]
+    );
+  });
+
+  test('モデルや Effort を変えた後にも聞き直す。対応していないモデルは undefined', async () => {
+    const { query, fake } = fakeQuery();
+    fake.appliedEffort = 'medium';
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await settle();
+    fake.appliedEffort = null;
+    await handle.setModel('haiku');
+    fake.appliedEffort = 'high';
+    await handle.setEffort('high');
+    await settle();
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'effort'),
+      [
+        { type: 'effort', effort: 'medium' },
+        { type: 'effort', effort: undefined },
+        { type: 'effort', effort: 'high' },
+      ]
+    );
+  });
+
+  test('getSettings が無い（使えなくなった）SDK では、何も知らせずに動き続ける', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await settle();
+    assert.strictEqual(fake.appliedEffort, undefined);
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'effort'),
+      []
     );
   });
 });

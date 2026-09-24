@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { attachmentKey, promptWithAttachments } from '../domain/attachments';
-import { defaultModelName, isSameModel, modelLabel, type ModelOption } from '../domain/models';
+import {
+  defaultModelName,
+  EFFORT_LEVELS,
+  effortsFor,
+  isSameModel,
+  modelLabel,
+  type ModelOption,
+} from '../domain/models';
+import type { EffortLevel } from '../domain/task';
 import { applyPreset, matchPresets } from '../domain/presets';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
@@ -156,6 +164,13 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
     (nextModel === undefined || !isSameModel(state.activeModel, nextModel))
       ? modelLabel(state.activeModel, state.models)
       : undefined;
+  // 次のモデルで選べる Effort（低い順）。対応していないモデルならスライダーを出さない。
+  // 指定中の Effort が選べる段階に無くても（モデルを変えた後など）、目盛りには残す
+  const supported = effortsFor(nextModel);
+  const efforts =
+    supported.length === 0
+      ? []
+      : EFFORT_LEVELS.filter((level) => supported.includes(level) || level === state.effort);
   return (
     <div
       class="panel"
@@ -424,6 +439,15 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 ))}
               </select>
             </label>
+            {efforts.length > 0 && (
+              <EffortSlider
+                levels={efforts}
+                // 指定していなければ、セッションが実際に使う Effort を選んだ状態で出す
+                current={state.effort ?? state.activeEffort}
+                strings={state.strings}
+                onChange={(effort) => post({ type: 'setEffort', effort })}
+              />
+            )}
             {busy ? (
               <button class="action stop" onClick={() => post({ type: 'interrupt' })}>
                 <Icon name="debug-stop" />
@@ -438,6 +462,48 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         </div>
       </footer>
     </div>
+  );
+}
+
+interface EffortSliderProps {
+  /** 目盛り（低い順） */
+  levels: readonly EffortLevel[];
+  /** 今の段階。分からなければ undefined */
+  current: EffortLevel | undefined;
+  strings: PanelStrings;
+  onChange: (effort: EffortLevel) => void;
+}
+
+/** Effort のスライダー。目盛りはモデルが対応する段階の数。動かしている間も横の名前が変わる */
+function EffortSlider({ levels, current, strings, onChange }: EffortSliderProps) {
+  const [dragging, setDragging] = useState<number | undefined>(undefined);
+  const known = current === undefined ? -1 : levels.indexOf(current);
+  const index = dragging ?? (known < 0 ? 0 : known);
+  const level = dragging === undefined ? current : levels[dragging];
+  const name = level === undefined ? '—' : strings.effortLabels[level];
+  return (
+    <label class="effort-slider" title={`${strings.effort}: ${name}`}>
+      <span class="effort-name">{strings.effort}</span>
+      <input
+        type="range"
+        min="0"
+        max={String(levels.length - 1)}
+        step="1"
+        value={String(index)}
+        data-unknown={known < 0 && dragging === undefined ? 'true' : undefined}
+        aria-label={strings.effort}
+        aria-valuetext={name}
+        onInput={(e) => setDragging(Number((e.target as HTMLInputElement).value))}
+        onChange={(e) => {
+          const next = levels[Number((e.target as HTMLInputElement).value)];
+          setDragging(undefined);
+          if (next !== undefined && next !== current) {
+            onChange(next);
+          }
+        }}
+      />
+      <span class="effort-value">{name}</span>
+    </label>
   );
 }
 

@@ -27,6 +27,9 @@ export type TaskEvent =
 
 export type PermissionMode = 'default' | 'acceptEdits';
 
+/** Claude の考える量（Effort）。指定しなければ Claude Code に従う */
+export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 /** 「このタスクでは常に許可」で SDK に返した内容。中身は解釈せず、そのまま保存する */
 export type PermissionRule = Record<string, unknown>;
 
@@ -99,6 +102,10 @@ export interface Task {
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
+  /** 指定した Effort。無ければ Claude Code に従う */
+  effort?: EffortLevel;
+  /** セッションが実際に使う Effort（SDK に聞いた値）。分からない・対応していなければ undefined */
+  activeEffort?: EffortLevel;
   permissionMode: PermissionMode;
   alwaysAllowed: PermissionRule[];
   turns: Turn[];
@@ -161,6 +168,7 @@ export interface CreateTaskInput {
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
+  effort?: EffortLevel;
   permissionMode?: PermissionMode;
   parentTaskId?: string;
   /** true なら下書き（開始しない）として作る */
@@ -182,6 +190,7 @@ export function createTask(input: CreateTaskInput): Task {
     cwd: input.worktree?.path ?? input.cwd,
     worktree: input.worktree,
     model: input.model,
+    effort: input.effort,
     permissionMode: input.permissionMode ?? 'default',
     alwaysAllowed: [],
     turns: [],

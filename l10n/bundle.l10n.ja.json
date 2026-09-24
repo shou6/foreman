@@ -167,5 +167,11 @@
   "Default ({0})": "既定（{0}）",
   "Approved": "承認済み",
   "Undo approval": "承認を取り消す",
-  "The approval of \"{0}\" cannot be undone.": "「{0}」の承認は取り消せません。"
+  "The approval of \"{0}\" cannot be undone.": "「{0}」の承認は取り消せません。",
+  "Effort": "Effort",
+  "Low": "低",
+  "Medium": "中",
+  "High": "高",
+  "Extra high": "特に高",
+  "Max": "最大"
 }

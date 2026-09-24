@@ -21,6 +21,7 @@ suite('AgentSdkModelCatalog', () => {
             resolvedModel: 'claude-sonnet-5',
             displayName: 'Sonnet',
             description: 'd',
+            supportedEffortLevels: ['low', 'high'],
           },
         ],
         close: () => {
@@ -40,6 +41,7 @@ suite('AgentSdkModelCatalog', () => {
         resolvedModel: 'claude-sonnet-5',
         displayName: 'Sonnet',
         description: 'd',
+        supportedEffortLevels: ['low', 'high'],
       },
     ]);
     assert.strictEqual(calls[0]?.options.pathToClaudeCodeExecutable, 'C:\\claude.exe');

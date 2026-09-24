@@ -7,7 +7,7 @@ import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { ModelOption } from '../domain/models';
 import type { ApprovalKind, StatusKind } from '../domain/status';
-import type { FileChange, TaskStatus } from '../domain/task';
+import type { EffortLevel, FileChange, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
 export type { Attachment, DiffLine, FileChange, PendingRequest, Preset, TranscriptDelta };
@@ -58,6 +58,9 @@ export interface PanelStrings {
   defaultModel: string;
   /** 推奨モデルが分かる時の「既定」。{0} にモデルの名前 */
   defaultModelWith: string;
+  /** Effort のスライダー（名前と、各段階の名前） */
+  effort: string;
+  effortLabels: Record<EffortLevel, string>;
   /** {0} に前のターンで動いたモデル */
   previousModel: string;
   attachments: string;
@@ -134,6 +137,10 @@ export interface PanelState {
   model?: string;
   /** SDK が報告した、実際に動いているモデル */
   activeModel?: string;
+  /** 指定した Effort。無ければ Claude Code に従う */
+  effort?: EffortLevel;
+  /** セッションが実際に使う Effort。分からなければ undefined */
+  activeEffort?: EffortLevel;
   /** モデルの選択肢（Claude Code から取得。取得前は固定の一覧） */
   models: ModelOption[];
   /** 既定（モデルを指定しない時）の中身。分からなければ undefined */
@@ -177,6 +184,8 @@ export type ToWebview =
       title: string;
       model?: string;
       activeModel?: string;
+      effort?: EffortLevel;
+      activeEffort?: EffortLevel;
       worktree?: { branch: string; base: string };
     }
   | { type: 'pending'; pending: PendingRequest | undefined }
@@ -198,6 +207,8 @@ export type ToExtension =
   | { type: 'openDiff'; turn: number; path: string }
   | { type: 'revert'; turn: number; path: string }
   | { type: 'setModel'; model: string | undefined }
+  /** 次のターンから使う Effort。undefined で Claude Code に従う */
+  | { type: 'setEffort'; effort: EffortLevel | undefined }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
   /** クリップボードから貼り付けた画像（base64）。拡張機能が保存してファイルとして添付する */

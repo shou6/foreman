@@ -89,6 +89,8 @@ export class TaskPanels implements vscode.Disposable {
             title: task.title,
             model: task.model,
             activeModel: task.activeModel,
+            effort: task.effort,
+            activeEffort: task.activeEffort,
             worktree: task.worktree,
           });
           for (const turn of task.turns) {
@@ -224,6 +226,9 @@ export class TaskPanels implements vscode.Disposable {
           return;
         case 'setModel':
           await this.deps.service.setModel(taskId, message.model);
+          return;
+        case 'setEffort':
+          await this.deps.service.setEffort(taskId, message.effort);
           return;
         case 'dropped':
           this.attach(
@@ -363,6 +368,8 @@ export class TaskPanels implements vscode.Disposable {
       tokens: tokensOf(task),
       model: task.model,
       activeModel: task.activeModel,
+      effort: task.effort,
+      activeEffort: task.activeEffort,
       models: this.deps.models.current().models,
       defaultModel: this.deps.models.current().defaultModel,
       items: this.deps.transcripts.get(task.id),
@@ -416,6 +423,14 @@ export class TaskPanels implements vscode.Disposable {
         model: vscode.l10n.t('Model'),
         defaultModel: vscode.l10n.t('Default'),
         defaultModelWith: vscode.l10n.t('Default ({0})', '{0}'),
+        effort: vscode.l10n.t('Effort'),
+        effortLabels: {
+          low: vscode.l10n.t('Low'),
+          medium: vscode.l10n.t('Medium'),
+          high: vscode.l10n.t('High'),
+          xhigh: vscode.l10n.t('Extra high'),
+          max: vscode.l10n.t('Max'),
+        },
         previousModel: vscode.l10n.t('Previous turn: {0}', '{0}'),
         attachments: vscode.l10n.t('Attachments'),
         remove: vscode.l10n.t('Remove'),

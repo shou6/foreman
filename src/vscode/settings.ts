@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
+import { EFFORT_LEVELS } from '../domain/models';
 import type { NotificationSetting } from '../domain/notifications';
-import type { PermissionMode } from '../domain/task';
+import type { EffortLevel, PermissionMode } from '../domain/task';
 import { DEFAULT_PRESETS, normalizePresets, type Preset } from '../domain/presets';
 
 export interface Settings {
   claudePath: string | undefined;
   defaultModel: string | undefined;
+  /** 新しいタスクの Effort。空なら Claude Code に従う */
+  defaultEffort: EffortLevel | undefined;
   defaultPermissionMode: PermissionMode;
   notifications: NotificationSetting;
   /** タスク画面の本文の最大の幅（em）。0 なら画面いっぱい */
@@ -36,6 +39,7 @@ export function readSettings(): Settings {
   return {
     claudePath: text('claudePath'),
     defaultModel: text('defaultModel'),
+    defaultEffort: effortOf(text('defaultEffort')),
     defaultPermissionMode: mode === 'acceptEdits' ? 'acceptEdits' : 'default',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
@@ -46,4 +50,9 @@ export function readSettings(): Settings {
     titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
   };
+}
+
+/** 設定の文字列を Effort にする。空や知らない値は undefined（Claude Code に従う） */
+function effortOf(value: string | undefined): EffortLevel | undefined {
+  return EFFORT_LEVELS.find((level) => level === value);
 }

@@ -57,6 +57,7 @@ Foreman は認証情報を読まず、保存もしない。ローカルの `clau
 | --- | --- |
 | `foreman.claudePath` | `claude` の実行ファイルの場所。空なら `PATH` と `~/.local/bin` から探す |
 | `foreman.defaultModel` | 新しいタスクで使うモデル。空なら Claude Code の推奨モデル。[モデル](#モデル)を参照 |
+| `foreman.defaultEffort` | 新しいタスクの Effort（`low`、`medium`、`high`、`xhigh`、`max`）。空なら Claude Code に従う。[モデル](#モデル)を参照 |
 | `foreman.defaultPermissionMode` | `default` はツールの実行のたびに確認する。`acceptEdits` はファイルの編集を自動で許可する |
 | `foreman.notifications` | `all`、`waiting`、`none` のいずれか |
 | `foreman.useWorktree` | Git リポジトリでタスクを作る・開始する時に「worktree で動かす」を先に選んでおく |
@@ -71,6 +72,7 @@ Foreman は認証情報を読まず、保存もしない。ローカルの `clau
 - **指定しない時**：`foreman.defaultModel` を空にすると、新しいタスクは Claude Code の推奨モデルで動く。入力欄には「既定（Opus 5.5）」のように出る。Claude Code がより新しいモデルを推奨するようになれば、設定を変えなくてもそのモデルが使われる
 - **指定する時**：`foreman.defaultModel` に `sonnet`、`opus`、`haiku` のような別名を書く。別名は、手元の Claude Code が対応した新しい版に自動で切り替わる。`claude-sonnet-5` のような正式な ID を書くと、その版に固定される
 - **ターンごと**：次のターンだけ別のモデルにしたい時は、入力欄で選ぶ。選択肢は手元の Claude Code から取得する
+- **Effort**：Claude が考える量は、入力欄のモデルの横のスライダーで変える。目盛りはそのモデルが対応する段階の数だけあり、Haiku のように対応していないモデルでは出ない。`foreman.defaultEffort` を空にすると Claude Code に従い（`/effort` で保存した値か、モデルの既定）、スライダーにはセッションが実際に使う段階が出る
 - **タスク名**：新しいタスクの名前は、最初の指示から軽いモデルが付ける。既定は `haiku` なので、Haiku の新しい版に追従する。`foreman.titleModel` で変えられ、`foreman.autoTitle` で止められる。タスクごとに短い問い合わせを 1 回行う
 
 ## デスクトップ通知

@@ -1,5 +1,6 @@
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
+import type { EffortLevel } from '../domain/task';
 
 /**
  * 台本で動かす Runner。Claude を起動せず、テストがイベントを外から起こす。
@@ -8,6 +9,7 @@ import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../doma
 export class ScriptedRunHandle implements RunHandle {
   readonly sent: string[] = [];
   readonly models: (string | undefined)[] = [];
+  readonly efforts: (EffortLevel | undefined)[] = [];
   interrupted = false;
   closed = false;
   private resolveDone!: () => void;
@@ -30,6 +32,10 @@ export class ScriptedRunHandle implements RunHandle {
 
   async setModel(model: string | undefined): Promise<void> {
     this.models.push(model);
+  }
+
+  async setEffort(effort: EffortLevel | undefined): Promise<void> {
+    this.efforts.push(effort);
   }
 
   close(): void {

@@ -49,6 +49,7 @@ export class AgentSdkModelCatalog implements ModelCatalog {
         resolvedModel: m.resolvedModel,
         displayName: m.displayName,
         description: m.description,
+        supportedEffortLevels: m.supportedEffortLevels,
       }));
     } finally {
       release();

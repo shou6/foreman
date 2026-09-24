@@ -63,6 +63,7 @@ export class ReviewActions {
       prompt: applyPreset(prompt.trim(), settings.presets).prompt,
       cwd: folder,
       model: settings.defaultModel,
+      effort: settings.defaultEffort,
       permissionMode: settings.defaultPermissionMode,
     });
   }

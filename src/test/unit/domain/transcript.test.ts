@@ -133,3 +133,10 @@ suite('transcript: text-final（確定した出力で、ストリームの断片
     assert.deepStrictEqual(items[2], { kind: 'text', turn: 0, text: 'after' });
   });
 });
+
+suite('applyEvent: effort', () => {
+  test('effort のイベントは会話の履歴に出さない', () => {
+    const items = [{ kind: 'prompt' as const, turn: 0, text: 'p' }];
+    assert.deepStrictEqual(applyEvent(items, 0, { type: 'effort', effort: 'high' }), items);
+  });
+});

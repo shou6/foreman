@@ -59,3 +59,39 @@ suite('TaskService: 添付とモデル', () => {
     assert.strictEqual((await service.load('task-1'))?.model, undefined);
   });
 });
+
+suite('TaskService: Effort', () => {
+  test('作成時の Effort を保存し、起動に渡す', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD, effort: 'medium' });
+    assert.strictEqual(runner.last.options.effort, 'medium');
+    assert.strictEqual((await service.load('task-1'))?.effort, 'medium');
+  });
+
+  test('Effort の切り替えは保存し、動いているセッションにも伝える', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    await service.setEffort('task-1', 'max');
+    assert.deepStrictEqual(runner.last.efforts, ['max']);
+    assert.strictEqual((await service.load('task-1'))?.effort, 'max');
+    await service.setEffort('task-1', undefined);
+    assert.deepStrictEqual(runner.last.efforts, ['max', undefined]);
+    assert.strictEqual((await service.load('task-1'))?.effort, undefined);
+  });
+});
+
+suite('TaskService: 実際に使われる Effort', () => {
+  test('effort のイベントで、実際に使われる Effort を記録する', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.emit({ type: 'effort', effort: 'medium' });
+    await settle();
+    assert.strictEqual((await service.load('task-1'))?.activeEffort, 'medium');
+    runner.last.emit({ type: 'effort', effort: undefined });
+    await settle();
+    assert.strictEqual((await service.load('task-1'))?.activeEffort, undefined);
+  });
+});

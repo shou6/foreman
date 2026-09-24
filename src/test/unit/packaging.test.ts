@@ -172,3 +172,16 @@ suite('設定の既定値', () => {
     );
   });
 });
+
+suite('設定の既定値: Effort', () => {
+  test('新しいタスクの Effort は既定では指定しない（空欄＝Claude Code に従う）。選べるのは 5 段階', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: {
+        configuration: { properties: Record<string, { default?: unknown; enum?: unknown[] }> };
+      };
+    };
+    const effort = pkg.contributes.configuration.properties['foreman.defaultEffort'];
+    assert.strictEqual(effort?.default, '');
+    assert.deepStrictEqual(effort?.enum, ['', 'low', 'medium', 'high', 'xhigh', 'max']);
+  });
+});

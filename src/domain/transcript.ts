@@ -90,6 +90,7 @@ export function applyEvent(
             },
       ];
     case 'init':
+    case 'effort':
     case 'file-edit':
       return [...items];
   }

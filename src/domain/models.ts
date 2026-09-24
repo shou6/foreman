@@ -1,4 +1,8 @@
 import { shortModel } from './labels';
+import type { EffortLevel } from './task';
+
+/** Effort の段階（低い順） */
+export const EFFORT_LEVELS: readonly EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 /** モデルの選択肢 */
 export interface ModelOption {
@@ -10,6 +14,8 @@ export interface ModelOption {
   description: string;
   /** 名前が指す実際のモデル（例: claude-sonnet-5）。分からなければ undefined */
   resolved?: string;
+  /** 対応する Effort の段階。空なら対応していない。分からなければ undefined */
+  efforts?: EffortLevel[];
 }
 
 /** Claude Code が返すモデルの情報のうち、使う分だけ（SDK の ModelInfo と同じ形） */
@@ -18,6 +24,7 @@ export interface SdkModelInfo {
   displayName: string;
   description: string;
   resolvedModel?: string;
+  supportedEffortLevels?: EffortLevel[];
 }
 
 export interface ModelList {
@@ -39,7 +46,13 @@ function optionOf(info: SdkModelInfo): ModelOption {
     label: info.displayName,
     description: info.description,
     resolved: info.resolvedModel,
+    efforts: info.supportedEffortLevels ?? [],
   };
+}
+
+/** そのモデルで選べる Effort の段階。分からなければすべて、対応していなければ空 */
+export function effortsFor(option: ModelOption | undefined): readonly EffortLevel[] {
+  return option?.efforts ?? EFFORT_LEVELS;
 }
 
 /** Claude Code が返す一覧を選択肢にする。default は「既定」の中身に回す。空なら固定の一覧 */

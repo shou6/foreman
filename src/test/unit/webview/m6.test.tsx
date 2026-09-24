@@ -161,3 +161,76 @@ suite('webview: 状態の表示名', () => {
     assert.ok(!html.includes('>done<'));
   });
 });
+
+suite('webview: Effort', () => {
+  const models = [
+    {
+      value: 'sonnet',
+      label: 'Sonnet',
+      description: '',
+      resolved: 'claude-sonnet-5',
+      efforts: ['low' as const, 'medium' as const, 'high' as const],
+    },
+    { value: 'haiku', label: 'Haiku', description: '', efforts: [] },
+  ];
+
+  function slider(html: string): string {
+    const footer = html.slice(html.indexOf('<footer'));
+    return footer.slice(footer.indexOf('class="effort-slider"'));
+  }
+
+  test('モデルの横に、選んだモデルが対応する段階の数だけ目盛りのあるスライダーを出す', () => {
+    const html = render(
+      <App state={state({ models, model: 'sonnet', effort: 'high' })} post={() => {}} />
+    );
+    const footer = html.slice(html.indexOf('<footer'));
+    assert.ok(footer.indexOf('class="model-select"') < footer.indexOf('class="effort-slider"'));
+    const s = slider(html);
+    assert.ok(/<input[^>]*type="range"/.test(s));
+    assert.ok(/min="0"/.test(s) && /max="2"/.test(s), 'low / medium / high の 3 段階');
+    assert.ok(/value="2"/.test(s), 'high は 3 つ目');
+    assert.ok(/class="effort-value"[^>]*>High</.test(s));
+    assert.ok(!html.includes('<option value="low"'), 'プルダウンはやめる');
+  });
+
+  test('Effort を指定していなければ、実際に使われる Effort の段階を選んだ状態で出す。「既定」は出さない', () => {
+    const html = render(
+      <App
+        state={state({ models, model: 'sonnet', effort: undefined, activeEffort: 'medium' })}
+        post={() => {}}
+      />
+    );
+    const s = slider(html);
+    assert.ok(/value="1"/.test(s));
+    assert.ok(/class="effort-value"[^>]*>Medium</.test(s));
+    // 「Effort: default」のような既定の段階は出さない（承認方式の default は別物）
+    assert.ok(!slider(html).includes('default'));
+    assert.ok(!html.includes('Effort: default'));
+  });
+
+  test('実際の Effort が分からなければ、段階の名前の代わりに — を出す', () => {
+    const html = render(<App state={state({ models, model: 'sonnet' })} post={() => {}} />);
+    assert.ok(/class="effort-value"[^>]*>—</.test(slider(html)));
+  });
+
+  test('Effort に対応していないモデル（Haiku）ではスライダーを出さない', () => {
+    const html = render(<App state={state({ models, model: 'haiku' })} post={() => {}} />);
+    assert.ok(!html.includes('class="effort-slider"'));
+  });
+
+  test('task メッセージで Effort と実際の Effort が入れ替わり、setEffort のメッセージの型がある', () => {
+    const s = reduce(state({}), {
+      type: 'task',
+      status: 'done',
+      turnOpen: false,
+      mergeable: false,
+      title: 't',
+      effort: 'low',
+      activeEffort: 'high',
+    });
+    assert.strictEqual(s?.effort, 'low');
+    assert.strictEqual(s?.activeEffort, 'high');
+    const message: ToExtension = { type: 'setEffort', effort: 'max' };
+    assert.strictEqual(message.type, 'setEffort');
+  });
+});

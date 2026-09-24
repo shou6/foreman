@@ -6,6 +6,7 @@ import {
   isTurnOpen,
   canUnapprove,
   transition,
+  type EffortLevel,
   type FileChange,
   type PermissionMode,
   type Task,
@@ -35,6 +36,7 @@ export interface CreateInput {
   cwd: string;
   title?: string;
   model?: string;
+  effort?: EffortLevel;
   permissionMode?: PermissionMode;
   /** 添付したファイルの絶対パス */
   attachments?: Attachment[];
@@ -132,6 +134,7 @@ export class TaskService {
       createdAt: now,
       title: input.title,
       model: input.model,
+      effort: input.effort,
       permissionMode: input.permissionMode,
     });
     const attachments = input.attachments ?? [];
@@ -157,6 +160,7 @@ export class TaskService {
       createdAt: now,
       title: input.title,
       model: input.model,
+      effort: input.effort,
       permissionMode: input.permissionMode,
       draft: true,
     });
@@ -367,6 +371,7 @@ export class TaskService {
       createdAt: now,
       title: input.title,
       model: input.model ?? parent.model,
+      effort: parent.effort,
       permissionMode: input.permissionMode ?? parent.permissionMode,
       parentTaskId: parentId,
     });
@@ -390,6 +395,13 @@ export class TaskService {
     await this.mustLoad(id);
     await this.update(id, (task) => ({ ...task, model }));
     await this.handles.get(id)?.setModel(model);
+  }
+
+  /** 次のターンから使う Effort を変える。undefined で Claude Code に従う */
+  async setEffort(id: string, effort: EffortLevel | undefined): Promise<void> {
+    await this.mustLoad(id);
+    await this.update(id, (task) => ({ ...task, effort }));
+    await this.handles.get(id)?.setEffort(effort);
   }
 
   /**
@@ -439,6 +451,7 @@ export class TaskService {
       cwd: task.cwd,
       prompt,
       model: task.model,
+      effort: task.effort,
       permissionMode: task.permissionMode,
       alwaysAllowed: task.alwaysAllowed,
       onPermissionRequest: (request) => this.handlePermission(task.id, request),
@@ -510,6 +523,10 @@ export class TaskService {
           task.sessionId === event.sessionId && task.activeModel === event.model
             ? undefined
             : { ...task, sessionId: event.sessionId, activeModel: event.model }
+        );
+      case 'effort':
+        return this.update(id, (task) =>
+          task.activeEffort === event.effort ? undefined : { ...task, activeEffort: event.effort }
         );
       case 'turn-end':
         return this.update(id, (task) => {

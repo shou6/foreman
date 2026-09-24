@@ -340,6 +340,27 @@
           "default": "",
           "markdownDescription": "%config.defaultModel%"
         },
+        "foreman.defaultEffort": {
+          "type": "string",
+          "enum": [
+            "",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "enumDescriptions": [
+            "%config.defaultEffort.default%",
+            "%config.defaultEffort.low%",
+            "%config.defaultEffort.medium%",
+            "%config.defaultEffort.high%",
+            "%config.defaultEffort.xhigh%",
+            "%config.defaultEffort.max%"
+          ],
+          "default": "",
+          "markdownDescription": "%config.defaultEffort%"
+        },
         "foreman.notifications": {
           "type": "string",
           "enum": [

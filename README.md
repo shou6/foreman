@@ -59,6 +59,7 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | --- | --- |
 | `foreman.claudePath` | Path to the `claude` executable. Leave empty to search `PATH` and `~/.local/bin`. |
 | `foreman.defaultModel` | Model for new tasks. Leave empty to use the model Claude Code recommends. See [Models](#models). |
+| `foreman.defaultEffort` | Effort for new tasks: `low`, `medium`, `high`, `xhigh` or `max`. Leave empty to follow Claude Code. See [Models](#models). |
 | `foreman.defaultPermissionMode` | `default` asks before every tool call. `acceptEdits` allows file edits automatically. |
 | `foreman.notifications` | `all`, `waiting` or `none`. |
 | `foreman.useWorktree` | Preselect "in a worktree" when creating or starting a task in a Git repository. |
@@ -73,6 +74,7 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 - **No model set**: leave `foreman.defaultModel` empty, and new tasks use the model that Claude Code recommends. The input box shows it as "Default (Opus 5.5)", for example. When Claude Code starts to recommend a newer model, Foreman uses it without any change.
 - **Set a model**: write an alias such as `sonnet`, `opus` or `haiku` in `foreman.defaultModel`. An alias follows new versions of that model as your Claude Code supports them. A full ID such as `claude-sonnet-5` keeps that exact version.
 - **Per turn**: to use another model for the next turn, pick it in the input box. The list comes from your Claude Code.
+- **Effort**: set how much Claude thinks with the slider next to the model in the input box. The slider has one stop for each level that the model supports, and it hides for models without effort support, such as Haiku. Leave `foreman.defaultEffort` empty to follow Claude Code: the level you saved with `/effort`, or the model default. The slider then shows the level that the session actually uses.
 - **Task titles**: a light model writes the title of a new task from its first prompt. It uses `haiku` by default, so it follows new versions of Haiku. Change it with `foreman.titleModel`, or turn it off with `foreman.autoTitle`. Each title uses one short request.
 
 ## Desktop notifications

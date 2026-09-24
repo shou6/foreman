@@ -1,10 +1,12 @@
-import type { PermissionMode, PermissionRule } from '../domain/task';
+import type { EffortLevel, PermissionMode, PermissionRule } from '../domain/task';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 
 export interface StartOptions {
   cwd: string;
   prompt: string;
   model?: string;
+  /** Effort。無ければ Claude Code に従う */
+  effort?: EffortLevel;
   permissionMode: PermissionMode;
   /** 「このタスクでは常に許可」で保存した内容。再開時に SDK へ写す */
   alwaysAllowed: PermissionRule[];
@@ -23,6 +25,8 @@ export interface RunHandle {
   interrupt(): Promise<void>;
   /** 次のターンから使うモデルを変える。undefined で Claude Code の既定に戻す */
   setModel(model: string | undefined): Promise<void>;
+  /** 次のターンから使う Effort を変える。undefined で Claude Code に従う */
+  setEffort(effort: EffortLevel | undefined): Promise<void>;
   /** 入力を閉じてプロセスを終わらせる。セッションは resume で続けられる */
   close(): void;
   /** プロセスが終わった時に解決する。異常終了は reject ではなく、turn-end イベントで伝える */

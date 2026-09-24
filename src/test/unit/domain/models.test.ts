@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import {
   defaultModelName,
+  EFFORT_LEVELS,
+  effortsFor,
   FALLBACK_MODELS,
   isSameModel,
   modelLabel,
@@ -30,10 +32,17 @@ suite('models: Claude Code が返すモデルの一覧', () => {
       label: 'Default (recommended)',
       description: 'Opus 5.5 with 1M context',
       resolved: 'claude-opus-5-5[1m]',
+      efforts: [],
     });
     assert.deepStrictEqual(list.models, [
-      { value: 'sonnet', label: 'Sonnet', description: 'Sonnet 5', resolved: 'claude-sonnet-5' },
-      { value: 'haiku', label: 'Haiku', description: '', resolved: undefined },
+      {
+        value: 'sonnet',
+        label: 'Sonnet',
+        description: 'Sonnet 5',
+        resolved: 'claude-sonnet-5',
+        efforts: [],
+      },
+      { value: 'haiku', label: 'Haiku', description: '', resolved: undefined, efforts: [] },
     ]);
   });
 
@@ -118,5 +127,35 @@ suite('models: 既定のモデルの名前', () => {
       undefined
     );
     assert.strictEqual(defaultModelName(undefined), undefined);
+  });
+});
+
+suite('models: Effort', () => {
+  test('Claude Code が返す対応の段階を選択肢に持つ。対応していなければ空', () => {
+    const list = modelsFromSdk([
+      {
+        value: 'sonnet',
+        displayName: 'Sonnet',
+        description: '',
+        supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+      },
+      { value: 'haiku', displayName: 'Haiku', description: '' },
+    ]);
+    assert.deepStrictEqual(list.models[0]?.efforts, ['low', 'medium', 'high', 'xhigh', 'max']);
+    assert.deepStrictEqual(list.models[1]?.efforts, []);
+  });
+
+  test('選べる段階。分からない（固定の一覧、一覧に無いモデル）ならすべて、対応していなければ空', () => {
+    assert.deepStrictEqual(EFFORT_LEVELS, ['low', 'medium', 'high', 'xhigh', 'max']);
+    assert.deepStrictEqual(effortsFor(undefined), EFFORT_LEVELS);
+    assert.deepStrictEqual(effortsFor(FALLBACK_MODELS[0]), EFFORT_LEVELS);
+    assert.deepStrictEqual(
+      effortsFor({ value: 'haiku', label: 'Haiku', description: '', efforts: [] }),
+      []
+    );
+    assert.deepStrictEqual(
+      effortsFor({ value: 's', label: 'S', description: '', efforts: ['low', 'high'] }),
+      ['low', 'high']
+    );
   });
 });
