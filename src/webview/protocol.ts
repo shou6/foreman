@@ -34,8 +34,13 @@ export interface PanelStrings {
   /** 質問の「その他」と、その入力欄の案内 */
   other: string;
   otherPlaceholder: string;
-  /** {0} に最後の番号 */
+  /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
   questionKeys: string;
+  questionTabKeys: string;
+  /** 質問のタブの最後（答えの確認と送信）、次の質問へ、答えていない質問 */
+  submitTab: string;
+  next: string;
+  unanswered: string;
   waiting: string;
   /** 差分カードの見出し。{0} にターンの番号（1 始まり） */
   changesInTurn: string;

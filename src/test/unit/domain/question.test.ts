@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { answersToInput, optionKeyOf, questionsOf, withOther } from '../../../domain/question';
+import {
+  answersToInput,
+  nextTabAfterChoice,
+  optionKeyOf,
+  questionsOf,
+  withOther,
+} from '../../../domain/question';
 import type { PermissionRequest } from '../../../domain/events';
 
 const ASK: PermissionRequest = {
@@ -98,5 +104,17 @@ suite('withOther', () => {
     assert.deepStrictEqual(withOther([], '  自分で書く  '), ['自分で書く']);
     assert.deepStrictEqual(withOther(['README.md'], 'CHANGELOG.md'), ['README.md', 'CHANGELOG.md']);
     assert.deepStrictEqual(withOther(['Usage'], '   '), ['Usage']);
+  });
+});
+
+suite('nextTabAfterChoice', () => {
+  test('単一選択の選択肢を選ぶと次のタブへ進む。最後の質問の次は確認のタブ（質問の数）', () => {
+    assert.strictEqual(nextTabAfterChoice({ multiSelect: false, other: false }, 0, 3), 1);
+    assert.strictEqual(nextTabAfterChoice({ multiSelect: false, other: false }, 2, 3), 3);
+  });
+
+  test('複数選択と「その他」は続けて選んだり書いたりするので進めない', () => {
+    assert.strictEqual(nextTabAfterChoice({ multiSelect: true, other: false }, 0, 3), 0);
+    assert.strictEqual(nextTabAfterChoice({ multiSelect: false, other: true }, 1, 3), 1);
   });
 });

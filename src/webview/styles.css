@@ -667,6 +667,60 @@ body.dragging .drop-hint {
   color: var(--vscode-descriptionForeground);
 }
 
+/* 質問が複数ある時のタブ。答えた質問には印を付ける */
+.question-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 0.6em;
+  border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+}
+
+.question-tab {
+  padding: 0.3em 0.8em;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--vscode-descriptionForeground);
+  font: inherit;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.question-tab:hover {
+  color: var(--vscode-foreground);
+}
+
+.question-tab[aria-selected='true'] {
+  border-bottom-color: var(--vscode-focusBorder);
+  color: var(--vscode-foreground);
+}
+
+.question-tab[data-answered='true']::after {
+  content: ' ✓';
+  color: var(--vscode-testing-iconPassed);
+}
+
+/* 確認のタブ。答えをまとめて見せる */
+.question-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3em 1em;
+  margin: 0 0 0.75em;
+}
+
+.question-summary dt {
+  color: var(--vscode-descriptionForeground);
+}
+
+.question-summary dd {
+  margin: 0;
+}
+
+.question-summary .unanswered {
+  color: var(--vscode-editorWarning-foreground);
+}
+
 /* 差分カード */
 .diff-card {
   margin: 0.75em 0;

@@ -158,5 +158,9 @@
   "More actions": "その他の操作",
   "No attachments": "添付なし",
   "{0} attached": "添付 {0} 件",
-  "Rewind": "戻す"
+  "Rewind": "戻す",
+  "Press 1–{0} to choose, ←/→ to switch questions": "1〜{0} で選び、←/→ で質問を切り替える",
+  "Submit": "送信",
+  "Next": "次へ",
+  "Not answered": "未回答"
 }

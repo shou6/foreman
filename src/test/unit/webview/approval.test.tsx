@@ -164,6 +164,75 @@ suite('webview: 承認カード', () => {
     assert.ok(!html.includes('Always allow'));
   });
 
+  test('質問が複数あれば、見出しのタブで切り替える。最初は 1 問目だけを出し、最後に確認のタブがある', () => {
+    const html = render(
+      <App
+        state={state({
+          pending: {
+            id: 'req-1',
+            toolName: 'AskUserQuestion',
+            input: {
+              questions: [
+                {
+                  question: 'Which section?',
+                  header: 'Section',
+                  multiSelect: false,
+                  options: [{ label: 'Usage', description: '' }],
+                },
+                {
+                  question: 'Which files?',
+                  header: 'Files',
+                  multiSelect: true,
+                  options: [{ label: 'README.md', description: '' }],
+                },
+              ],
+            },
+            suggestions: [],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    const tabs = html.slice(
+      html.indexOf('class="question-tabs"'),
+      html.indexOf('</div>', html.indexOf('class="question-tabs"'))
+    );
+    assert.ok(/role="tablist"/.test(tabs));
+    assert.ok(/class="question-tab"[^>]*aria-selected="true"[^>]*>Section</.test(tabs));
+    assert.ok(/class="question-tab"[^>]*aria-selected="false"[^>]*>Files</.test(tabs));
+    assert.ok(/class="question-tab submit"[^>]*aria-selected="false"[^>]*>Submit</.test(tabs));
+    assert.ok(html.includes('Which section?'));
+    assert.ok(!html.includes('Which files?'), '2 問目はタブを切り替えるまで出さない');
+    assert.ok(html.includes('Press 1–2 to choose, ←/→ to switch questions'));
+  });
+
+  test('質問が 1 つならタブを出さない', () => {
+    const html = render(
+      <App
+        state={state({
+          pending: {
+            id: 'req-1',
+            toolName: 'AskUserQuestion',
+            input: {
+              questions: [
+                {
+                  question: 'Which?',
+                  header: 'H',
+                  multiSelect: false,
+                  options: [{ label: 'A', description: '' }],
+                },
+              ],
+            },
+            suggestions: [],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!html.includes('question-tabs'));
+    assert.ok(html.includes('Press 1–2 to choose, Enter to answer'));
+  });
+
   test('承認待ちの間は、入力欄の代わりに待っている旨を出す', () => {
     const html = render(
       <App

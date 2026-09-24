@@ -5,6 +5,7 @@ import { applyPreset, matchPresets } from '../domain/presets';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
   answersToInput,
+  nextTabAfterChoice,
   optionKeyOf,
   questionsOf,
   withOther,
@@ -804,7 +805,10 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
   );
 }
 
-/** Claude からの質問。選択肢は行ごと押せる枠にし、数字キーで選んで Enter で答える */
+/**
+ * Claude からの質問。選択肢は行ごと押せる枠にし、数字キーで選ぶ。
+ * 質問が複数ある時は見出しのタブで 1 問ずつ出し、最後の確認のタブで答えをまとめて送る
+ */
 function QuestionCard({
   pending,
   questions,
@@ -814,12 +818,13 @@ function QuestionCard({
   const [selected, setSelected] = useState<Record<string, string[]>>({});
   // 「その他」を選んだ質問の、書いた文（選んでいなければ undefined）
   const [others, setOthers] = useState<Record<string, string | undefined>>({});
-  // 数字キーで選ぶ質問（最後にフォーカスした質問）
+  // 開いているタブ。questions.length は確認のタブ
   const [active, setActive] = useState(0);
   const card = useRef<HTMLElement>(null);
   useEffect(() => {
     card.current?.focus();
   }, []);
+  const tabbed = questions.length > 1;
   const toggle = (q: Question, label: string): void => {
     setSelected((current) => {
       const now = current[q.question] ?? [];
@@ -842,6 +847,28 @@ function QuestionCard({
       setSelected((current) => ({ ...current, [q.question]: [] }));
     }
   };
+  /** 質問 qi の index 番目（options.length なら「その他」）を選ぶ。単一選択なら次のタブへ進む */
+  const choose = (qi: number, index: number): void => {
+    const q = questions[qi];
+    if (q === undefined) {
+      return;
+    }
+    const option = q.options[index];
+    if (option === undefined) {
+      toggleOther(q);
+    } else {
+      toggle(q, option.label);
+    }
+    if (tabbed) {
+      setActive(
+        nextTabAfterChoice(
+          { multiSelect: q.multiSelect, other: option === undefined },
+          qi,
+          questions.length
+        )
+      );
+    }
+  };
   const answersOf = (q: Question): string[] =>
     withOther(selected[q.question] ?? [], others[q.question]);
   const complete = questions.every((q) => answersOf(q).length > 0);
@@ -861,7 +888,9 @@ function QuestionCard({
       },
     });
   };
-  const lastKey = Math.max(...questions.map((q) => q.options.length + 1));
+  const onSubmitTab = tabbed && active >= questions.length;
+  const shown = tabbed ? questions.slice(active, active + 1) : questions;
+  const current = questions[active];
   return (
     <section
       class="question"
@@ -871,28 +900,57 @@ function QuestionCard({
         const typing = e.target instanceof HTMLInputElement && e.target.type === 'text';
         if (e.key === 'Enter') {
           e.preventDefault();
-          answer();
+          if (tabbed && !onSubmitTab) {
+            setActive(active + 1);
+          } else {
+            answer();
+          }
           return;
         }
-        const q = questions[active];
-        const index = typing || q === undefined ? undefined : optionKeyOf(e.key, q.options.length);
-        if (q === undefined || index === undefined) {
+        if (tabbed && !typing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+          e.preventDefault();
+          const step = e.key === 'ArrowLeft' ? -1 : 1;
+          setActive(Math.min(Math.max(active + step, 0), questions.length));
           return;
         }
-        e.preventDefault();
-        const option = q.options[index];
-        if (option === undefined) {
-          toggleOther(q);
-        } else {
-          toggle(q, option.label);
+        const index =
+          typing || current === undefined ? undefined : optionKeyOf(e.key, current.options.length);
+        if (index !== undefined) {
+          e.preventDefault();
+          choose(active, index);
         }
       }}
     >
-      {questions.map((q, qi) => {
+      {tabbed && (
+        <div class="question-tabs" role="tablist">
+          {questions.map((q, i) => (
+            <button
+              key={q.question}
+              class="question-tab"
+              role="tab"
+              aria-selected={i === active ? 'true' : 'false'}
+              data-answered={answersOf(q).length > 0 ? 'true' : undefined}
+              onClick={() => setActive(i)}
+            >
+              {q.header !== '' ? q.header : `${i + 1}`}
+            </button>
+          ))}
+          <button
+            class="question-tab submit"
+            role="tab"
+            aria-selected={onSubmitTab ? 'true' : 'false'}
+            onClick={() => setActive(questions.length)}
+          >
+            {strings.submitTab}
+          </button>
+        </div>
+      )}
+      {shown.map((q) => {
+        const qi = questions.indexOf(q);
         const chosen = selected[q.question] ?? [];
         const other = others[q.question];
         return (
-          <fieldset key={q.question} class="question-group" onFocusIn={() => setActive(qi)}>
+          <fieldset key={q.question} class="question-group">
             <legend class="question-title">
               <Icon name="question" />
               {q.header !== '' && <span class="question-header">{q.header}</span>}
@@ -909,7 +967,7 @@ function QuestionCard({
                   type={q.multiSelect ? 'checkbox' : 'radio'}
                   name={q.question}
                   checked={chosen.includes(option.label)}
-                  onChange={() => toggle(q, option.label)}
+                  onChange={() => choose(qi, i)}
                 />
                 <span class="option-key">{i + 1}</span>
                 <span class="option-body">
@@ -929,7 +987,7 @@ function QuestionCard({
                 type={q.multiSelect ? 'checkbox' : 'radio'}
                 name={q.question}
                 checked={other !== undefined}
-                onChange={() => toggleOther(q)}
+                onChange={() => choose(qi, q.options.length)}
               />
               <span class="option-key">{q.options.length + 1}</span>
               <span class="option-body">
@@ -941,8 +999,8 @@ function QuestionCard({
                     placeholder={strings.otherPlaceholder}
                     value={other}
                     onInput={(e) =>
-                      setOthers((current) => ({
-                        ...current,
+                      setOthers((now) => ({
+                        ...now,
                         [q.question]: (e.target as HTMLInputElement).value,
                       }))
                     }
@@ -953,11 +1011,39 @@ function QuestionCard({
           </fieldset>
         );
       })}
+      {onSubmitTab && (
+        <dl class="question-summary">
+          {questions.map((q) => {
+            const answers = answersOf(q);
+            return (
+              <>
+                <dt key={`q-${q.question}`}>{q.header !== '' ? q.header : q.question}</dt>
+                <dd key={`a-${q.question}`} class={answers.length === 0 ? 'unanswered' : undefined}>
+                  {answers.length === 0 ? strings.unanswered : answers.join(', ')}
+                </dd>
+              </>
+            );
+          })}
+        </dl>
+      )}
       <div class="approval-actions">
-        <button class="action allow" disabled={!complete} onClick={answer}>
-          {strings.answer}
-        </button>
-        <span class="question-keys">{strings.questionKeys.replace('{0}', String(lastKey))}</span>
+        {tabbed && !onSubmitTab ? (
+          <button class="action next" onClick={() => setActive(active + 1)}>
+            {strings.next}
+          </button>
+        ) : (
+          <button class="action allow" disabled={!complete} onClick={answer}>
+            {strings.answer}
+          </button>
+        )}
+        {current !== undefined && (
+          <span class="question-keys">
+            {(tabbed ? strings.questionTabKeys : strings.questionKeys).replace(
+              '{0}',
+              String(current.options.length + 1)
+            )}
+          </span>
+        )}
       </div>
     </section>
   );

@@ -74,6 +74,18 @@ export function withOther(selected: readonly string[], other: string | undefined
   return text === '' ? [...selected] : [...selected, text];
 }
 
+/**
+ * 選んだ後に開くタブ。質問が複数ある時はタブで切り替え、最後の質問の次（total）は確認のタブ。
+ * 単一選択の選択肢を選んだ時だけ次へ進める。複数選択と「その他」は続けて選んだり書いたりするので進めない
+ */
+export function nextTabAfterChoice(
+  choice: { multiSelect: boolean; other: boolean },
+  active: number,
+  total: number
+): number {
+  return choice.multiSelect || choice.other ? active : Math.min(active + 1, total);
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
