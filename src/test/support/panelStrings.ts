@@ -23,6 +23,7 @@ export const PANEL_STRINGS: PanelStrings = {
   elapsedMinutes: '{0}m {1}s',
   allow: 'Allow',
   allowAlways: 'Always allow',
+  alwaysScope: 'Always allow covers: {0}',
   deny: 'Deny…',
   denyConfirm: 'Deny',
   denyReason: 'Reason (optional)',

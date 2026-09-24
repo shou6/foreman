@@ -67,6 +67,24 @@ suite('GitCli', function () {
     assert.strictEqual(exclude.split('\n').filter((l) => l === '.foreman/').length, 1);
   });
 
+  test('ブランチをチェックアウトしている worktree のパスが分かる。どこにも無ければ undefined', async () => {
+    const repo = makeRepo();
+    const git = new GitCli();
+    const wt = path.join(repo, '.foreman', 'worktrees', 't-where');
+    await git.ensureExcluded(repo, '.foreman/');
+    await git.addWorktree(repo, wt, 'foreman/t-where', 'main');
+    execFileSync('git', ['branch', 'idle'], { cwd: repo });
+    assert.strictEqual(
+      path.resolve((await git.worktreeOfBranch(repo, 'main')) ?? ''),
+      path.resolve(repo)
+    );
+    assert.strictEqual(
+      path.resolve((await git.worktreeOfBranch(repo, 'foreman/t-where')) ?? ''),
+      path.resolve(wt)
+    );
+    assert.strictEqual(await git.worktreeOfBranch(repo, 'idle'), undefined);
+  });
+
   test('衝突するとマージは失敗し、元のブランチは汚れない', async () => {
     const repo = makeRepo();
     const git = new GitCli();

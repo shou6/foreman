@@ -54,6 +54,7 @@ export class FakeGit implements Git {
     }
     r.branches.add(branch);
     r.worktrees.add(path);
+    this.checkedOut.set(path, branch);
   }
 
   /** hasChanges を失敗させたいパス（フォルダが無い時の git の失敗を再現する） */
@@ -72,6 +73,7 @@ export class FakeGit implements Git {
       throw new Error('worktree has changes: ' + path);
     }
     r.worktrees.delete(path);
+    this.checkedOut.delete(path);
     this.dirty.delete(path);
   }
 
@@ -82,6 +84,20 @@ export class FakeGit implements Git {
 
   async listWorktrees(repo: string): Promise<string[]> {
     return [...(this.repos.get(repo)?.worktrees ?? [])];
+  }
+
+  /** worktree のパス → チェックアウトしているブランチ（メインの作業ツリーは repos の branch） */
+  readonly checkedOut = new Map<string, string>();
+
+  async worktreeOfBranch(repo: string, branch: string): Promise<string | undefined> {
+    const r = this.repos.get(repo);
+    if (r === undefined) {
+      return undefined;
+    }
+    if (r.branch === branch) {
+      return repo;
+    }
+    return [...r.worktrees].find((path) => this.checkedOut.get(path) === branch);
   }
 
   async hasChanges(dir: string): Promise<boolean> {

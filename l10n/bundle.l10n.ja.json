@@ -162,5 +162,6 @@
   "Press 1–{0} to choose, ←/→ to switch questions": "1〜{0} で選び、←/→ で質問を切り替える",
   "Submit": "送信",
   "Next": "次へ",
-  "Not answered": "未回答"
+  "Not answered": "未回答",
+  "Always allow covers: {0}": "「常に許可」の範囲: {0}"
 }

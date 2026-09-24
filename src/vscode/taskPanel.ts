@@ -370,6 +370,7 @@ export class TaskPanels implements vscode.Disposable {
         elapsedMinutes: vscode.l10n.t('{0}m {1}s', '{0}', '{1}'),
         allow: vscode.l10n.t('Allow'),
         allowAlways: vscode.l10n.t('Always allow'),
+        alwaysScope: vscode.l10n.t('Always allow covers: {0}', '{0}'),
         deny: vscode.l10n.t('Deny…'),
         denyConfirm: vscode.l10n.t('Deny'),
         denyReason: vscode.l10n.t('Reason (optional)'),

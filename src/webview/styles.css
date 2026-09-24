@@ -283,6 +283,11 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+/* 実行中のツールが無い間も、同じ高さの場所を取っておく */
+.tool-running.idle {
+  visibility: hidden;
+}
+
 .tool-elapsed {
   flex: none;
   color: var(--vscode-descriptionForeground);
@@ -1057,12 +1062,11 @@ body.dragging .drop-hint {
   background: var(--vscode-editorGroupHeader-tabsBackground, transparent);
 }
 
-/* 「常に許可」の範囲はボタンの中に添える */
+/* 「常に許可」の範囲は、ボタンの並びの下に全文を出す（長くてもボタンが崩れないように） */
 .always-scope {
-  margin-left: 0.5em;
   font-size: 0.85em;
   font-family: var(--vscode-editor-font-family);
-  opacity: 0.75;
+  color: var(--vscode-descriptionForeground);
   word-break: break-all;
 }
 
@@ -1259,6 +1263,7 @@ body.dragging .drop-hint {
 
 .context-summary {
   display: flex;
+  align-items: baseline;
   gap: 8px;
   min-width: 0;
   cursor: pointer;
@@ -1286,7 +1291,6 @@ body.dragging .drop-hint {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--vscode-editor-font-family);
 }
 
 .context-empty {

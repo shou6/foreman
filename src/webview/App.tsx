@@ -127,6 +127,9 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
       ? formatElapsed(now - started, state.strings)
       : elapsedSince(`turn:${lastTurn}`);
   };
+  const blocks = groupTools(state.items);
+  // 動いている間は、最後のツールのまとまりの下に実行中の行の場所を取っておく
+  const lastTools = blocks.map((b) => b.kind).lastIndexOf('tools');
   const markDone = state.status === 'waiting' && !state.turnOpen && state.pending === undefined;
   // 前のターンで動いたモデルが、次に使うモデルと違う時だけ知らせる
   const previousModel =
@@ -192,7 +195,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         )}
       </header>
       <main class="transcript">
-        {groupTools(state.items).map((block, i) => (
+        {blocks.map((block, i) => (
           <>
             <BlockView
               key={i}
@@ -200,6 +203,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
               expanded={state.toolCallsExpanded}
               strings={state.strings}
               toolElapsed={(id) => elapsedSince(`tool:${id}`)}
+              reserve={state.turnOpen && i === lastTools}
             />
             {block.kind === 'turn-end' && block.ok && (
               <div class="checkpoint" key={`checkpoint-${block.turn}`}>
@@ -517,12 +521,15 @@ function BlockView({
   expanded,
   strings,
   toolElapsed,
+  reserve,
 }: {
   block: Block;
   expanded: boolean;
   strings: PanelStrings;
   /** 実行中のツールの経過 */
   toolElapsed: (id: string) => string;
+  /** 実行中のツールが無くても、その行の場所を取っておく（ツールごとに画面が揺れないように） */
+  reserve: boolean;
 }) {
   switch (block.kind) {
     case 'prompt':
@@ -574,6 +581,12 @@ function BlockView({
               <span class="tool-elapsed">{toolElapsed(tool.id)}</span>
             </div>
           ))}
+          {reserve && running.length === 0 && (
+            <div class="tool-running idle" aria-hidden="true">
+              <Icon name="loading" />
+              <span class="tool-name">&nbsp;</span>
+            </div>
+          )}
         </>
       );
     }
@@ -781,7 +794,6 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
             }
           >
             {strings.allowAlways}
-            <span class="always-scope">{describeSuggestions(pending.suggestions).join(', ')}</span>
           </button>
         )}
         <button
@@ -801,6 +813,11 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
           {denying ? strings.denyConfirm : strings.deny}
         </button>
       </div>
+      {pending.suggestions.length > 0 && (
+        <div class="always-scope">
+          {strings.alwaysScope.replace('{0}', describeSuggestions(pending.suggestions).join(', '))}
+        </div>
+      )}
     </section>
   );
 }

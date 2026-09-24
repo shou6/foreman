@@ -70,11 +70,12 @@ suite('webview: 承認カード', () => {
     assert.ok(/<pre class="approval-target">npm test<\/pre>/.test(html));
     assert.ok(html.includes('Input details (JSON)'));
     assert.ok(/class="action allow"[^>]*>Allow</.test(html));
-    assert.ok(
-      /class="action allow-always"[^>]*>Always allow<span class="always-scope">Bash\(npm test\)<\/span>/.test(
-        html
-      )
-    );
+    assert.ok(/class="action allow-always"[^>]*>Always allow</.test(html));
+    // 範囲はボタンに入れず、ボタンの並びの下に全文を出す（長いとボタンが崩れるため）
+    const actions = html.indexOf('class="approval-actions"');
+    const scope = html.indexOf('class="always-scope"');
+    assert.ok(actions >= 0 && scope > actions);
+    assert.ok(/class="always-scope"[^>]*>Always allow covers: Bash\(npm test\)</.test(html));
     assert.ok(/class="action deny"[^>]*>Deny…</.test(html));
   });
 

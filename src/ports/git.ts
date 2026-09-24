@@ -14,11 +14,13 @@ export interface Git {
   deleteBranch(repo: string, branch: string): Promise<void>;
   /** 登録されている worktree のパスの一覧（メインの作業ツリーを含む） */
   listWorktrees(repo: string): Promise<string[]>;
+  /** branch をチェックアウトしている worktree のパス（メインの作業ツリーを含む）。どこにも無ければ undefined */
+  worktreeOfBranch(repo: string, branch: string): Promise<string | undefined>;
   /** 未コミットの変更（追跡外を含む）があるか */
   hasChanges(dir: string): Promise<boolean>;
   /** すべての変更をステージしてコミットする。変更が無ければ何もしない */
   commitAll(dir: string, message: string): Promise<void>;
-  /** repo の今のブランチへ branch をマージする（--no-ff）。衝突したら中止して失敗にする */
+  /** dir（worktree）の今のブランチへ branch をマージする（--no-ff）。衝突したら中止して失敗にする */
   merge(repo: string, branch: string, message: string): Promise<void>;
   /** paths（dir からの相対）のうち、Git が無視するもの。Git でない場所なら空 */
   ignored(dir: string, paths: readonly string[]): Promise<string[]>;

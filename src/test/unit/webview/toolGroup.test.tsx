@@ -99,6 +99,27 @@ suite('webview: ツールの呼び出しのたたみ', () => {
   });
 });
 
+suite('webview: 実行中のツールの行の場所を取っておく（画面が揺れないように）', () => {
+  const items = [
+    { kind: 'prompt' as const, turn: 0, text: 'p' },
+    { kind: 'tool' as const, turn: 0, id: '1', name: 'Read', input: {}, status: 'ok' as const },
+  ];
+
+  test('動いている間は、最後のツールのまとまりの下に、実行中のツールが無くても同じ高さの空の行を置く', () => {
+    const html = render(
+      <App state={state({ status: 'running', turnOpen: true, items })} post={() => {}} />
+    );
+    assert.ok(/class="tool-running idle"[^>]*aria-hidden="true"/.test(html));
+  });
+
+  test('ターンが終わったら空の行は出さない', () => {
+    const html = render(
+      <App state={state({ status: 'waiting', turnOpen: false, items })} post={() => {}} />
+    );
+    assert.ok(!html.includes('tool-running'));
+  });
+});
+
 suite('webview: 見出しの「…」メニュー', () => {
   test('エクスポートなどは見出しに並べず「…」にまとめ、more のメッセージを送る', () => {
     const html = render(<App state={state({})} post={() => {}} />);

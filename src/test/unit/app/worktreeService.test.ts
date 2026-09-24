@@ -54,6 +54,27 @@ suite('WorktreeService.merge', () => {
     assert.strictEqual(git.repos.get(REPO)!.branches.has(wt.branch), false);
   });
 
+  test('切り出したタスクは、表示どおり親のブランチ（親の worktree）へマージする', async () => {
+    const { git, service } = build();
+    const parent = await service.create(REPO, 'Parent', 'aaaaaa0000');
+    const child = await service.create(REPO, 'Child', 'bbbbbb1111', parent.branch);
+    assert.strictEqual(child.base, parent.branch);
+    await service.merge(child, 'Child');
+    assert.deepStrictEqual(
+      git.merges.map((m) => ({ repo: m.repo, branch: m.branch })),
+      [{ repo: parent.path, branch: child.branch }]
+    );
+  });
+
+  test('マージ先のブランチがどこにもチェックアウトされていなければ、マージせずに止め、何も消さない', async () => {
+    const { git, service } = build();
+    const wt = await service.create(REPO, 't', 'abcdef0123');
+    git.repos.get(REPO)!.branch = 'develop';
+    await assert.rejects(service.merge(wt, 't'), /main/);
+    assert.deepStrictEqual(git.merges, []);
+    assert.strictEqual((await git.listWorktrees(REPO)).includes(wt.path), true);
+  });
+
   test('マージに失敗したら worktree とブランチは残す', async () => {
     const { git, service } = build();
     const wt = await service.create(REPO, 't', 'abcdef0123');

@@ -68,12 +68,19 @@ export class WorktreeService {
   }
 
   /**
-   * worktree の変更をコミットし、元のブランチへマージして、worktree とブランチを消す。
-   * マージに失敗した時は何も消さない
+   * worktree の変更をコミットし、元のブランチ（base）へマージして、worktree とブランチを消す。
+   * マージは base をチェックアウトしている worktree で行う（切り出したタスクなら親の worktree）。
+   * base がどこにもチェックアウトされていなければ、マージせずに止める。マージに失敗した時は何も消さない
    */
   async merge(worktree: Worktree, title: string): Promise<MergeResult> {
+    const target = await this.deps.git.worktreeOfBranch(worktree.repo, worktree.base);
+    if (target === undefined) {
+      throw new Error(
+        `The branch "${worktree.base}" to merge into is not checked out in any worktree. Check it out and try again.`
+      );
+    }
     await this.deps.git.commitAll(worktree.path, `foreman: ${title}`);
-    await this.deps.git.merge(worktree.repo, worktree.branch, `Merge ${worktree.branch}: ${title}`);
+    await this.deps.git.merge(target, worktree.branch, `Merge ${worktree.branch}: ${title}`);
     try {
       await this.remove(worktree);
       return { removed: true };

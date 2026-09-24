@@ -23,6 +23,8 @@ export interface PanelStrings {
   allow: string;
   /** 「常に許可」。後ろに許可する範囲を添える */
   allowAlways: string;
+  /** 「常に許可」で許可する範囲（ボタンの並びの下に出す）。{0} に範囲 */
+  alwaysScope: string;
   /** 拒否…（押すと理由の欄が開く）と、理由を書いた後の拒否 */
   deny: string;
   denyConfirm: string;

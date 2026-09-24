@@ -45,6 +45,19 @@ export class GitCli implements Git {
       .map((line) => path.normalize(line.slice('worktree '.length)));
   }
 
+  async worktreeOfBranch(repo: string, branch: string): Promise<string | undefined> {
+    const out = await this.run(repo, 'worktree', 'list', '--porcelain');
+    // 1 つの worktree は空行で区切られ、worktree <path> と branch refs/heads/<name> の行を持つ
+    for (const block of out.split(/\r?\n\r?\n/)) {
+      const lines = block.split(/\r?\n/);
+      const where = lines.find((line) => line.startsWith('worktree '));
+      if (where !== undefined && lines.includes(`branch refs/heads/${branch}`)) {
+        return path.normalize(where.slice('worktree '.length));
+      }
+    }
+    return undefined;
+  }
+
   async hasChanges(dir: string): Promise<boolean> {
     const out = await this.run(dir, 'status', '--porcelain', '--untracked-files=all');
     return out.trim() !== '';
