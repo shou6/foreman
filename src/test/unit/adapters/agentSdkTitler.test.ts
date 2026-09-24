@@ -48,6 +48,25 @@ suite('suggestTitleWithSdk', () => {
       await suggestTitleWithSdk(empty, { prompt: 'p', model: 'm', claudePath: 'c', cwd: 'd' }),
       undefined
     );
+    // 未ログインの claude は success・is_error で案内の文を返す。それをタスク名にしない
+    const notLoggedIn: TitleQueryFn = () =>
+      (async function* () {
+        yield {
+          type: 'result',
+          subtype: 'success',
+          is_error: true,
+          result: 'Not logged in · Please run /login',
+        };
+      })() as never;
+    assert.strictEqual(
+      await suggestTitleWithSdk(notLoggedIn, {
+        prompt: 'p',
+        model: 'm',
+        claudePath: 'c',
+        cwd: 'd',
+      }),
+      undefined
+    );
     const throwing: TitleQueryFn = () => {
       throw new Error('no claude');
     };

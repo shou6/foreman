@@ -74,6 +74,10 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
       );
     }
     case 'result':
+      if (m.subtype === 'success' && m.is_error) {
+        // 未ログインなど、Claude が動けなかった。案内の文は result に入る
+        return [{ type: 'turn-end', ok: false, interrupted: false, reason: m.result }];
+      }
       if (m.subtype === 'success') {
         return [{ type: 'turn-end', ok: true, usage: usageOf(m) }];
       }

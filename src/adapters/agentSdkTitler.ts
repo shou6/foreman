@@ -4,7 +4,7 @@ import type { Options } from '@anthropic-ai/claude-agent-sdk' with { 'resolution
 export type TitleQueryFn = (params: {
   prompt: string;
   options?: Options;
-}) => AsyncIterable<{ type: string; subtype?: string; result?: string }>;
+}) => AsyncIterable<{ type: string; subtype?: string; is_error?: boolean; result?: string }>;
 
 export interface TitleRequest {
   prompt: string;
@@ -67,7 +67,8 @@ export async function suggestTitleWithSdk(
     });
     for await (const m of messages) {
       if (m.type === 'result') {
-        return m.subtype === 'success' && typeof m.result === 'string'
+        // 未ログインなどの失敗は success でも is_error になり、result は案内の文
+        return m.subtype === 'success' && m.is_error !== true && typeof m.result === 'string'
           ? cleanTitle(m.result)
           : undefined;
       }

@@ -152,6 +152,30 @@ suite('normalizeMessage', () => {
     );
   });
 
+  test('subtype が success でも is_error なら失敗。理由は result の文（未ログインなど）', () => {
+    // ログインしていない claude は、success・is_error・result に案内の文を返す（2026-09-25 に実機で確認）
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'result',
+          subtype: 'success',
+          is_error: true,
+          result: 'Not logged in · Please run /login',
+          usage: {},
+          modelUsage: {},
+        })
+      ),
+      [
+        {
+          type: 'turn-end',
+          ok: false,
+          interrupted: false,
+          reason: 'Not logged in · Please run /login',
+        },
+      ]
+    );
+  });
+
   test('知らない種類は無視する', () => {
     assert.deepStrictEqual(normalizeMessage(msg({ type: 'rate_limit_event' })), []);
     assert.deepStrictEqual(normalizeMessage(msg({ type: 'system', subtype: 'status' })), []);
