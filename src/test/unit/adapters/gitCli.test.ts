@@ -13,10 +13,13 @@ function makeRepo(): string {
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 'test@example.com');
   git('config', 'user.name', 'test');
+  // CI の Windows は core.autocrlf が true で、チェックアウトの時に改行を CRLF に変える
+  git('config', 'core.autocrlf', 'false');
   fs.writeFileSync(path.join(dir, 'a.txt'), 'a\n');
   git('add', '.');
   git('commit', '-q', '-m', 'init');
-  return fs.realpathSync(dir);
+  // git は長い名前の実際のパスを返す。Windows の短い名前（RUNNER~1 など）を展開して比べる
+  return fs.realpathSync.native(dir);
 }
 
 suite('GitCli', function () {

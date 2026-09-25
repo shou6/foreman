@@ -16,6 +16,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         status: message.status,
         turnOpen: message.turnOpen,
         turnStartedAt: message.turnStartedAt,
+        turnTimes: message.turnTimes,
+        snapshotsPruned: message.snapshotsPruned,
         mergeable: message.mergeable,
         unapprovable: message.unapprovable,
         usage: message.usage,
@@ -25,6 +27,7 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         activeModel: message.activeModel,
         effort: message.effort,
         activeEffort: message.activeEffort,
+        permissionMode: message.permissionMode,
         worktree: message.worktree,
       };
     case 'pending':
@@ -42,6 +45,8 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       return { ...state, finishing: message.kind };
     case 'models':
       return { ...state, models: message.models, defaultModel: message.defaultModel };
+    case 'commands':
+      return { ...state, commands: message.commands };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':

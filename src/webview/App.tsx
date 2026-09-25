@@ -8,8 +8,10 @@ import {
   modelLabel,
   type ModelOption,
 } from '../domain/models';
-import type { EffortLevel } from '../domain/task';
-import { applyPreset, matchPresets } from '../domain/presets';
+import type { EffortLevel, PermissionMode } from '../domain/task';
+import { applyPreset } from '../domain/presets';
+import { slashSuggestions } from '../domain/slashCommands';
+import { inlineCode, promptBlocks } from '../domain/promptBlocks';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
   answersToInput,
@@ -21,10 +23,11 @@ import {
 } from '../domain/question';
 import { approvalKindOf, pendingKindOf, statusKindOf } from '../domain/status';
 import { describeSuggestions } from '../domain/suggestions';
-import { splitElapsed } from '../domain/time';
+import { dayKindOf, formatDate, formatTime, sameLocalDay, splitElapsed } from '../domain/time';
 import type { TranscriptItem } from '../domain/transcript';
 import { Icon, STATUS_ICONS } from './icons';
 import { renderMarkdown } from './markdown';
+import { Scroll } from './Scroll';
 import { hunksOf } from '../domain/diff';
 import {
   diffKey,
@@ -47,19 +50,31 @@ export interface AppProps {
 
 type ToolItem = TranscriptItem & { kind: 'tool' };
 
-/** 連続するツールの呼び出しを 1 つにまとめた、描画用の項目 */
-type Block = { kind: 'tools'; turn: number; tools: ToolItem[] } | Exclude<TranscriptItem, ToolItem>;
+/**
+ * 連続するツールの呼び出しを 1 つにまとめた、描画用の項目。
+ * children はサブエージェントの呼び出し（親の呼び出しの ID ごと）。親の行の中に入れ子で出す
+ */
+type Block =
+  | { kind: 'tools'; turn: number; tools: ToolItem[]; children: ReadonlyMap<string, ToolItem[]> }
+  | Exclude<TranscriptItem, ToolItem>;
 
 /** 連続するツールの呼び出しをまとめる（ラフの「Read … · Read … · Grep …」の 1 行） */
 function groupTools(items: readonly TranscriptItem[]): Block[] {
+  const ids = new Set(items.flatMap((item) => (item.kind === 'tool' ? [item.id] : [])));
+  const children = new Map<string, ToolItem[]>();
   const blocks: Block[] = [];
   for (const item of items) {
     const last = blocks[blocks.length - 1];
+    // 親が見つかるサブエージェントの呼び出しは、親の下に回す（グループを分けない）
+    if (item.kind === 'tool' && item.parentId !== undefined && ids.has(item.parentId)) {
+      children.set(item.parentId, [...(children.get(item.parentId) ?? []), item]);
+      continue;
+    }
     if (item.kind === 'tool') {
       if (last?.kind === 'tools' && last.turn === item.turn) {
         last.tools.push(item);
       } else {
-        blocks.push({ kind: 'tools', turn: item.turn, tools: [item] });
+        blocks.push({ kind: 'tools', turn: item.turn, tools: [item], children });
       }
     } else {
       blocks.push(item);
@@ -92,6 +107,9 @@ function useTicking(active: boolean): number {
 /** タスク画面。状態は拡張機能から届いたものをそのまま描く */
 export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
   const [draft, setDraftState] = useState(initialDraft ?? '');
+  // / の候補で選んでいる項目と、Esc で閉じた時の入力（同じ入力の間は出さない）
+  const [selected, setSelected] = useState(0);
+  const [dismissed, setDismissed] = useState<string | undefined>(undefined);
   // 実行中のツールとターンを最初に見た時刻（開始の時刻が分からない時の経過に使う）
   const seen = useRef(new Map<string, number>());
   const now = useTicking(state?.turnOpen === true);
@@ -113,7 +131,18 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
     post({ type: 'send', prompt: composed, attachments: state.attachments });
     setDraft('');
   };
-  const candidates = matchPresets(draft, state.presets);
+  // / の候補。↑↓ で選び、Enter か Tab で確定、Esc で閉じる
+  const suggestions =
+    dismissed === draft ? undefined : slashSuggestions(draft, state.presets, state.commands ?? []);
+  const candidates = suggestions?.items ?? [];
+  const selectedIndex = Math.min(selected, Math.max(0, candidates.length - 1));
+  const accept = (index: number): void => {
+    const c = candidates[index];
+    if (c !== undefined) {
+      setDraft('/' + c.name + ' ');
+      setSelected(0);
+    }
+  };
   const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
   // 指定のモデルに当たる選択肢。正式な ID（claude-sonnet-5）も中身で照合する（Sonnet）
   const chosen =
@@ -226,16 +255,31 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
             {state.usage !== undefined && (
               <Meter usage={state.usage} label={state.strings.contextUsage} />
             )}
+            {state.usage !== undefined && !busy && (
+              <button
+                class="icon-button compact"
+                title={state.strings.compact}
+                aria-label={state.strings.compact}
+                onClick={() => post({ type: 'compact' })}
+              >
+                <Icon name="fold" />
+              </button>
+            )}
           </div>
         )}
       </header>
       <main class="transcript">
         {blocks.map((block, i) => (
           <>
+            {block.kind === 'prompt' && <DayDivider turn={block.turn} state={state} />}
             <BlockView
               key={i}
               block={block}
+              time={block.kind === 'prompt' ? state.turnTimes?.[block.turn]?.startedAt : undefined}
+              locale={state.locale ?? 'en'}
               expanded={state.toolCallsExpanded}
+              thinking={state.thinking ?? 'collapsed'}
+              thinkingOpen={state.turnOpen && i === blocks.length - 1}
               strings={state.strings}
               toolElapsed={(id) => elapsedSince(`tool:${id}`)}
               reserve={state.turnOpen && i === lastTools}
@@ -245,6 +289,11 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 <span class="checkpoint-turn">
                   {state.strings.turn.replace('{0}', String(block.turn + 1))}
                 </span>
+                <TurnTimeView
+                  time={state.turnTimes?.[block.turn]}
+                  locale={state.locale ?? 'en'}
+                  strings={state.strings}
+                />
                 {state.tokens?.[block.turn] !== undefined && (
                   <span class="turn-tokens" title="input / output tokens">
                     ↑{formatTokens(state.tokens[block.turn]?.input ?? 0)} ↓
@@ -254,8 +303,12 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 <span class="checkpoint-actions">
                   <button
                     class="checkpoint-action rewind"
-                    title={state.strings.rewindHere}
-                    disabled={busy}
+                    title={
+                      state.snapshotsPruned === true
+                        ? state.strings.snapshotsPruned
+                        : state.strings.rewindHere
+                    }
+                    disabled={busy || state.snapshotsPruned === true}
                     onClick={() => post({ type: 'rewind', turn: block.turn })}
                   >
                     <Icon name="discard" />
@@ -284,6 +337,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 revertable={block.turn === lastChangedTurn}
                 approved={state.status === 'done' && block.turn === lastChangedTurn}
                 unapprovable={state.unapprovable === true}
+                pruned={state.snapshotsPruned === true}
                 post={post}
               />
             )}
@@ -311,21 +365,39 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         <ContextPanel
           prompt={composed}
           attachments={state.attachments}
-          context={state.context}
-          model={state.activeModel ?? state.model}
           strings={state.strings}
+          post={post}
         />
-        {candidates.length > 0 && (
-          <ul class="preset-list">
-            {candidates.map((p) => (
-              <li key={p.name}>
-                <button class="link preset" onClick={() => setDraft('/' + p.name + ' ')}>
-                  /{p.name}
-                </button>
-                <span class="preset-prompt">{p.prompt.split('\n')[0]}</span>
-              </li>
-            ))}
-          </ul>
+        {suggestions !== undefined && (candidates.length > 0 || suggestions.hidden > 0) && (
+          <div class="suggestions">
+            {candidates.length > 0 && (
+              <ul class="preset-list">
+                {candidates.map((c, i) => (
+                  <li
+                    key={`${c.source}:${c.name}`}
+                    data-source={c.source}
+                    data-selected={i === selectedIndex ? 'true' : undefined}
+                    title={c.description}
+                    onMouseEnter={() => setSelected(i)}
+                  >
+                    <button class="link preset" onClick={() => accept(i)}>
+                      /{c.name}
+                    </button>
+                    <span class="preset-hint">{c.argumentHint}</span>
+                    <span class="preset-desc">{c.description}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {candidates[selectedIndex] !== undefined && (
+              <div class="preset-detail">{candidates[selectedIndex]?.description}</div>
+            )}
+            {suggestions.hidden > 0 && (
+              <div class="preset-more">
+                {state.strings.moreCandidates.replace('{0}', String(suggestions.hidden))}
+              </div>
+            )}
+          </div>
         )}
         <div class="composer-box">
           {state.attachments.length > 0 && (
@@ -352,7 +424,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
           ) : (
             <textarea
               class="prompt-input"
-              rows={2}
+              rows={4}
               value={draft}
               placeholder={
                 state.turnOpen
@@ -366,6 +438,21 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
                   submit();
+                  return;
+                }
+                if (candidates.length === 0) {
+                  return;
+                }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  const step = e.key === 'ArrowDown' ? 1 : -1;
+                  setSelected((selectedIndex + step + candidates.length) % candidates.length);
+                } else if (e.key === 'Enter' || e.key === 'Tab') {
+                  e.preventDefault();
+                  accept(selectedIndex);
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setDismissed(draft);
                 }
               }}
             />
@@ -405,6 +492,29 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
               {state.strings.addFile}
             </button>
             <span class="composer-spacer" />
+            <label
+              class="mode-select"
+              title={state.strings.permissionModeHints[state.permissionMode ?? 'default']}
+            >
+              <Icon name={state.permissionMode === 'plan' ? 'checklist' : 'workspace-trusted'} />
+              <span class="sr-only">{state.strings.permissionMode}</span>
+              <select
+                class="mode-select"
+                value={state.permissionMode ?? 'default'}
+                onChange={(e) =>
+                  post({
+                    type: 'setPermissionMode',
+                    mode: (e.target as HTMLSelectElement).value as PermissionMode,
+                  })
+                }
+              >
+                {(['default', 'acceptEdits', 'plan'] as const).map((mode) => (
+                  <option key={mode} value={mode} title={state.strings.permissionModeHints[mode]}>
+                    {state.strings.permissionModes[mode]}
+                  </option>
+                ))}
+              </select>
+            </label>
             {previousModel !== undefined && (
               <span class="previous-model">
                 {state.strings.previousModel.replace('{0}', previousModel)}
@@ -511,25 +621,23 @@ function EffortSlider({ levels, current, strings, onChange }: EffortSliderProps)
 interface ContextPanelProps {
   prompt: string;
   attachments: Attachment[];
-  context: PanelState['context'];
-  model: string | undefined;
   strings: PanelStrings;
+  post: (message: ToExtension) => void;
 }
 
-/** Context パネル（FR-VIEW-9）。次に Claude へ送る文と、セッションの条件をそのまま見せる */
-function ContextPanel({ prompt, attachments, context, model, strings }: ContextPanelProps) {
+/**
+ * Context パネル（FR-VIEW-9）。次に Claude へ送る文（プリセットと添付を展開したもの）を見せる。
+ * セッションの情報（ディレクトリ、モデル、承認方式、常に許可、MCP）は右サイドバーの下の区画に出す
+ */
+function ContextPanel({ prompt, attachments, strings, post }: ContextPanelProps) {
   const preview =
     prompt.trim() === '' && attachments.length === 0
       ? undefined
       : promptWithAttachments(prompt, attachments);
-  // 閉じていても、ディレクトリ・承認方式・添付数は見えるようにする
-  const brief = [
-    context.cwd,
-    `${strings.permissionMode} ${context.permissionMode}`,
+  const brief =
     attachments.length === 0
       ? strings.noAttachments
-      : strings.attachmentCount.replace('{0}', String(attachments.length)),
-  ].join(' · ');
+      : strings.attachmentCount.replace('{0}', String(attachments.length));
   return (
     <details class="context-panel">
       <summary class="context-summary">
@@ -537,30 +645,26 @@ function ContextPanel({ prompt, attachments, context, model, strings }: ContextP
         <span class="context-brief" title={brief}>
           {brief}
         </span>
+        <button
+          class="link show-session"
+          onClick={(e) => {
+            // 開閉ではなく、右サイドバーの区画を出す
+            e.preventDefault();
+            e.stopPropagation();
+            post({ type: 'showSession' });
+          }}
+        >
+          <Icon name="layout-sidebar-right" />
+          {strings.showSession}
+        </button>
       </summary>
       {preview === undefined ? (
         <div class="context-empty">{strings.contextEmpty}</div>
       ) : (
-        <pre class="context-preview">{preview}</pre>
+        <Scroll class="context-preview-scroll" as="pre" viewportClass="context-preview">
+          {preview}
+        </Scroll>
       )}
-      <dl class="context-facts">
-        <dt>{strings.directory}</dt>
-        <dd>{context.cwd}</dd>
-        {model !== undefined && (
-          <>
-            <dt>{strings.model}</dt>
-            <dd>{model}</dd>
-          </>
-        )}
-        <dt>{strings.permissionMode}</dt>
-        <dd>{context.permissionMode}</dd>
-        {context.alwaysAllowed.length > 0 && (
-          <>
-            <dt>{strings.alwaysAllowedList}</dt>
-            <dd>{context.alwaysAllowed.join(', ')}</dd>
-          </>
-        )}
-      </dl>
     </details>
   );
 }
@@ -623,14 +727,25 @@ function dirname(path: string): string {
 
 function BlockView({
   block,
+  time,
+  locale,
   expanded,
   strings,
   toolElapsed,
   reserve,
+  thinking,
+  thinkingOpen,
 }: {
   block: Block;
+  /** 指示を送った時刻（指示の時だけ） */
+  time?: string;
+  locale: string;
   expanded: boolean;
   strings: PanelStrings;
+  /** 考えている途中の出し方 */
+  thinking: 'collapsed' | 'hidden';
+  /** その thinking が今まさに進んでいる（最後の項目で、動いている） */
+  thinkingOpen: boolean;
   /** 実行中のツールの経過 */
   toolElapsed: (id: string) => string;
   /** 実行中のツールが無くても、その行の場所を取っておく（ツールごとに画面が揺れないように） */
@@ -638,7 +753,31 @@ function BlockView({
 }) {
   switch (block.kind) {
     case 'prompt':
-      return <div class="item prompt">{block.text}</div>;
+      return <PromptView text={block.text} time={time} locale={locale} />;
+    case 'thinking':
+      if (thinking === 'hidden') {
+        return null;
+      }
+      // Claude Code は第三者のクライアントに thinking の文を渡さない（断片は空）。
+      // その時は、考えている間だけ「考え中…」の印を出し、終わったら何も残さない
+      if (block.text === '') {
+        return thinkingOpen ? (
+          <div class="item thinking-indicator">
+            <Icon name="lightbulb" />
+            {strings.thinking}
+          </div>
+        ) : null;
+      }
+      // 文が取れる環境では、たたんで出す
+      return (
+        <details class="item thinking">
+          <summary>
+            <Icon name="lightbulb" />
+            {thinkingOpen ? strings.thinking : strings.thought}
+          </summary>
+          <div class="thinking-text">{block.text}</div>
+        </details>
+      );
     case 'text':
       return (
         <div
@@ -672,23 +811,28 @@ function BlockView({
               <span class="tool-names">{names}</span>
             </summary>
             {block.tools.map((tool) => (
-              <details class="tool" data-status={tool.status} key={tool.id}>
-                <summary>
-                  <span class="tool-name">{tool.name}</span>
-                  <span class="tool-target">{summarize(tool.input)}</span>
-                </summary>
-                {tool.output !== undefined && <pre class="tool-output">{tool.output}</pre>}
-              </details>
+              <ToolRow key={tool.id} tool={tool} subagents={block.children} strings={strings} />
             ))}
           </details>
-          {running.map((tool) => (
-            <div class="tool-running" key={`running-${tool.id}`}>
-              <Icon name="loading~spin" />
-              <span class="tool-name">{tool.name}</span>
-              <span class="tool-target">{summarize(tool.input)}</span>
-              <span class="tool-elapsed">{toolElapsed(tool.id)}</span>
-            </div>
-          ))}
+          {running.map((tool) => {
+            // サブエージェントが動いている間は、今動いている子のツールを添える
+            const sub = [...(block.children.get(tool.id) ?? [])]
+              .reverse()
+              .find((t) => t.status === 'running');
+            return (
+              <div class="tool-running" key={`running-${tool.id}`}>
+                <Icon name="loading~spin" />
+                <span class="tool-name">{tool.name}</span>
+                <span class="tool-target">{summarize(tool.input)}</span>
+                {sub !== undefined && (
+                  <span class="tool-sub">
+                    {sub.name} {summarize(sub.input)}
+                  </span>
+                )}
+                <span class="tool-elapsed">{toolElapsed(tool.id)}</span>
+              </div>
+            );
+          })}
           {reserve && running.length === 0 && (
             <div class="tool-running idle" aria-hidden="true">
               <Icon name="loading" />
@@ -698,6 +842,20 @@ function BlockView({
         </>
       );
     }
+    case 'compact':
+      return (
+        <div class="checkpoint compacted">
+          <span class="checkpoint-turn">
+            <Icon name="fold" />
+            {strings.compacted
+              .replace('{0}', formatTokens(block.preTokens))
+              .replace(
+                '{1}',
+                block.postTokens === undefined ? '?' : formatTokens(block.postTokens)
+              )}
+          </span>
+        </div>
+      );
     case 'turn-end':
       return block.ok ? null : (
         <div class={block.interrupted ? 'item interrupted' : 'item error'}>{block.reason}</div>
@@ -718,6 +876,8 @@ interface DiffCardProps {
   approved: boolean;
   /** 承認を取り消せるなら、印の横に「取り消す」を出す */
   unapprovable: boolean;
+  /** スナップショットを消した（差分と「戻す」を出さない） */
+  pruned?: boolean;
   post: (message: ToExtension) => void;
 }
 
@@ -731,6 +891,7 @@ function DiffCard({
   revertable,
   approved,
   unapprovable,
+  pruned = false,
   post,
 }: DiffCardProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -749,7 +910,7 @@ function DiffCard({
           <span class="removed"> −{removed}</span>
         </span>
         <span class="head-spacer" />
-        {revertable && (
+        {revertable && !pruned && (
           <button
             class="revert-all"
             disabled={!revertible}
@@ -776,6 +937,7 @@ function DiffCard({
           </button>
         )}
       </div>
+      {pruned && <div class="diff-pruned">{strings.snapshotsPruned}</div>}
       {changes.map((change) => {
         const key = diffKey(turn, change.path);
         const lines = diffs[key];
@@ -789,6 +951,7 @@ function DiffCard({
               </span>
               <button
                 class="diff-file-name"
+                disabled={pruned}
                 onClick={() => {
                   const next = !(open[key] ?? lines !== undefined);
                   setOpen({ ...open, [key]: next });
@@ -814,30 +977,32 @@ function DiffCard({
                   </span>
                 )}
                 {change.reverted && <span class="reverted">{strings.reverted}</span>}
-                <span class="diff-row-actions">
-                  <button
-                    class="icon-button open-diff"
-                    title={strings.openDiff}
-                    aria-label={strings.openDiff}
-                    onClick={() => post({ type: 'openDiff', turn, path: change.path })}
-                  >
-                    <Icon name="diff" />
-                  </button>
-                  {canRevert && (
+                {!pruned && (
+                  <span class="diff-row-actions">
                     <button
-                      class="icon-button revert"
-                      title={strings.revert}
-                      aria-label={strings.revert}
-                      onClick={() => post({ type: 'revert', turn, path: change.path })}
+                      class="icon-button open-diff"
+                      title={strings.openDiff}
+                      aria-label={strings.openDiff}
+                      onClick={() => post({ type: 'openDiff', turn, path: change.path })}
                     >
-                      <Icon name="discard" />
+                      <Icon name="diff" />
                     </button>
-                  )}
-                </span>
+                    {canRevert && (
+                      <button
+                        class="icon-button revert"
+                        title={strings.revert}
+                        aria-label={strings.revert}
+                        onClick={() => post({ type: 'revert', turn, path: change.path })}
+                      >
+                        <Icon name="discard" />
+                      </button>
+                    )}
+                  </span>
+                )}
               </span>
             </div>
             {lines !== undefined && (open[key] ?? true) && (
-              <pre class="diff-lines">
+              <Scroll class="diff-scroll" as="pre" viewportClass="diff-lines">
                 {hunksOf(lines, 3).flatMap((hunk, h) => [
                   <div class="diff-hunk" key={`h${h}`}>
                     @@ -{hunk.oldStart},{hunk.oldCount} +{hunk.newStart},{hunk.newCount} @@
@@ -855,7 +1020,7 @@ function DiffCard({
                     </div>
                   )),
                 ])}
-              </pre>
+              </Scroll>
             )}
           </div>
         );
@@ -885,21 +1050,38 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
   const [reason, setReason] = useState('');
   const [denying, setDenying] = useState(false);
   const decide = (decision: ToExtension & { type: 'decision' }): void => post(decision);
-  const title = strings.approvalTitles[approvalKindOf(pending.toolName)].replace(
-    '{0}',
-    pending.toolName
-  );
+  const kind = approvalKindOf(pending.toolName);
+  const title = strings.approvalTitles[kind].replace('{0}', pending.toolName);
   const target = summarize(pending.input);
+  // 計画の承認（ExitPlanMode）は、計画を Markdown で描く
+  const plan =
+    kind === 'plan' && typeof pending.input.plan === 'string' ? pending.input.plan : undefined;
   return (
     <section class="approval">
       <div class="approval-title">
-        <Icon name="shield" />
+        <Icon name={kind === 'plan' ? 'checklist' : 'shield'} />
         {title}
+        {plan !== undefined && (
+          <button class="link open-plan" onClick={() => post({ type: 'openPlan', plan })}>
+            <Icon name="go-to-file" />
+            {strings.openPlan}
+          </button>
+        )}
       </div>
-      {target !== '{}' && <pre class="approval-target">{target}</pre>}
+      {plan !== undefined ? (
+        <Scroll
+          class="approval-plan-scroll"
+          viewportClass="approval-plan markdown"
+          html={renderMarkdown(plan)}
+        />
+      ) : (
+        target !== '{}' && <pre class="approval-target">{target}</pre>
+      )}
       <details class="approval-input">
         <summary>{strings.inputDetails}</summary>
-        <pre>{JSON.stringify(pending.input, null, 2)}</pre>
+        <Scroll class="approval-input-scroll" as="pre">
+          {JSON.stringify(pending.input, null, 2)}
+        </Scroll>
       </details>
       {denying && (
         <textarea
@@ -917,7 +1099,7 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
             decide({ type: 'decision', requestId: pending.id, decision: { behavior: 'allow' } })
           }
         >
-          {strings.allow}
+          {kind === 'plan' ? strings.approvePlan : strings.allow}
         </button>
         {pending.suggestions.length > 0 && (
           <button
@@ -1203,9 +1385,148 @@ function QuestionCard({
   );
 }
 
+/**
+ * ユーザーの指示の吹き出し。引用・コードブロック・インラインコードだけを描く。
+ * HTML は組み立てず Preact の要素にするので、貼り付けた文字列がそのまま出る
+ */
+function PromptView({ text, time, locale }: { text: string; time?: string; locale: string }) {
+  const inline = (line: string) =>
+    inlineCode(line).map((part, i) => (part.code ? <code key={i}>{part.text}</code> : part.text));
+  return (
+    <div class="prompt-row">
+      <div class="item prompt">
+        {promptBlocks(text).map((block, i) => {
+          switch (block.kind) {
+            case 'quote':
+              return <blockquote key={i}>{inline(block.text)}</blockquote>;
+            case 'code':
+              return (
+                <Scroll key={i} class="prompt-code-scroll" as="pre">
+                  <code data-lang={block.lang}>{block.text}</code>
+                </Scroll>
+              );
+            case 'text':
+              return <span key={i}>{inline(block.text)}</span>;
+            default:
+              return null;
+          }
+        })}
+      </div>
+      {time !== undefined && (
+        <span class="prompt-time" title={new Date(time).toLocaleString(locale)}>
+          {formatTime(time, locale)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 日付の区切り。最初のターンの前と、日付が変わったターンの前に出す。
+ * 今日と昨日は、その呼び名に日付を添える。時刻の無い古い記録には出さない
+ */
+function DayDivider({ turn, state }: { turn: number; state: PanelState }) {
+  const current = state.turnTimes?.[turn]?.startedAt;
+  if (current === undefined) {
+    return null;
+  }
+  const previous = state.turnTimes?.[turn - 1]?.startedAt;
+  if (previous !== undefined && sameLocalDay(previous, current)) {
+    return null;
+  }
+  const now = new Date();
+  const locale = state.locale ?? 'en';
+  const date = formatDate(current, locale, now);
+  const kind = dayKindOf(current, now);
+  const label =
+    kind === 'today'
+      ? `${state.strings.today} · ${date}`
+      : kind === 'yesterday'
+        ? `${state.strings.yesterday} · ${date}`
+        : date;
+  return (
+    <div class="day-divider">
+      <span>{label}</span>
+    </div>
+  );
+}
+
+/** ターンの区切りに添える、終わった時刻と所要時間 */
+function TurnTimeView({
+  time,
+  locale,
+  strings,
+}: {
+  time: { startedAt: string; endedAt?: string } | undefined;
+  locale: string;
+  strings: PanelStrings;
+}) {
+  if (time?.endedAt === undefined) {
+    return null;
+  }
+  const took = Date.parse(time.endedAt) - Date.parse(time.startedAt);
+  return (
+    <span class="turn-time" title={new Date(time.endedAt).toLocaleString(locale)}>
+      {`${formatTime(time.endedAt, locale)} · ${formatElapsed(took, strings)}`}
+    </span>
+  );
+}
+
+/**
+ * ツールの呼び出しの 1 行。サブエージェントを始めた呼び出し（Agent）なら、
+ * その中の呼び出しを入れ子で出し、件数を添える
+ */
+function ToolRow({
+  tool,
+  subagents,
+  strings,
+}: {
+  tool: ToolItem;
+  /** サブエージェントの呼び出し（親の呼び出しの ID ごと） */
+  subagents: ReadonlyMap<string, ToolItem[]>;
+  strings: PanelStrings;
+}) {
+  const subs = subagents.get(tool.id) ?? [];
+  return (
+    <details class="tool" data-status={tool.status}>
+      <summary>
+        <span class="tool-name">{tool.name}</span>
+        <span class="tool-target">{summarize(tool.input)}</span>
+        {subs.length > 0 && (
+          <span class="subagent-count">
+            {strings.toolCalls.replace('{0}', String(subs.length))}
+          </span>
+        )}
+      </summary>
+      {subs.length > 0 && (
+        <div class="subagent-tools">
+          {subs.map((sub) => (
+            <ToolRow key={sub.id} tool={sub} subagents={subagents} strings={strings} />
+          ))}
+        </div>
+      )}
+      {tool.output !== undefined && (
+        <Scroll class="tool-output-scroll" as="pre" viewportClass="tool-output">
+          {tool.output}
+        </Scroll>
+      )}
+    </details>
+  );
+}
+
 /** ツールの入力から、対象が分かる 1 行を作る */
 function summarize(input: Record<string, unknown>): string {
-  for (const key of ['file_path', 'notebook_path', 'command', 'pattern', 'path', 'url', 'skill']) {
+  for (const key of [
+    'file_path',
+    'notebook_path',
+    'command',
+    'pattern',
+    'path',
+    'url',
+    'skill',
+    // Agent（サブエージェント）は、何をさせるかの短い説明
+    'description',
+  ]) {
     const value = input[key];
     if (typeof value === 'string') {
       return value;

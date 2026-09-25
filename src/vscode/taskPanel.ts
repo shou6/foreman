@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { DiffService } from '../app/diffService';
+import type { CommandService } from '../app/commandService';
 import type { ModelService } from '../app/modelService';
 import type { TaskService } from '../app/taskService';
 import type { Transcripts } from '../app/transcripts';
@@ -16,6 +17,7 @@ import { describeSuggestions } from '../domain/suggestions';
 import { randomNonce } from './nonce';
 import { statusKindLabels } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
+import { taskPanelCsp } from '../webview/csp';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
 
@@ -27,6 +29,8 @@ export interface TaskPanelDeps {
   diffs: DiffService;
   /** モデルの選択肢（Claude Code から取得して覚えておく） */
   models: ModelService;
+  /** Claude Code のコマンドとスキル（取得して覚えておく） */
+  commands: CommandService;
   /** worktree のマージと破棄（確認や後始末は呼ぶ側が行う） */
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
@@ -37,6 +41,8 @@ export interface TaskPanelDeps {
   moreActions: (taskId: string) => Promise<void>;
   /** 貼り付けた画像を保存して、そのパスを返す */
   savePastedImage: (mime: string, base64: string) => Promise<string>;
+  /** 計画をエディターの別のタブで開く */
+  openPlan: (taskId: string, plan: string) => Promise<void>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
   /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
@@ -82,6 +88,8 @@ export class TaskPanels implements vscode.Disposable {
             status: task.status,
             turnOpen: isTurnOpen(task),
             turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
+            turnTimes: turnTimesOf(task),
+            snapshotsPruned: task.snapshotsPrunedAt !== undefined,
             mergeable: canMerge(task),
             unapprovable: canUnapprove(task),
             usage: contextUsage(task),
@@ -91,6 +99,7 @@ export class TaskPanels implements vscode.Disposable {
             activeModel: task.activeModel,
             effort: task.effort,
             activeEffort: task.activeEffort,
+            permissionMode: task.permissionMode,
             worktree: task.worktree,
           });
           for (const turn of task.turns) {
@@ -106,6 +115,13 @@ export class TaskPanels implements vscode.Disposable {
           const { models, defaultModel } = deps.models.current();
           for (const taskId of this.panels.keys()) {
             this.post(taskId, { type: 'models', models, defaultModel });
+          }
+        }),
+      },
+      {
+        dispose: deps.commands.onDidChange(() => {
+          for (const taskId of this.panels.keys()) {
+            this.post(taskId, { type: 'commands', commands: deps.commands.current() });
           }
         }),
       },
@@ -179,6 +195,22 @@ export class TaskPanels implements vscode.Disposable {
     this.post(taskId, { type: 'attachments', attachments: next });
   }
 
+  /** ドロップされたファイル（URI の文字列）を添付に足す。ファイル以外は無視する */
+  attachUris(taskId: string, uris: readonly string[]): void {
+    this.attach(
+      taskId,
+      uris
+        .map((u) => vscode.Uri.parse(u))
+        .filter((u) => u.scheme === 'file')
+        .map((u) => ({ kind: 'file', path: u.fsPath }))
+    );
+  }
+
+  /** 次の指示に付ける添付 */
+  attachmentsOf(taskId: string): Attachment[] {
+    return this.attachments.get(taskId) ?? [];
+  }
+
   dispose(): void {
     for (const s of this.subscriptions) {
       s.dispose();
@@ -230,14 +262,11 @@ export class TaskPanels implements vscode.Disposable {
         case 'setEffort':
           await this.deps.service.setEffort(taskId, message.effort);
           return;
+        case 'setPermissionMode':
+          await this.deps.service.setPermissionMode(taskId, message.mode);
+          return;
         case 'dropped':
-          this.attach(
-            taskId,
-            message.uris
-              .map((u) => vscode.Uri.parse(u))
-              .filter((u) => u.scheme === 'file')
-              .map((u) => ({ kind: 'file', path: u.fsPath }))
-          );
+          this.attachUris(taskId, message.uris);
           return;
         case 'pasteImage': {
           const file = await this.deps.savePastedImage(message.mime, message.data);
@@ -288,6 +317,16 @@ export class TaskPanels implements vscode.Disposable {
           return;
         case 'more':
           await this.deps.moreActions(taskId);
+          return;
+        case 'showSession':
+          // 右サイドバーの区画（ビュー）を前面に出す。VS Code がビューごとに作るコマンド
+          await vscode.commands.executeCommand('foreman.details.focus');
+          return;
+        case 'openPlan':
+          await this.deps.openPlan(taskId, message.plan);
+          return;
+        case 'compact':
+          await this.deps.service.compact(taskId);
           return;
         case 'rewind':
           await this.deps.checkpoint.rewind(taskId, message.turn);
@@ -362,6 +401,9 @@ export class TaskPanels implements vscode.Disposable {
       status: task.status,
       turnOpen: isTurnOpen(task),
       turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
+      turnTimes: turnTimesOf(task),
+      snapshotsPruned: task.snapshotsPrunedAt !== undefined,
+      locale: vscode.env.language,
       mergeable: canMerge(task),
       unapprovable: canUnapprove(task),
       usage: contextUsage(task),
@@ -370,7 +412,9 @@ export class TaskPanels implements vscode.Disposable {
       activeModel: task.activeModel,
       effort: task.effort,
       activeEffort: task.activeEffort,
+      permissionMode: task.permissionMode,
       models: this.deps.models.current().models,
+      commands: this.deps.commands.current(),
       defaultModel: this.deps.models.current().defaultModel,
       items: this.deps.transcripts.get(task.id),
       pending: this.deps.approvals.pending(task.id),
@@ -380,6 +424,7 @@ export class TaskPanels implements vscode.Disposable {
       maxWidthEm: readSettings().taskViewWidth,
       worktree: task.worktree,
       toolCallsExpanded: readSettings().toolCallsExpanded,
+      thinking: readSettings().thinking,
       presets: readSettings().presets,
       context: {
         cwd: task.cwd,
@@ -392,6 +437,11 @@ export class TaskPanels implements vscode.Disposable {
         runningTurn: vscode.l10n.t('Turn {0} running · {1}', '{0}', '{1}'),
         elapsedSeconds: vscode.l10n.t('{0}s', '{0}'),
         elapsedMinutes: vscode.l10n.t('{0}m {1}s', '{0}', '{1}'),
+        today: vscode.l10n.t('Today'),
+        yesterday: vscode.l10n.t('Yesterday'),
+        snapshotsPruned: vscode.l10n.t(
+          'Saved file contents were removed after the retention period. Diffs and revert are no longer available.'
+        ),
         allow: vscode.l10n.t('Allow'),
         allowAlways: vscode.l10n.t('Always allow'),
         alwaysScope: vscode.l10n.t('Always allow covers: {0}', '{0}'),
@@ -403,6 +453,20 @@ export class TaskPanels implements vscode.Disposable {
           edit: vscode.l10n.t('Edit this file?'),
           web: vscode.l10n.t('Access the web?'),
           other: vscode.l10n.t('Use {0}?', '{0}'),
+          plan: vscode.l10n.t('Approve the plan and start?'),
+        },
+        approvePlan: vscode.l10n.t('Approve and implement'),
+        openPlan: vscode.l10n.t('Open in editor'),
+        showSession: vscode.l10n.t('Session'),
+        permissionModes: {
+          default: vscode.l10n.t('Ask each time'),
+          acceptEdits: vscode.l10n.t('Auto-accept edits'),
+          plan: vscode.l10n.t('Plan only'),
+        },
+        permissionModeHints: {
+          default: vscode.l10n.t('Claude asks before each tool call'),
+          acceptEdits: vscode.l10n.t('File edits are allowed automatically; other tools still ask'),
+          plan: vscode.l10n.t('Claude reads and plans, and asks before it edits'),
         },
         inputDetails: vscode.l10n.t('Input details (JSON)'),
         answer: vscode.l10n.t('Answer'),
@@ -449,6 +513,12 @@ export class TaskPanels implements vscode.Disposable {
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
         merging: vscode.l10n.t('Merging…'),
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
+        thinking: vscode.l10n.t('Thinking…'),
+        thought: vscode.l10n.t('Thought'),
+        compact: vscode.l10n.t('Compact the context'),
+        compacted: vscode.l10n.t('Context compacted ({0} → {1})', '{0}', '{1}'),
+        commandsHint: vscode.l10n.t('Claude Code commands and skills'),
+        moreCandidates: vscode.l10n.t('{0} more: keep typing to filter', '{0}'),
         more: vscode.l10n.t('More actions'),
         rename: vscode.l10n.t('Rename'),
         contextPanel: vscode.l10n.t('What Claude will receive'),
@@ -499,7 +569,7 @@ export class TaskPanels implements vscode.Disposable {
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="${taskPanelCsp(webview.cspSource, nonce)}">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
       `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,
@@ -530,4 +600,9 @@ function tokensOf(task: Task): Record<number, TurnTokens> {
     }
   }
   return tokens;
+}
+
+/** ターンごとの開始と終了の時刻（画面の日付の区切りと時刻に使う） */
+function turnTimesOf(task: Task): { startedAt: string; endedAt?: string }[] {
+  return task.turns.map((turn) => ({ startedAt: turn.startedAt, endedAt: turn.endedAt }));
 }

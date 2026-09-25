@@ -64,6 +64,7 @@ export class DiffService {
   /** ファイルを変更前に戻す（FR-DIFF-5、FR-DIFF-6） */
   async revert(taskId: string, turn: number, path: string): Promise<void> {
     const task = await this.deps.service.load(taskId);
+    assertNotPruned(task);
     const change = task?.turns[turn]?.changes.find((c) => c.path === path);
     if (task === undefined || change === undefined) {
       throw new Error(`Change "${path}" not found in turn ${turn}`);
@@ -81,6 +82,7 @@ export class DiffService {
    */
   async revertAfter(taskId: string, afterTurn: number): Promise<string[]> {
     const task = await this.deps.service.load(taskId);
+    assertNotPruned(task);
     if (task === undefined) {
       throw new Error(`Task "${taskId}" not found`);
     }
@@ -150,6 +152,32 @@ export class DiffService {
       if (!referenced.has(hash)) {
         await this.deps.snapshots.delete(hash);
       }
+    }
+  }
+
+  /**
+   * 保存期間を過ぎたタスクのスナップショットを消す（NFR-4）。ほかのタスクと共有する分は残す。
+   * タスクの記録と会話の履歴は残し、消した印を付ける
+   */
+  async prune(taskIds: readonly string[], now: string): Promise<void> {
+    const targets = new Set(taskIds);
+    const tasks = await this.deps.service.list();
+    const referenced = new Set<string>();
+    for (const task of tasks) {
+      if (!targets.has(task.id) && task.snapshotsPrunedAt === undefined) {
+        hashesOf(task).forEach((hash) => referenced.add(hash));
+      }
+    }
+    for (const task of tasks) {
+      if (!targets.has(task.id)) {
+        continue;
+      }
+      for (const hash of new Set(hashesOf(task))) {
+        if (!referenced.has(hash)) {
+          await this.deps.snapshots.delete(hash);
+        }
+      }
+      await this.deps.service.patch(task.id, (t) => ({ ...t, snapshotsPrunedAt: now }));
     }
   }
 
@@ -340,4 +368,13 @@ function hashesOf(task: Task): string[] {
 /** 変更前に戻せるか。新規作成は消せばよく、それ以外は変更前の内容が要る */
 function canRevert(change: FileChange): boolean {
   return change.kind === 'created' || change.before !== undefined;
+}
+
+/** スナップショットを消したタスクでは、戻せない */
+function assertNotPruned(task: Task | undefined): void {
+  if (task?.snapshotsPrunedAt !== undefined) {
+    throw new Error(
+      `Saved file contents of task "${task.id}" were removed after the retention period`
+    );
+  }
 }

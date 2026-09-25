@@ -25,7 +25,8 @@ export type TaskEvent =
   | 'changes-recorded' // 終わったターンに変更が記録された
   | 'approve'; // ユーザーが変更を確認した
 
-export type PermissionMode = 'default' | 'acceptEdits';
+/** 承認方式。plan は読むだけで、計画の承認（ExitPlanMode）を許可すると抜ける */
+export type PermissionMode = 'default' | 'acceptEdits' | 'plan';
 
 /** Claude の考える量（Effort）。指定しなければ Claude Code に従う */
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -99,6 +100,8 @@ export interface Task {
    * 完了でなくなった時と、worktree をマージ・破棄した時に消す
    */
   approvedFrom?: 'review' | 'waiting';
+  /** 保存期間を過ぎてスナップショットを消した日時。消した後は差分と「戻す」を使えない */
+  snapshotsPrunedAt?: string;
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;

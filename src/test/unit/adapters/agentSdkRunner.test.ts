@@ -38,6 +38,18 @@ suite('normalizeMessage', () => {
           event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: '…' } },
         })
       ),
+      [{ type: 'thinking', text: '…' }]
+    );
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'stream_event',
+          event: {
+            type: 'content_block_delta',
+            delta: { type: 'signature_delta', signature: 'x' },
+          },
+        })
+      ),
       []
     );
     assert.deepStrictEqual(
@@ -60,6 +72,34 @@ suite('normalizeMessage', () => {
         })
       ),
       [{ type: 'tool-call', id: 'tu1', name: 'Edit', input: { file_path: 'a.txt' } }]
+    );
+  });
+
+  test('サブエージェントの tool_use は、親の呼び出しの ID を parentId に付ける', () => {
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'assistant',
+          parent_tool_use_id: 'agent-1',
+          message: {
+            content: [{ type: 'tool_use', id: 'tu9', name: 'Grep', input: { pattern: 'x' } }],
+          },
+        })
+      ),
+      [{ type: 'tool-call', id: 'tu9', name: 'Grep', input: { pattern: 'x' }, parentId: 'agent-1' }]
+    );
+  });
+
+  test('サブエージェントの出力の断片は、本文に混ぜない', () => {
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'stream_event',
+          parent_tool_use_id: 'agent-1',
+          event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'sub' } },
+        })
+      ),
+      []
     );
   });
 
@@ -231,8 +271,12 @@ interface FakeQuery {
   prompts: string[];
   /** applyFlagSettings に渡された設定 */
   flags: Record<string, unknown>[];
+  /** setPermissionMode に渡された承認方式 */
+  modes: string[];
   /** getSettings が返す、次に使う Effort。undefined なら getSettings を持たない（古い SDK） */
   appliedEffort?: string | null;
+  /** mcpServerStatus が返す MCP サーバーの状態 */
+  mcp: Record<string, unknown>[];
 }
 
 function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
@@ -243,7 +287,9 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     interrupts: 0,
     models: [],
     flags: [],
+    modes: [],
     prompts: [],
+    mcp: [],
     push: (m) => {
       queue.push(m);
       wake?.();
@@ -297,6 +343,10 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       applyFlagSettings: async (settings: Record<string, unknown>) => {
         fake.flags.push(settings);
       },
+      setPermissionMode: async (mode: string) => {
+        fake.modes.push(mode);
+      },
+      mcpServerStatus: async () => fake.mcp,
       getSettings:
         fake.appliedEffort === undefined
           ? undefined
@@ -603,6 +653,107 @@ suite('AgentSdkRunner: M9', () => {
   });
 });
 
+suite('AgentSdkRunner: 起動したプロセスの記録（Windows の後始末用）', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onEvent: () => {},
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('記録先を渡すと、自前で起動してプロセスの番号を知らせ、終わったら外す。stderr は記録に流す', async () => {
+    const { query, fake } = fakeQuery();
+    const { EventEmitter } = await import('events');
+    const { PassThrough } = await import('stream');
+    const child = Object.assign(new EventEmitter(), {
+      pid: 4321,
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      killed: false,
+      exitCode: null,
+      kill: () => true,
+    });
+    const spawnCalls: unknown[][] = [];
+    const events: string[] = [];
+    const logs: string[] = [];
+    const runner = new AgentSdkRunner({
+      query,
+      claudePath: () => 'c',
+      log: (line) => logs.push(line),
+      processes: {
+        spawned: (pid) => events.push(`spawned ${pid}`),
+        exited: (pid) => events.push(`exited ${pid}`),
+      },
+      spawn: ((...args: unknown[]) => {
+        spawnCalls.push(args);
+        return child;
+      }) as never,
+    });
+    const handle = runner.start(base);
+    const spawnOption = fake.params[0]?.options?.spawnClaudeCodeProcess;
+    assert.ok(spawnOption, 'spawnClaudeCodeProcess を渡す');
+    spawnOption({
+      command: 'claude',
+      args: ['-p'],
+      cwd: 'D:\\work',
+      env: {},
+      signal: new AbortController().signal,
+    });
+    assert.strictEqual(spawnCalls[0]?.[0], 'claude');
+    assert.deepStrictEqual(events, ['spawned 4321']);
+    child.stderr.write('warn\n');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(logs.join('').includes('warn'));
+    child.emit('exit', 0, null);
+    assert.deepStrictEqual(events, ['spawned 4321', 'exited 4321']);
+    fake.push(null);
+    await handle.done;
+  });
+
+  test('記録先が無ければ、SDK の既定の起動のまま', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start(base);
+    assert.strictEqual(fake.params[0]?.options?.spawnClaudeCodeProcess, undefined);
+    fake.push(null);
+    await handle.done;
+  });
+});
+
+suite('AgentSdkRunner: MCP サーバーの状態', () => {
+  test('動いているセッションに MCP サーバーの状態を聞き、名前・状態・エラー・スコープだけにする', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.mcp = [
+      {
+        name: 'github',
+        status: 'connected',
+        serverInfo: { name: 'gh', version: '1' },
+        scope: 'user',
+        config: { type: 'http', url: 'https://example.com/mcp' },
+      },
+      { name: 'db', status: 'failed', error: 'spawn ENOENT' },
+    ];
+    assert.deepStrictEqual(await handle.mcpServers(), [
+      { name: 'github', status: 'connected', scope: 'user' },
+      { name: 'db', status: 'failed', error: 'spawn ENOENT' },
+    ]);
+    fake.push(null);
+    await handle.done;
+  });
+});
+
 suite('AgentSdkRunner: 出力の確定', () => {
   const base = {
     cwd: 'D:\\work',
@@ -656,6 +807,31 @@ suite('AgentSdkRunner: 出力の確定', () => {
     assert.ok(
       order.indexOf('text-final') < order.indexOf('tool-call'),
       'text-final は tool-call より前'
+    );
+  });
+
+  test('サブエージェントの text は本文にしない（text-final を出さない）', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.push(
+      msg({
+        type: 'assistant',
+        uuid: 'u1',
+        parent_tool_use_id: 'agent-1',
+        message: { content: [{ type: 'text', text: 'sub report' }] },
+      })
+    );
+    fake.push(null);
+    await handle.done;
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'text-final' || e.type === 'text'),
+      []
     );
   });
 
@@ -803,6 +979,84 @@ suite('AgentSdkRunner: 常に許可の保存先', () => {
     assert.deepStrictEqual(
       result.updatedPermissions.map((p) => p.destination),
       ['session', 'session']
+    );
+  });
+});
+
+suite('AgentSdkRunner: 承認方式の切り替え', () => {
+  test('setPermissionMode は SDK の setPermissionMode に渡す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await handle.setPermissionMode('plan');
+    await handle.setPermissionMode('acceptEdits');
+    assert.deepStrictEqual(fake.modes, ['plan', 'acceptEdits']);
+  });
+
+  test('起動時に plan を渡せる', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'plan',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await settle();
+    assert.strictEqual(fake.params[0]?.options?.permissionMode, 'plan');
+  });
+});
+
+suite('AgentSdkRunner: コンテキストの圧縮', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('compact は /compact を送るがターンは開かず、その result はターンの終了にしない', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await settle();
+    fake.push(
+      msg({ type: 'result', subtype: 'success', is_error: false, usage: {}, modelUsage: {} })
+    );
+    await settle();
+    handle.compact();
+    await settle();
+    assert.deepStrictEqual(fake.prompts, ['hello', '/compact']);
+    fake.push(
+      msg({
+        type: 'system',
+        subtype: 'compact_boundary',
+        compact_metadata: { trigger: 'manual', pre_tokens: 27596, post_tokens: 2537 },
+      })
+    );
+    fake.push(
+      msg({ type: 'result', subtype: 'success', is_error: false, usage: {}, modelUsage: {} })
+    );
+    await settle();
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'turn-end').length,
+      1,
+      '圧縮の result でターンは終わらない'
+    );
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'compact'),
+      [{ type: 'compact', preTokens: 27596, postTokens: 2537 }]
     );
   });
 });

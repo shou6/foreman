@@ -7,6 +7,8 @@ import type { RunnerEvent } from './events';
 export type TranscriptItem =
   | { kind: 'prompt'; turn: number; text: string }
   | { kind: 'text'; turn: number; text: string }
+  /** 考えている途中。たたんで出すか、出さない */
+  | { kind: 'thinking'; turn: number; text: string }
   | {
       kind: 'tool';
       turn: number;
@@ -15,7 +17,11 @@ export type TranscriptItem =
       input: Record<string, unknown>;
       status: 'running' | 'ok' | 'error';
       output?: string;
+      /** サブエージェントの呼び出しなら、親（Agent）の呼び出しの ID */
+      parentId?: string;
     }
+  /** コンテキストの圧縮（区切りとして出す） */
+  | { kind: 'compact'; turn: number; preTokens: number; postTokens: number | undefined }
   | { kind: 'turn-end'; turn: number; ok: true }
   | { kind: 'turn-end'; turn: number; ok: false; interrupted: boolean; reason: string };
 
@@ -50,6 +56,13 @@ export function applyEvent(
       }
       return [...items, { kind: 'text', turn, text: event.text }];
     }
+    case 'thinking': {
+      const last = items[items.length - 1];
+      if (last?.kind === 'thinking' && last.turn === turn) {
+        return [...items.slice(0, -1), { ...last, text: last.text + event.text }];
+      }
+      return [...items, { kind: 'thinking', turn, text: event.text }];
+    }
     case 'text-final': {
       const last = items[items.length - 1];
       if (last?.kind === 'text' && last.turn === turn) {
@@ -68,6 +81,7 @@ export function applyEvent(
           name: event.name,
           input: event.input,
           status: 'running',
+          ...(event.parentId !== undefined ? { parentId: event.parentId } : {}),
         },
       ];
     case 'tool-result':
@@ -88,6 +102,11 @@ export function applyEvent(
               interrupted: event.interrupted,
               reason: event.reason,
             },
+      ];
+    case 'compact':
+      return [
+        ...items,
+        { kind: 'compact', turn, preTokens: event.preTokens, postTokens: event.postTokens },
       ];
     case 'init':
     case 'effort':

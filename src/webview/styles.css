@@ -191,6 +191,43 @@ body {
   border: 1px solid var(--vscode-panel-border);
 }
 
+/* 指示の中の引用・コードブロック・インラインコード。出力の Markdown と同じ見た目 */
+.item.prompt blockquote {
+  margin: 0.3em 0;
+  padding: 0.2em 0.8em;
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  background: var(--vscode-editor-background);
+  white-space: pre-wrap;
+}
+
+.prompt-code-scroll {
+  margin: 0.3em 0;
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+.item.prompt pre {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+  white-space: pre;
+}
+
+.item.prompt code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.item.prompt pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
 /* 連続するツールの呼び出し。1 行に並べ、開くと出力が見える */
 .item.tool-group {
   display: flex;
@@ -235,13 +272,16 @@ body {
   margin-right: 0.4em;
 }
 
-.tool-output {
+.tool-output-scroll {
   flex-basis: 100%;
   margin: 0.25em 0 0.5em 1em;
   padding: 0.5em;
   max-height: 20em;
-  overflow: auto;
   background: var(--vscode-textCodeBlock-background);
+}
+
+.tool-output {
+  margin: 0;
   color: var(--vscode-foreground);
   white-space: pre-wrap;
 }
@@ -252,6 +292,61 @@ body {
 
 .item.error {
   color: var(--vscode-editorError-foreground);
+}
+
+/* 考えている途中。文が取れない時は印だけ */
+.item.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0.3em 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.item.thinking-indicator .codicon {
+  font-size: 13px;
+}
+
+/* 考えている途中。たたんだ 1 行で出す */
+.item.thinking {
+  margin: 0.3em 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.item.thinking summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.item.thinking summary::-webkit-details-marker {
+  display: none;
+}
+
+.item.thinking summary::before {
+  content: '▸';
+  width: 1em;
+}
+
+.item.thinking[open] > summary::before {
+  content: '▾';
+}
+
+.item.thinking .codicon {
+  font-size: 13px;
+}
+
+.thinking-text {
+  margin: 0.3em 0 0 1.6em;
+  padding: 0.5em 0.8em;
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  white-space: pre-wrap;
+  font-style: italic;
 }
 
 .item.interrupted {
@@ -281,6 +376,33 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--vscode-descriptionForeground);
+}
+
+/* サブエージェントが今動かしているツール */
+.tool-running .tool-sub {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.tool-running .tool-sub::before {
+  content: '↳ ';
+}
+
+/* サブエージェントの呼び出し。親（Agent）の行の中に、字下げと左の線で入れ子にする */
+.subagent-count {
+  flex: none;
+  margin-left: 0.6em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.subagent-tools {
+  margin: 0.2em 0 0.3em 0.6em;
+  padding-left: 0.6em;
+  border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border));
 }
 
 /* 実行中のツールが無い間も、同じ高さの場所を取っておく */
@@ -329,6 +451,8 @@ body {
   box-sizing: border-box;
   resize: vertical;
   padding: 0.6em;
+  /* つまみで縮めても 1 行分（と上下の余白）は残す */
+  min-height: calc(1lh + 1.2em);
   color: var(--vscode-input-foreground);
   background: transparent;
   border: none;
@@ -530,6 +654,19 @@ body.dragging .drop-hint {
   color: var(--vscode-editorWarning-foreground);
 }
 
+/* 計画をエディターで開く。見出しの右端に置く */
+.approval-title .open-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-weight: normal;
+}
+
+.approval-title .open-plan .codicon {
+  color: inherit;
+}
+
 .approval-target {
   margin: 0;
   padding: 0.5em 0.7em;
@@ -546,12 +683,15 @@ body.dragging .drop-hint {
   font-size: 0.85em;
 }
 
-.approval-input pre {
+.approval-input-scroll {
   margin: 0.25em 0;
   padding: 0.5em;
   max-height: 16em;
-  overflow: auto;
   background: var(--vscode-textCodeBlock-background);
+}
+
+.approval-input pre {
+  margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -862,12 +1002,14 @@ body.dragging .drop-hint {
   align-items: center;
 }
 
-.diff-lines {
-  margin: 0;
+.diff-scroll {
   padding: 0.25em 0;
   max-height: 30em;
-  overflow: auto;
   background: var(--vscode-textCodeBlock-background);
+}
+
+.diff-lines {
+  margin: 0;
   font-family: var(--vscode-editor-font-family);
   font-size: 0.85em;
   line-height: 1.5;
@@ -1254,33 +1396,73 @@ body.dragging .drop-hint {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 指示のプリセットの候補 */
-.preset-list {
-  margin: 0;
-  padding: 0.3em 0.6em;
-  list-style: none;
+/* / の候補（プリセットと Claude Code のコマンド）。名前の列は固定幅、説明は 1 行 */
+.suggestions {
   border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
   border-radius: 4px;
   background: var(--vscode-editorWidget-background);
   font-size: 0.9em;
 }
 
+.preset-list {
+  margin: 0;
+  padding: 0.2em 0;
+  list-style: none;
+}
+
 .preset-list li {
-  display: flex;
-  gap: 0.8em;
+  display: grid;
+  grid-template-columns: 14em 6em minmax(0, 1fr);
+  gap: 0 0.8em;
   align-items: baseline;
-  padding: 0.1em 0;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+}
+
+.preset-list li[data-selected='true'] {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
 }
 
 .preset {
-  font-family: var(--vscode-editor-font-family);
-}
-
-.preset-prompt {
-  color: var(--vscode-descriptionForeground);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.preset-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+.preset-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.preset-list li[data-selected='true'] .preset,
+.preset-list li[data-selected='true'] .preset-hint,
+.preset-list li[data-selected='true'] .preset-desc {
+  color: inherit;
+}
+
+/* 選んでいる候補の説明の全文と、出していない件数 */
+.preset-detail,
+.preset-more {
+  padding: 0.3em 0.6em;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
 }
 
 /* Context パネル（次に送る内容） */
@@ -1325,35 +1507,29 @@ body.dragging .drop-hint {
   padding: 0.3em 0 0 1em;
 }
 
-.context-preview {
+.context-preview-scroll {
   max-height: 14em;
-  overflow: auto;
   margin: 0.3em 0 0;
   padding: 0.5em 0.7em;
   border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
   border-radius: 4px;
   background: var(--vscode-textCodeBlock-background);
+}
+
+.context-preview {
+  margin: 0;
   color: var(--vscode-foreground);
   white-space: pre-wrap;
   font-family: var(--vscode-editor-font-family);
 }
 
-.context-facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.1em 0.8em;
-  margin: 0.4em 0 0;
-}
-
-.context-facts dt {
-  font-weight: 600;
-}
-
-.context-facts dd {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 右サイドバーのセッションの区画を開くリンク（1 行の右端） */
+.context-summary .show-session {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex: none;
 }
 
 /* 見出しの 2 行目のメーターは、行の文字の大きさに合わせる */
@@ -1386,4 +1562,135 @@ body.dragging .drop-hint {
 .effort-value {
   min-width: 3em;
   color: var(--vscode-foreground);
+}
+
+/* 入力欄の「計画だけ」のトグル */
+/* 承認方式の 3 択。モデルの選択欄と同じ見た目 */
+label.mode-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+label.mode-select .codicon {
+  font-size: 13px;
+}
+
+select.mode-select {
+  padding: 1px 2px;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 2px;
+  font: inherit;
+}
+
+/* 計画の承認カード。計画は Markdown で描く */
+.approval-plan-scroll {
+  max-height: 24em;
+  padding: 0.5em 0.8em;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+.approval-plan {
+  white-space: normal;
+}
+
+/* / の候補の引数のヒント */
+.preset-hint {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+/* 圧縮した区切り */
+.checkpoint.compacted .checkpoint-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.head-meta .icon-button.compact {
+  padding: 1px;
+}
+
+/*
+ * スクロールバー（OverlayScrollbars）。中身の上に重ねて出し、バーの有無で幅が変わらない。
+ * 色は VS Code のスクロールバーに合わせ、ポインターが領域の外に出ると隠す
+ */
+.scroll.page {
+  height: 100vh;
+}
+
+.os-theme-foreman {
+  box-sizing: border-box;
+  --os-size: 7px;
+  --os-padding-perpendicular: 0;
+  --os-padding-axis: 0;
+  --os-track-border-radius: 0;
+  --os-handle-border-radius: 0;
+  --os-handle-min-size: 20px;
+  --os-handle-interactive-area-offset: 2px;
+  --os-handle-bg: var(--vscode-scrollbarSlider-background);
+  --os-handle-bg-hover: var(--vscode-scrollbarSlider-hoverBackground);
+  --os-handle-bg-active: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* いつのやり取りか。日付の区切り、指示の時刻、ターンの区切りの終了時刻と所要時間 */
+.day-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1em 0 0.4em;
+  font-size: 0.85em;
+}
+
+.day-divider::before,
+.day-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.day-divider > span {
+  padding: 0.05em 0.8em;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 1em;
+  color: var(--vscode-foreground);
+}
+
+/* 指示の吹き出しは幅の 90% まで。送った時刻は吹き出しの右下に置く（長い指示でも位置が変わらない） */
+.prompt-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 1em 0 1em 10%;
+}
+
+.prompt-row > .item.prompt {
+  max-width: 100%;
+  margin: 0;
+}
+
+.prompt-time {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.turn-time {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+/* 保存期間を過ぎてスナップショットを消したタスクの、差分カードの案内 */
+.diff-pruned {
+  padding: 0.4em 0.9em;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  border-bottom: 1px solid var(--vscode-panel-border);
 }

@@ -191,6 +191,17 @@
         "title": "%command.openBoard%",
         "category": "Foreman",
         "icon": "$(layout)"
+      },
+      {
+        "command": "foreman.refreshUsage",
+        "title": "%command.refreshUsage%",
+        "category": "Foreman",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "foreman.importSession",
+        "title": "%command.importSession%",
+        "category": "Foreman"
       }
     ],
     "menus": {
@@ -246,6 +257,16 @@
           "command": "foreman.openBoard",
           "when": "view == foreman.tasks",
           "group": "navigation@2"
+        },
+        {
+          "command": "foreman.refreshUsage",
+          "when": "view == foreman.tasks",
+          "group": "navigation@3"
+        },
+        {
+          "command": "foreman.importSession",
+          "when": "view == foreman.tasks",
+          "group": "1_import@1"
         }
       ],
       "webview/context": [
@@ -380,11 +401,13 @@
           "type": "string",
           "enum": [
             "default",
-            "acceptEdits"
+            "acceptEdits",
+            "plan"
           ],
           "enumDescriptions": [
             "%config.defaultPermissionMode.default%",
-            "%config.defaultPermissionMode.acceptEdits%"
+            "%config.defaultPermissionMode.acceptEdits%",
+            "%config.defaultPermissionMode.plan%"
           ],
           "default": "default",
           "description": "%config.defaultPermissionMode%"
@@ -418,6 +441,25 @@
           "default": "collapsed",
           "description": "%config.toolCalls%"
         },
+        "foreman.snapshotRetentionDays": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "%config.snapshotRetentionDays%"
+        },
+        "foreman.thinking": {
+          "type": "string",
+          "enum": [
+            "collapsed",
+            "hidden"
+          ],
+          "enumDescriptions": [
+            "%config.thinking.collapsed%",
+            "%config.thinking.hidden%"
+          ],
+          "default": "collapsed",
+          "description": "%config.thinking%"
+        },
         "foreman.autoTitle": {
           "type": "boolean",
           "default": true,
@@ -427,6 +469,52 @@
           "type": "string",
           "default": "haiku",
           "description": "%config.titleModel%"
+        },
+        "foreman.planUsage.sidebar": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "fiveHour",
+              "sevenDay",
+              "models"
+            ],
+            "enumDescriptions": [
+              "%config.planUsage.fiveHour%",
+              "%config.planUsage.sevenDay%",
+              "%config.planUsage.models%"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "fiveHour",
+            "sevenDay",
+            "models"
+          ],
+          "markdownDescription": "%config.planUsage.sidebar%"
+        },
+        "foreman.planUsage.statusBar": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "fiveHour",
+              "sevenDay",
+              "models"
+            ],
+            "enumDescriptions": [
+              "%config.planUsage.fiveHour%",
+              "%config.planUsage.sevenDay%",
+              "%config.planUsage.models%"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "fiveHour",
+            "sevenDay",
+            "models"
+          ],
+          "markdownDescription": "%config.planUsage.statusBar%"
         },
         "foreman.presets": {
           "type": "array",
@@ -494,6 +582,7 @@
     "@vscode/codicons": "^0.0.46-24",
     "diff": "^8.0.4",
     "marked": "^18.0.14",
+    "overlayscrollbars": "^2.16.0",
     "preact": "^10.29.8"
   },
   "devDependencies": {

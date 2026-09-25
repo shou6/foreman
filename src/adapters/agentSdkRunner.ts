@@ -1,3 +1,4 @@
+import { spawn as nodeSpawn } from 'child_process';
 import type {
   CanUseTool,
   HookCallback,
@@ -7,6 +8,7 @@ import type {
   Query,
   SDKMessage,
   SDKUserMessage,
+  SpawnedProcess,
 } from '@anthropic-ai/claude-agent-sdk' with { 'resolution-mode': 'import' };
 import type { PermissionRequest, RunnerEvent } from '../domain/events';
 import { EFFORT_LEVELS } from '../domain/models';
@@ -32,6 +34,13 @@ export interface AgentSdkRunnerDeps {
   claudePath: () => string;
   /** SDK の stderr などの記録 */
   log?: (line: string) => void;
+  /**
+   * 起動した claude のプロセスの記録先（Windows の異常終了の後始末用、NFR-5）。
+   * 渡すと、プロセスの番号を知るために SDK の既定の起動の代わりに自前で起動する
+   */
+  processes?: { spawned(pid: number, startedAt: number): void; exited(pid: number): void };
+  /** 自前で起動する時の spawn。テストで差し替える */
+  spawn?: typeof nodeSpawn;
 }
 
 const EDIT_TOOLS = 'Edit|Write|MultiEdit|NotebookEdit';
@@ -40,22 +49,49 @@ const EDIT_TOOLS = 'Edit|Write|MultiEdit|NotebookEdit';
 export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
   switch (m.type) {
     case 'system':
-      return m.subtype === 'init'
-        ? [{ type: 'init', sessionId: m.session_id, model: m.model }]
-        : [];
+      if (m.subtype === 'init') {
+        return [{ type: 'init', sessionId: m.session_id, model: m.model }];
+      }
+      if (m.subtype === 'compact_boundary') {
+        return [
+          {
+            type: 'compact',
+            preTokens: m.compact_metadata.pre_tokens,
+            postTokens: m.compact_metadata.post_tokens,
+          },
+        ];
+      }
+      return [];
     case 'stream_event': {
+      // サブエージェントの出力は本文に混ぜない（活動は親の呼び出しの中にツールとして出す）
+      if ((m.parent_tool_use_id ?? null) !== null) {
+        return [];
+      }
       const event = m.event;
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
         return [{ type: 'text', text: event.delta.text }];
       }
+      if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
+        return [{ type: 'thinking', text: event.delta.thinking }];
+      }
       return [];
     }
-    case 'assistant':
-      return m.message.content.flatMap((block) =>
+    case 'assistant': {
+      const parentId = m.parent_tool_use_id ?? undefined;
+      return m.message.content.flatMap((block): RunnerEvent[] =>
         block.type === 'tool_use'
-          ? [{ type: 'tool-call', id: block.id, name: block.name, input: asRecord(block.input) }]
+          ? [
+              {
+                type: 'tool-call',
+                id: block.id,
+                name: block.name,
+                input: asRecord(block.input),
+                ...(parentId !== undefined ? { parentId } : {}),
+              },
+            ]
           : []
       );
+    }
     case 'user': {
       const content = m.message.content;
       if (typeof content === 'string') {
@@ -90,7 +126,8 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
 
 /** assistant メッセージの text ブロックをつないだもの。text ブロックが無ければ undefined */
 function finalTextOf(m: SDKMessage): string | undefined {
-  if (m.type !== 'assistant') {
+  // サブエージェントの文は本文にしない
+  if (m.type !== 'assistant' || (m.parent_tool_use_id ?? null) !== null) {
     return undefined;
   }
   const texts = m.message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []));
@@ -214,6 +251,8 @@ export class AgentSdkRunner implements AgentRunner {
           PostToolUse: [{ matcher: EDIT_TOOLS, hooks: [fileEditHook('after')] }],
         },
         stderr: (data) => this.deps.log?.(data),
+        spawnClaudeCodeProcess:
+          this.deps.processes === undefined ? undefined : (o) => this.spawnTracked(o),
       },
     });
 
@@ -276,6 +315,8 @@ export class AgentSdkRunner implements AgentRunner {
         turnOpen = true;
         prompts.push(prompt);
       },
+      // /compact は CLI が処理する。result は届くが、ターンは開いていないので終了にはしない
+      compact: () => prompts.push('/compact'),
       interrupt: async () => {
         interruptRequested = true;
         await query.interrupt();
@@ -286,13 +327,50 @@ export class AgentSdkRunner implements AgentRunner {
         await reportEffort();
       },
       // Effort は途中で変えられるフラグ設定で伝える。null で Claude Code の既定に戻る
+      setPermissionMode: (mode) => query.setPermissionMode(mode),
       setEffort: async (effort) => {
         await query.applyFlagSettings({ effortLevel: effort ?? null });
         await reportEffort();
       },
+      mcpServers: async () =>
+        (await query.mcpServerStatus()).map((s) => ({
+          name: s.name,
+          status: s.status,
+          ...(s.error !== undefined ? { error: s.error } : {}),
+          ...(s.scope !== undefined ? { scope: s.scope } : {}),
+        })),
       close: () => prompts.end(),
       done,
     };
+  }
+
+  /**
+   * SDK の既定と同じ設定で claude を起動し、プロセスの番号を記録先に知らせる。
+   * 自前で起動すると SDK は stderr を読まないので、こちらで記録に流す
+   */
+  private spawnTracked(o: {
+    command: string;
+    args: string[];
+    cwd?: string;
+    env: Record<string, string | undefined>;
+    signal: AbortSignal;
+  }): SpawnedProcess {
+    const spawn = this.deps.spawn ?? nodeSpawn;
+    const child = spawn(o.command, o.args, {
+      cwd: o.cwd,
+      env: o.env,
+      signal: o.signal,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    const pid = child.pid;
+    if (pid !== undefined) {
+      this.deps.processes?.spawned(pid, Date.now());
+      child.once('exit', () => this.deps.processes?.exited(pid));
+    }
+    child.stderr?.on('data', (data: Buffer | string) => this.deps.log?.(String(data)));
+    // stdio を pipe にしたので stdin と stdout はある。SDK の SpawnedProcess の形に合う
+    return child as unknown as SpawnedProcess;
   }
 }
 
@@ -389,9 +467,12 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
   );
   return {
     send: () => {},
+    compact: () => {},
     interrupt: async () => {},
     setModel: async () => {},
     setEffort: async () => {},
+    setPermissionMode: async () => {},
+    mcpServers: async () => [],
     close: () => {},
     done: Promise.resolve(),
   };

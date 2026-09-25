@@ -6,8 +6,9 @@ import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { ModelOption } from '../domain/models';
+import type { SlashCommandInfo } from '../domain/slashCommands';
 import type { ApprovalKind, StatusKind } from '../domain/status';
-import type { EffortLevel, FileChange, TaskStatus } from '../domain/task';
+import type { EffortLevel, FileChange, PermissionMode, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
 export type { Attachment, DiffLine, FileChange, PendingRequest, Preset, TranscriptDelta };
@@ -21,6 +22,11 @@ export interface PanelStrings {
   /** 経過の表し方。{0} に秒 / {0} に分、{1} に秒 */
   elapsedSeconds: string;
   elapsedMinutes: string;
+  /** スナップショットを消したタスクの差分カードの案内 */
+  snapshotsPruned: string;
+  /** 日付の区切りの「今日」「昨日」 */
+  today: string;
+  yesterday: string;
   allow: string;
   /** 「常に許可」。後ろに許可する範囲を添える */
   allowAlways: string;
@@ -37,6 +43,15 @@ export interface PanelStrings {
   /** 質問の「その他」と、その入力欄の案内 */
   other: string;
   otherPlaceholder: string;
+  /** 計画の承認カードの「承認して実装」、入力欄の「計画だけ」のトグルとその説明 */
+  approvePlan: string;
+  /** 計画をエディターの別のタブで開く */
+  openPlan: string;
+  /** 右サイドバーのセッションの区画を開くリンク */
+  showSession: string;
+  /** 承認方式の 3 択の名前と、マウスを乗せた時の説明 */
+  permissionModes: Record<PermissionMode, string>;
+  permissionModeHints: Record<PermissionMode, string>;
   /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
   questionKeys: string;
   questionTabKeys: string;
@@ -84,6 +99,15 @@ export interface PanelStrings {
   merging: string;
   /** {0} に件数が入る */
   toolCalls: string;
+  /** 考えている途中の見出し（動いている間 / 終わった後） */
+  thinking: string;
+  thought: string;
+  /** 圧縮のボタンと、圧縮した区切り（{0} 前、{1} 後のトークン数）。/ の候補のうちコマンドの見出し */
+  compact: string;
+  compacted: string;
+  commandsHint: string;
+  /** 候補の下の案内。{0} に出していない件数 */
+  moreCandidates: string;
   /** 見出しの「…」（ほかの操作） */
   more: string;
   /** 題名を押した時の説明（名前の変更） */
@@ -117,7 +141,19 @@ export interface PanelStrings {
   contextUsage: string;
 }
 
+/** ターンの開始と終了の時刻（ISO 8601）。添字はターンの番号 */
+export interface TurnTime {
+  startedAt: string;
+  endedAt?: string;
+}
+
 export interface PanelState {
+  /** ターンの時刻。日付の区切りと、指示・ターンの時刻に使う。古い記録には無い */
+  turnTimes?: TurnTime[];
+  /** 日付と時刻の表し方に使う言語（VS Code の表示言語） */
+  locale?: string;
+  /** 保存期間を過ぎてスナップショットを消した（差分と「戻す」を出さない） */
+  snapshotsPruned?: boolean;
   taskId: string;
   title: string;
   status: TaskStatus;
@@ -141,6 +177,8 @@ export interface PanelState {
   effort?: EffortLevel;
   /** セッションが実際に使う Effort。分からなければ undefined */
   activeEffort?: EffortLevel;
+  /** 承認方式。plan なら入力欄の「計画だけ」が入になる */
+  permissionMode?: PermissionMode;
   /** モデルの選択肢（Claude Code から取得。取得前は固定の一覧） */
   models: ModelOption[];
   /** 既定（モデルを指定しない時）の中身。分からなければ undefined */
@@ -160,8 +198,12 @@ export interface PanelState {
   worktree?: { branch: string; base: string };
   /** ツールの呼び出しを最初から開いて見せるか（設定 foreman.toolCalls） */
   toolCallsExpanded: boolean;
+  /** 考えている途中の出し方（設定 foreman.thinking）。無ければたたんで出す */
+  thinking?: 'collapsed' | 'hidden';
   /** 指示のプリセット（設定 foreman.presets） */
   presets: Preset[];
+  /** Claude Code のスラッシュコマンドとスキル（取得できた時だけ） */
+  commands?: SlashCommandInfo[];
   /** セッションの情報（Context パネルに出す） */
   context: { cwd: string; permissionMode: string; alwaysAllowed: string[] };
   /** worktree のマージ・破棄の処理中 */
@@ -177,6 +219,8 @@ export type ToWebview =
       status: TaskStatus;
       turnOpen: boolean;
       turnStartedAt?: string;
+      turnTimes?: TurnTime[];
+      snapshotsPruned?: boolean;
       mergeable: boolean;
       unapprovable?: boolean;
       usage?: ContextUsage;
@@ -186,6 +230,7 @@ export type ToWebview =
       activeModel?: string;
       effort?: EffortLevel;
       activeEffort?: EffortLevel;
+      permissionMode?: PermissionMode;
       worktree?: { branch: string; base: string };
     }
   | { type: 'pending'; pending: PendingRequest | undefined }
@@ -195,6 +240,8 @@ export type ToWebview =
   | { type: 'finishing'; kind: 'merge' | 'discard' | undefined }
   /** モデルの一覧を取得し終えた */
   | { type: 'models'; models: ModelOption[]; defaultModel: ModelOption | undefined }
+  /** Claude Code のコマンドとスキルの一覧を取得し終えた */
+  | { type: 'commands'; commands: SlashCommandInfo[] }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
@@ -209,6 +256,8 @@ export type ToExtension =
   | { type: 'setModel'; model: string | undefined }
   /** 次のターンから使う Effort。undefined で Claude Code に従う */
   | { type: 'setEffort'; effort: EffortLevel | undefined }
+  /** 承認方式を変える（「計画だけ」の切り替え） */
+  | { type: 'setPermissionMode'; mode: PermissionMode }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
   /** クリップボードから貼り付けた画像（base64）。拡張機能が保存してファイルとして添付する */
@@ -226,6 +275,12 @@ export type ToExtension =
   | { type: 'export' }
   /** 見出しの「…」。ほかの操作（名前の変更・書き出し・切り出し・削除）を選ぶ */
   | { type: 'more' }
+  /** コンテキストを圧縮する */
+  | { type: 'compact' }
+  /** 計画（ExitPlanMode）をエディターで開く */
+  | { type: 'openPlan'; plan: string }
+  /** 右サイドバーのセッションの区画を前面に出す */
+  | { type: 'showSession' }
   /** タスク名の変更（入力は拡張機能側のダイアログ） */
   | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */

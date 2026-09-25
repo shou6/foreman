@@ -361,6 +361,51 @@ suite('DiffService: スナップショットの後片付け', () => {
   });
 });
 
+suite('DiffService.prune: 古いスナップショットを消す', () => {
+  test('指定したタスクだけが使うスナップショットを消し、ほかのタスクと共有する分は残す。消した印を付け、戻せなくする', async () => {
+    const runner = new FakeAgentRunner();
+    const store = new InMemoryTaskStore();
+    let n = 0;
+    const service = new TaskService({
+      runner,
+      store,
+      newId: () => `task-${++n}`,
+      now: () => '2026-09-23T10:00:00.000Z',
+      approve: async () => ({ behavior: 'allow' }),
+    });
+    const fs = new FakeFileSystem({ [A]: 'v0\n' });
+    const snapshots = new InMemorySnapshotStore();
+    const diffs = new DiffService({ service, fs, snapshots, sep: '\\' });
+    // task-1: v0 → only1
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    fs.change(A, 'only1\n');
+    runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    // task-2: only1 → shared（only1 は task-2 の変更前としても使う）
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.emit({ type: 'file-edit', phase: 'before', path: A });
+    await settle();
+    fs.change(A, 'shared\n');
+    runner.last.emit({ type: 'file-edit', phase: 'after', path: A });
+    await settle();
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+
+    const v0 = await snapshots.save('v0\n');
+    const only1 = await snapshots.save('only1\n');
+    await diffs.prune(['task-1'], '2026-09-25T00:00:00.000Z');
+    assert.strictEqual(snapshots.contents.has(v0), false, 'task-1 だけが使う');
+    assert.strictEqual(snapshots.contents.has(only1), true, 'task-2 も使う');
+    assert.strictEqual((await store.load('task-1'))?.snapshotsPrunedAt, '2026-09-25T00:00:00.000Z');
+    assert.strictEqual((await store.load('task-2'))?.snapshotsPrunedAt, undefined);
+    await assert.rejects(diffs.revert('task-1', 0, 'a.txt'), /removed/);
+  });
+});
+
 suite('DiffService.revertAfter: ターン単位で戻す', () => {
   test('指定したターンより後の変更を新しい順に戻し、戻せなかったものを返す', async () => {
     const h = harness({ [A]: 'v1\n' });

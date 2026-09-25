@@ -1,5 +1,7 @@
 import { Icon } from '../icons';
+import { dayKindOf, formatDate, sameLocalDay } from '../../domain/time';
 import type { DetailsState, DetailsTask, DetailsTurn, FromDetails } from '../detailsProtocol';
+import { SessionDock, type DockTab } from './SessionDock';
 
 /** 全ターンの追加・削除の行数の合計。数えられない変更は除く。live なら戻した変更も除く */
 function lineTotals(
@@ -27,10 +29,15 @@ function lineTotals(
 interface DetailsProps {
   state: DetailsState | undefined;
   post: (message: FromDetails) => void;
+  /** 下の区画で最初に開いておくタブ */
+  initialTab?: DockTab;
 }
 
-/** 右サイドバー。今見ているタスクの変更（ターンごと）とチェックポイント、仕上げ */
-export function Details({ state, post }: DetailsProps) {
+/**
+ * 右サイドバー。今見ているタスクの変更（ターンごと）とチェックポイント、仕上げ。
+ * 下の区画に、セッションの情報（概要・MCP・常に許可）を出す
+ */
+export function Details({ state, post, initialTab }: DetailsProps) {
   if (state === undefined) {
     return null;
   }
@@ -42,41 +49,107 @@ export function Details({ state, post }: DetailsProps) {
   const totals = lineTotals(task.turns);
   const anyChanges = task.turns.some((turn) => turn.changes.length > 0);
   return (
-    <div class="details">
-      <header class="details-head">
-        <button class="title link" onClick={() => post({ type: 'open' })}>
-          {task.title}
-        </button>
-        <span class="status" data-kind={task.kind}>
-          {strings.statusLabels[task.kind]}
-        </span>
-      </header>
-      <div class="changes-title">
-        <span>{strings.changesTitle}</span>
-        {!anyChanges && <span class="none">{strings.none}</span>}
-        {(totals.added !== undefined || totals.removed !== undefined) && (
-          <span class="counts">
-            <span class="added">+{totals.added ?? 0}</span>
-            <span class="removed">−{totals.removed ?? 0}</span>
+    <div class="details-root">
+      <div class="details">
+        <header class="details-head">
+          <button class="title link" onClick={() => post({ type: 'open' })}>
+            {task.title}
+          </button>
+          <span class="status" data-kind={task.kind}>
+            {strings.statusLabels[task.kind]}
           </span>
+        </header>
+        <div class="changes-title">
+          <span>{strings.changesTitle}</span>
+          {!anyChanges && <span class="none">{strings.none}</span>}
+          {(totals.added !== undefined || totals.removed !== undefined) && (
+            <span class="counts">
+              <span class="added">+{totals.added ?? 0}</span>
+              <span class="removed">−{totals.removed ?? 0}</span>
+            </span>
+          )}
+        </div>
+        {[...task.turns].reverse().map((turn, i, turns) => (
+          <>
+            <TurnDay
+              key={`day-${turn.index}`}
+              turn={turn}
+              newer={turns[i - 1]}
+              locale={state.locale ?? 'en'}
+              strings={strings}
+            />
+            <TurnView
+              key={turn.index}
+              turn={turn}
+              busy={busy}
+              pruned={task.snapshotsPruned === true}
+              strings={strings}
+              post={post}
+            />
+          </>
+        ))}
+        {task.worktree !== undefined ? (
+          <Finish task={task} worktree={task.worktree} busy={busy} strings={strings} post={post} />
+        ) : (
+          <section class="finish">
+            <div class="finish-actions">
+              <button
+                class="finish-button all-diff"
+                disabled={task.snapshotsPruned === true}
+                title={task.snapshotsPruned === true ? strings.snapshotsPruned : undefined}
+                onClick={() => post({ type: 'allDiff' })}
+              >
+                {strings.allDiff}
+              </button>
+            </div>
+          </section>
         )}
       </div>
-      {[...task.turns].reverse().map((turn) => (
-        <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
-      ))}
-      {task.worktree !== undefined ? (
-        <Finish task={task} worktree={task.worktree} busy={busy} strings={strings} post={post} />
-      ) : (
-        <section class="finish">
-          <div class="finish-actions">
-            <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
-              {strings.allDiff}
-            </button>
-          </div>
-        </section>
+      {state.session !== undefined && (
+        <SessionDock
+          taskId={task.id}
+          session={state.session}
+          mcp={state.mcp}
+          height={state.dockHeight}
+          strings={strings}
+          post={post}
+          initialTab={initialTab}
+        />
       )}
     </div>
   );
+}
+
+/**
+ * ターンの一覧の日付の見出し（新しい順に並べた時の、日付の変わり目）。
+ * 今日・昨日はその呼び名、それより前は日付。時刻の無い古い記録には出さない
+ */
+function TurnDay({
+  turn,
+  newer,
+  locale,
+  strings,
+}: {
+  turn: DetailsTurn;
+  newer: DetailsTurn | undefined;
+  locale: string;
+  strings: DetailsState['strings'];
+}) {
+  if (turn.startedAt === undefined) {
+    return null;
+  }
+  if (newer?.startedAt !== undefined && sameLocalDay(newer.startedAt, turn.startedAt)) {
+    return null;
+  }
+  const now = new Date();
+  const kind = dayKindOf(turn.startedAt, now);
+  const label =
+    kind === 'today'
+      ? strings.today
+      : kind === 'yesterday'
+        ? strings.yesterday
+        : formatDate(turn.startedAt, locale, now);
+  return <div class="turn-day">{label}</div>;
 }
 
 interface FinishProps {
@@ -141,7 +214,12 @@ function Finish({ task, worktree, busy, strings, post }: FinishProps) {
                 <span class="removed">−{totals.removed ?? 0}</span>
               </span>
             </span>
-            <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
+            <button
+              class="finish-button all-diff"
+              disabled={task.snapshotsPruned === true}
+              title={task.snapshotsPruned === true ? strings.snapshotsPruned : undefined}
+              onClick={() => post({ type: 'allDiff' })}
+            >
               {strings.allDiff}
             </button>
           </div>
@@ -177,18 +255,20 @@ function Finish({ task, worktree, busy, strings, post }: FinishProps) {
 interface TurnProps {
   turn: DetailsTurn;
   busy: boolean;
+  /** スナップショットを消した（ファイルを戻せず、差分も開けない） */
+  pruned: boolean;
   strings: DetailsState['strings'];
   post: (message: FromDetails) => void;
 }
 
-function TurnView({ turn, busy, strings, post }: TurnProps) {
+function TurnView({ turn, busy, pruned, strings, post }: TurnProps) {
   const checkpoint = turn.ok === true && (
     <span class="checkpoint">
       <button
         class="icon-button rewind"
-        title={strings.rewindHere}
+        title={pruned ? strings.snapshotsPruned : strings.rewindHere}
         aria-label={strings.rewindHere}
-        disabled={busy}
+        disabled={busy || pruned}
         onClick={() => post({ type: 'rewind', turn: turn.index })}
       >
         <Icon name="discard" />
@@ -241,6 +321,8 @@ function TurnView({ turn, busy, strings, post }: TurnProps) {
             </span>
             <button
               class="link open-diff"
+              disabled={pruned}
+              title={pruned ? strings.snapshotsPruned : undefined}
               onClick={() => post({ type: 'openDiff', turn: turn.index, path: change.path })}
             >
               {strings.openDiff}
@@ -250,7 +332,8 @@ function TurnView({ turn, busy, strings, post }: TurnProps) {
             ) : (
               <button
                 class="link revert"
-                disabled={busy}
+                disabled={busy || pruned}
+                title={pruned ? strings.snapshotsPruned : undefined}
                 onClick={() => post({ type: 'revert', turn: turn.index, path: change.path })}
               >
                 {strings.revert}

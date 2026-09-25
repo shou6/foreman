@@ -55,6 +55,10 @@ export function exportTaskMarkdown(task: Task, items: readonly TranscriptItem[])
         case 'text':
           lines.push(demote(item.text), '');
           break;
+        case 'thinking':
+        case 'compact':
+          // 考えている途中と圧縮の区切りは書き出さない
+          break;
         case 'tool':
           inTools = true;
           lines.push(`- ${mark(item.status)} ${item.name} \`${summarize(item.input)}\``);

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import type { RateLimitService } from '../app/rateLimitService';
 import type { TaskService } from '../app/taskService';
+import { planUsageEntries } from '../domain/rateLimits';
 import { statusCounts } from '../domain/statusCounts';
+import { readSettings } from './settings';
 import { contextUsage, formatTokens } from '../domain/usage';
 
 /** ステータスバーに、実行中と「あなたの番」の件数を出す。クリックでタスクの一覧を開く */
@@ -16,14 +19,18 @@ export class StatusBar implements vscode.Disposable {
     } = {
       id: () => undefined,
       onDidChange: () => ({ dispose: () => {} }),
-    }
+    },
+    /** 契約の利用枠。無ければ出さない */
+    private readonly rateLimits?: RateLimitService
   ) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
     this.item.name = 'Foreman';
     this.item.command = 'workbench.view.extension.foreman';
     const activeSubscription = active.onDidChange(() => void this.refresh());
+    const limitsSubscription = rateLimits?.onDidChange(() => void this.refresh());
     this.subscriptions.push(
       () => activeSubscription.dispose(),
+      () => limitsSubscription?.(),
       service.onDidChange(() => void this.refresh()),
       service.onDidDelete(() => void this.refresh())
     );
@@ -34,7 +41,11 @@ export class StatusBar implements vscode.Disposable {
     const tasks = await this.service.list();
     const { running, yourTurn } = statusCounts(tasks);
     const active = tasks.find((t) => t.id === this.active.id());
-    if (running === 0 && yourTurn === 0 && active === undefined) {
+    const limits = this.rateLimits?.current();
+    // 契約の利用枠は、設定で選んだ項目を「5h 22% · 7d 45% · Fable 73%」のように短く出す
+    const entries =
+      limits === undefined ? [] : planUsageEntries(limits, readSettings().planUsage.statusBar);
+    if (running === 0 && yourTurn === 0 && active === undefined && entries.length === 0) {
       this.item.hide();
       return;
     }
@@ -59,12 +70,33 @@ export class StatusBar implements vscode.Disposable {
     if (yourTurn > 0) {
       parts.push(vscode.l10n.t('$(bell) {0} your turn', String(yourTurn)));
     }
+    if (entries.length > 0) {
+      const short = entries.map((e) =>
+        e.kind === 'fiveHour'
+          ? vscode.l10n.t('5h {0}%', String(e.utilization))
+          : e.kind === 'sevenDay'
+            ? vscode.l10n.t('7d {0}%', String(e.utilization))
+            : `${e.name ?? ''} ${e.utilization}%`
+      );
+      parts.push(`$(pulse) ${short.join(' · ')}`);
+    }
     this.item.text = 'Foreman: ' + parts.join(' · ');
-    this.item.tooltip = vscode.l10n.t(
-      'Foreman: {0} running, {1} waiting for you',
-      String(running),
-      String(yourTurn)
-    );
+    const lines = [
+      vscode.l10n.t('Foreman: {0} running, {1} waiting for you', String(running), String(yourTurn)),
+    ];
+    if (limits !== undefined) {
+      lines.push(
+        vscode.l10n.t(
+          'Plan usage: 5-hour {0}%, 7-day {1}%',
+          String(limits.fiveHour?.utilization ?? '-'),
+          String(limits.sevenDay?.utilization ?? '-')
+        )
+      );
+      for (const model of limits.models) {
+        lines.push(`${model.name}: ${model.utilization}%`);
+      }
+    }
+    this.item.tooltip = lines.join('\n');
     this.item.show();
   }
 

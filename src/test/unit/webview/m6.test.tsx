@@ -234,3 +234,34 @@ suite('webview: Effort', () => {
     assert.strictEqual(message.type, 'setEffort');
   });
 });
+
+suite('webview: プランモードの切り替え', () => {
+  test('入力欄で承認方式を 3 択（毎回聞く・編集は自動で許可・計画だけ）から選べ、今の方式が選ばれている', () => {
+    for (const mode of ['default', 'acceptEdits', 'plan'] as const) {
+      const html = render(<App state={state({ permissionMode: mode })} post={() => {}} />);
+      assert.ok(/<select[^>]*class="mode-select"/.test(html), mode);
+      const options = [
+        ...html.matchAll(/<option([^>]*value="(default|acceptEdits|plan)"[^>]*)>([^<]*)</g),
+      ].map((m) => [m[2], /\bselected\b/.test(m[1] ?? ''), m[3]]);
+      assert.deepStrictEqual(options, [
+        ['default', mode === 'default', 'Ask each time'],
+        ['acceptEdits', mode === 'acceptEdits', 'Auto-accept edits'],
+        ['plan', mode === 'plan', 'Plan only'],
+      ]);
+    }
+  });
+
+  test('task メッセージで承認方式が入れ替わり、setPermissionMode のメッセージの型がある', () => {
+    const s = reduce(state({}), {
+      type: 'task',
+      status: 'done',
+      turnOpen: false,
+      mergeable: false,
+      title: 't',
+      permissionMode: 'plan',
+    });
+    assert.strictEqual(s?.permissionMode, 'plan');
+    const message: ToExtension = { type: 'setPermissionMode', mode: 'plan' };
+    assert.strictEqual(message.type, 'setPermissionMode');
+  });
+});

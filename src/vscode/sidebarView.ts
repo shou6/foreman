@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
+import type { RateLimitService } from '../app/rateLimitService';
 import type { TaskService } from '../app/taskService';
 import { sidebarOf } from '../domain/sidebar';
 import { tokensToday } from '../domain/usage';
@@ -12,6 +13,8 @@ export interface SidebarViewDeps {
   extensionUri: vscode.Uri;
   service: TaskService;
   approvals: ApprovalService;
+  /** 契約の利用枠 */
+  rateLimits: RateLimitService;
   activeTaskId: () => string | undefined;
   onDidChangeActive: (listener: () => void) => vscode.Disposable;
   openTask: (taskId: string) => Promise<void>;
@@ -33,6 +36,7 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
       { dispose: deps.service.onDidChange(() => void this.refresh()) },
       { dispose: deps.service.onDidDelete(() => void this.refresh()) },
       { dispose: deps.approvals.onDidChange(() => void this.refresh()) },
+      { dispose: deps.rateLimits.onDidChange(() => void this.refresh()) },
       deps.onDidChangeActive(() => void this.refresh())
     );
     this.timer = setInterval(() => void this.refresh(), 60_000);
@@ -67,7 +71,8 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
     }
   }
 
-  private async refresh(): Promise<void> {
+  /** 描き直す。設定が変わった時にも呼ぶ */
+  async refresh(): Promise<void> {
     if (this.view === undefined) {
       return;
     }
@@ -82,6 +87,9 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
       }),
       activeTaskId: this.deps.activeTaskId(),
       today: tokensToday(tasks, new Date(this.deps.now())),
+      rateLimits: this.deps.rateLimits.current(),
+      planUsageItems: readSettings().planUsage.sidebar,
+      now: this.deps.now(),
       strings: {
         newTask: vscode.l10n.t('New task'),
         empty: vscode.l10n.t('No tasks yet. Create one to get started.'),
@@ -110,6 +118,15 @@ export class SidebarView implements vscode.WebviewViewProvider, vscode.Disposabl
           days: vscode.l10n.t('{0}d ago', '{0}'),
         },
         today: vscode.l10n.t('Tokens today (all tasks)'),
+        rateLimits: {
+          title: vscode.l10n.t('Plan usage'),
+          fiveHour: vscode.l10n.t('5-hour'),
+          sevenDay: vscode.l10n.t('7-day'),
+          resetsIn: vscode.l10n.t('resets in {0}', '{0}'),
+          hoursMinutes: vscode.l10n.t('{0}h {1}m', '{0}', '{1}'),
+          minutes: vscode.l10n.t('{0}m', '{0}'),
+          fetchedAt: vscode.l10n.t('as of {0}', '{0}'),
+        },
       },
     };
     const message: ToSidebar = { type: 'state', state };

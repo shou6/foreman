@@ -1,5 +1,7 @@
 import type { StatusKind } from '../domain/status';
 import type { FileChange, TaskStatus } from '../domain/task';
+import type { McpServerInfo, McpStatus } from '../domain/mcp';
+import type { ContextUsage } from '../domain/usage';
 
 /** 右サイドバーに出す文字列。翻訳は拡張機能側で済ませて渡す */
 export interface DetailsStrings {
@@ -34,6 +36,41 @@ export interface DetailsStrings {
   endWithoutChanges: string;
   nothingToMerge: string;
   nothingToMergeHint: string;
+  /** スナップショットを消したタスクで、押せない操作に添える説明 */
+  snapshotsPruned: string;
+  /** ターンの一覧の日付の見出し */
+  today: string;
+  yesterday: string;
+  /** 下の区画（セッション）のタブ。{0} に常に許可の件数 */
+  overview: string;
+  mcpTab: string;
+  alwaysAllowedTab: string;
+  context: string;
+  model: string;
+  effort: string;
+  permissionMode: string;
+  directory: string;
+  compact: string;
+  refresh: string;
+  /** 区画の上端のつまみ */
+  resizeDock: string;
+  /** セッションが動いていない時の MCP の案内 */
+  mcpNotRunning: string;
+  mcpStatus: Record<McpStatus, string>;
+}
+
+/** 下の区画に出す、今見ているタスクのセッションの情報 */
+export interface DetailsSession {
+  usage: ContextUsage | undefined;
+  /** 圧縮できる（使用量があり、動いていない） */
+  canCompact: boolean;
+  /** 画面に出すモデルの名前 */
+  model: string;
+  /** 画面に出す Effort の名前。分からなければ undefined */
+  effort: string | undefined;
+  permissionMode: string;
+  cwd: string;
+  alwaysAllowed: string[];
 }
 
 export interface DetailsChange {
@@ -50,6 +87,8 @@ export interface DetailsTurn {
   /** 正常に終わったターンだけがチェックポイントになる。未終了は undefined */
   ok?: boolean;
   changes: DetailsChange[];
+  /** 指示を送った時刻。古い記録には無い */
+  startedAt?: string;
 }
 
 export interface DetailsTask {
@@ -63,16 +102,27 @@ export interface DetailsTask {
   worktree?: { branch: string; base: string };
   /** 承認済みで変更があり、マージできる */
   mergeable: boolean;
+  /** 保存期間を過ぎてスナップショットを消した（戻す・差分を開くを押せない） */
+  snapshotsPruned?: boolean;
 }
 
 export interface DetailsState {
   /** 今見ているタスク。無ければ undefined */
   task: DetailsTask | undefined;
+  /** 下の区画（セッション）の中身。タスクが無ければ undefined */
+  session?: DetailsSession;
+  /** 日付の表し方に使う言語 */
+  locale?: string;
+  /** 下の区画の高さ（覚えている値）。無ければ既定 */
+  dockHeight?: number;
+  /** MCP サーバーの状態（MCP のタブを開いた時に聞く）。聞く前は無い */
+  mcp?: { running: false } | { running: true; servers: McpServerInfo[] };
   strings: DetailsStrings;
 }
 
 /** 拡張機能 → 右サイドバー */
-export type ToDetails = { type: 'state'; state: DetailsState };
+export type ToDetails =
+  { type: 'state'; state: DetailsState } | { type: 'mcp'; mcp: NonNullable<DetailsState['mcp']> };
 
 /** 右サイドバー → 拡張機能 */
 export type FromDetails =
@@ -87,4 +137,10 @@ export type FromDetails =
   | { type: 'allDiff' }
   | { type: 'merge' }
   /** worktree を捨てる（確認は拡張機能側で出す） */
-  | { type: 'discard' };
+  | { type: 'discard' }
+  /** MCP サーバーの状態を聞く */
+  | { type: 'mcpServers' }
+  /** コンテキストを圧縮する */
+  | { type: 'compact' }
+  /** 下の区画の高さを覚えてもらう */
+  | { type: 'dockHeight'; height: number };

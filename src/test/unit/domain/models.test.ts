@@ -46,6 +46,45 @@ suite('models: Claude Code が返すモデルの一覧', () => {
     ]);
   });
 
+  test('系統（Opus・Fable・Sonnet・Haiku）ごとに、いちばん新しい版だけを残す', () => {
+    const info = (value: string, resolvedModel: string) => ({
+      value,
+      resolvedModel,
+      displayName: value,
+      description: '',
+    });
+    const list = modelsFromSdk([
+      info('default', 'claude-opus-5-5'),
+      info('opus', 'claude-opus-5-5'),
+      info('claude-fable-5-1', 'claude-fable-5-1'),
+      info('sonnet', 'claude-sonnet-5'),
+      info('haiku', 'claude-haiku-4-5-20251001'),
+      info('claude-opus-5', 'claude-opus-5'),
+      info('claude-fable-5', 'claude-fable-5'),
+      info('claude-opus-4-8', 'claude-opus-4-8'),
+      info('claude-opus-4-6', 'claude-opus-4-6'),
+      info('claude-sonnet-4-6', 'claude-sonnet-4-6'),
+      info('claude-haiku-4-5', 'claude-haiku-4-5'),
+      info('claude-opus-5-5[1m]', 'claude-opus-5-5[1m]'),
+    ]);
+    assert.deepStrictEqual(
+      list.models.map((m) => m.value),
+      ['opus', 'claude-fable-5-1', 'sonnet', 'haiku']
+    );
+    assert.strictEqual(list.defaultModel?.value, 'default');
+  });
+
+  test('系統の分からないモデルは、そのまま残す', () => {
+    const list = modelsFromSdk([
+      { value: 'sonnet', resolvedModel: 'claude-sonnet-5', displayName: 'S', description: '' },
+      { value: 'my-proxy-model', displayName: 'Custom', description: '' },
+    ]);
+    assert.deepStrictEqual(
+      list.models.map((m) => m.value),
+      ['sonnet', 'my-proxy-model']
+    );
+  });
+
   test('一覧が空なら固定の一覧を使う', () => {
     assert.deepStrictEqual(modelsFromSdk([]), { models: FALLBACK_MODELS, defaultModel: undefined });
   });

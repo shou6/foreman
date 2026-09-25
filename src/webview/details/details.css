@@ -8,7 +8,22 @@ body {
   font-size: var(--vscode-font-size);
 }
 
+/* 上の変更の一覧はスクロールし、下の区画（セッション）は高さを保つ */
+html,
+body {
+  height: 100%;
+}
+
+.details-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 .details {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding: 4px 0 12px;
 }
 
@@ -342,4 +357,193 @@ body {
 .finish-footer .finish-button {
   font-size: inherit;
   color: var(--vscode-button-secondaryForeground);
+}
+
+/* 下の区画（セッション）。上端のつまみで高さを変え、中身はタブで切り替える */
+.dock {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+}
+
+.dock-sash {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 1;
+}
+
+.dock-sash:hover {
+  background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
+.dock-tabs {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 0;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.dock-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dock-tab:hover {
+  color: var(--vscode-foreground);
+}
+
+.dock-tab[aria-selected='true'] {
+  color: var(--vscode-foreground);
+  border-bottom-color: var(--vscode-panelTitle-activeBorder, var(--vscode-focusBorder));
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tab-count::before,
+.mcp-row::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--vscode-descriptionForeground);
+}
+
+.tab-count[data-status='failed']::before,
+.mcp-row[data-status='failed']::before {
+  background: var(--vscode-errorForeground);
+}
+
+.mcp-row[data-status='needs-auth']::before {
+  background: var(--vscode-editorWarning-foreground);
+}
+
+.mcp-row[data-status='connected']::before {
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.dock-tabs-space {
+  flex: 1;
+}
+
+.dock-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0;
+}
+
+.dock-empty {
+  padding: 4px 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.session-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 0;
+  padding: 0 12px;
+  align-items: center;
+}
+
+.session-facts dt {
+  color: var(--vscode-descriptionForeground);
+}
+
+.session-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-context .meter {
+  display: inline-block;
+  width: 64px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--vscode-input-background);
+  overflow: hidden;
+}
+
+.session-context .meter > span {
+  display: block;
+  height: 100%;
+  background: var(--vscode-progressBar-background);
+}
+
+.session-context .tokens {
+  font-family: var(--vscode-editor-font-family);
+}
+
+.mcp-list,
+.rules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mcp-row {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 12px;
+}
+
+.mcp-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-why {
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.rule {
+  padding: 2px 12px;
+  font-family: var(--vscode-editor-font-family);
+  overflow-wrap: anywhere;
+}
+
+/* ターンの一覧の日付の見出し */
+.turn-day {
+  padding: 6px 12px 2px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
 }

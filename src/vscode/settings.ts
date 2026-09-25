@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { EFFORT_LEVELS } from '../domain/models';
+import { normalizePlanUsageItems, type PlanUsageItem } from '../domain/rateLimits';
 import type { NotificationSetting } from '../domain/notifications';
 import type { EffortLevel, PermissionMode } from '../domain/task';
 import { DEFAULT_PRESETS, normalizePresets, type Preset } from '../domain/presets';
 
 export interface Settings {
+  /** 完了したタスクのスナップショットを残す日数。0 以下は無期限 */
+  snapshotRetentionDays: number;
   claudePath: string | undefined;
   defaultModel: string | undefined;
   /** 新しいタスクの Effort。空なら Claude Code に従う */
@@ -19,12 +22,16 @@ export interface Settings {
   worktreeBranchPrefix: string;
   /** ツールの呼び出しを最初から開いて見せるか */
   toolCallsExpanded: boolean;
+  /** 考えている途中を、たたんで出すか、出さないか */
+  thinking: 'collapsed' | 'hidden';
   /** 軽いモデルで短いタイトルを付けるか */
   autoTitle: boolean;
   /** タイトル付けに使うモデル */
   titleModel: string;
   /** 指示のプリセット。/名前 で本文に置き換わる */
   presets: Preset[];
+  /** 契約の利用枠を、どこに何を出すか。空なら出さない */
+  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[] };
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -40,15 +47,21 @@ export function readSettings(): Settings {
     claudePath: text('claudePath'),
     defaultModel: text('defaultModel'),
     defaultEffort: effortOf(text('defaultEffort')),
-    defaultPermissionMode: mode === 'acceptEdits' ? 'acceptEdits' : 'default',
+    defaultPermissionMode: mode === 'acceptEdits' || mode === 'plan' ? mode : 'default',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
+    thinking: config.get<string>('thinking', 'collapsed') === 'hidden' ? 'hidden' : 'collapsed',
     autoTitle: config.get<boolean>('autoTitle', true),
+    snapshotRetentionDays: config.get<number>('snapshotRetentionDays', 60),
     titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
+    planUsage: {
+      sidebar: normalizePlanUsageItems(config.get<unknown>('planUsage.sidebar')),
+      statusBar: normalizePlanUsageItems(config.get<unknown>('planUsage.statusBar')),
+    },
   };
 }
 

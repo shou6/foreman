@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
+import { reduce } from '../../../webview/state';
 import { PANEL_STRINGS } from '../../support/panelStrings';
 
 const STRINGS = PANEL_STRINGS;
@@ -211,7 +212,7 @@ suite('webview: 指示のプリセット（M13）', () => {
 });
 
 suite('webview: Context パネル（M13）', () => {
-  test('次に送る内容（プリセットと添付を展開した文）と、セッションの情報を出す', () => {
+  test('次に送る内容（プリセットと添付を展開した文）だけを出す。セッションの情報は右サイドバーへ', () => {
     const html = render(
       <App
         state={state({
@@ -233,12 +234,25 @@ suite('webview: Context パネル（M13）', () => {
     assert.ok(html.includes('Fix: the bug'));
     assert.ok(html.includes('Attached files:'));
     assert.ok(html.includes('D:\\w\\a.ts'));
-    assert.ok(html.includes('acceptEdits'));
-    assert.ok(html.includes('Bash(npm test)'));
+    assert.ok(/class="context-brief"[^>]*>1 attached</.test(html), '1 行には添付の数だけ');
+    // Context パネルの中だけを見る（承認方式の選択欄は入力欄の下にある）
+    const panel = html.slice(
+      html.indexOf('class="context-panel'),
+      html.indexOf('</details>', html.indexOf('class="context-panel'))
+    );
+    assert.ok(!panel.includes('acceptEdits'), '承認方式は右サイドバーへ');
+    assert.ok(!panel.includes('Bash(npm test)'), '常に許可は右サイドバーへ');
+    assert.ok(!html.includes('context-facts'));
+    assert.ok(/<button[^>]*class="link show-session"[^>]*>[\s\S]*?Session<\/button>/.test(html));
   });
 });
 
 suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
+  test('入力欄の高さは、既定で 4 行分', () => {
+    const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
+    assert.ok(/<textarea[^>]*class="prompt-input"[^>]*rows="4"/.test(html));
+  });
+
   test('入力が空の間は送信を押せず、入力すると押せる', () => {
     const empty = render(
       <App state={state({ status: 'done', turnOpen: false })} post={() => {}} />
@@ -292,7 +306,7 @@ suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
     );
   });
 
-  test('「Claude に渡す内容」は閉じていても、ディレクトリ・承認方式・添付数を 1 行で出す', () => {
+  test('「Claude に渡す内容」は閉じていても、添付数を 1 行で出す（ディレクトリと承認方式は右サイドバーへ）', () => {
     const none = render(
       <App
         state={state({
@@ -304,7 +318,7 @@ suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
       />
     );
     assert.ok(
-      /class="context-summary"[\s\S]*?What Claude will receive[\s\S]*?class="context-brief"[^>]*>D:\w\wt · Permission mode default · No attachments</.test(
+      /class="context-summary"[\s\S]*?What Claude will receive[\s\S]*?class="context-brief"[^>]*>No attachments</.test(
         none
       )
     );
@@ -365,5 +379,52 @@ suite('webview: 見出しの状態（サイドバーと同じ呼び名）', () =
     assert.ok(
       /class="status"[^>]*data-kind="approval"[^>]*>(<i[^>]*><\/i>)Needs approval</.test(approval)
     );
+  });
+});
+
+suite('webview: Claude Code のコマンドとスキルの補完', () => {
+  const presets = [{ name: 'fix', prompt: 'Fix: {input}' }];
+  const commands = [
+    { name: 'compact', description: 'Clear history but keep a summary', argumentHint: '' },
+    { name: 'frontend-design', description: 'Design UI', argumentHint: '<page>' },
+    { name: 'commit', description: 'Commit changes', argumentHint: '' },
+  ];
+
+  test('/ だけならプリセットだけを出し、コマンドは件数の案内にする', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets, commands })}
+        post={() => {}}
+        initialDraft="/"
+      />
+    );
+    const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
+    assert.ok(list.includes('/fix'));
+    assert.ok(!list.includes('/compact'));
+    assert.ok(html.includes('3 more: keep typing to filter'));
+  });
+
+  test('文字を打つと絞り込み、名前・引数のヒント・説明を 1 行に並べ、全文は title に入れる', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets, commands })}
+        post={() => {}}
+        initialDraft="/com"
+      />
+    );
+    const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
+    assert.ok(list.includes('/compact') && list.includes('/commit') && !list.includes('/fix'));
+    assert.ok(/<li[^>]*title="Clear history but keep a summary"/.test(list));
+    assert.ok(/class="preset-desc"[^>]*>Clear history but keep a summary</.test(list));
+    assert.ok(/data-selected="true"[\s\S]*?\/compact/.test(list), '最初の候補が選ばれている');
+    assert.ok(
+      /class="preset-detail"[^>]*>Clear history but keep a summary</.test(html),
+      '選んだ候補の説明を全文で出す'
+    );
+  });
+
+  test('commands メッセージで一覧が入れ替わる', () => {
+    const s = reduce(state({ status: 'done', turnOpen: false }), { type: 'commands', commands });
+    assert.deepStrictEqual(s?.commands, commands);
   });
 });

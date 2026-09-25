@@ -95,3 +95,60 @@ suite('TaskService: 実際に使われる Effort', () => {
     assert.strictEqual((await service.load('task-1'))?.activeEffort, undefined);
   });
 });
+
+suite('TaskService: プランモード', () => {
+  test('承認方式の切り替えは保存し、動いているセッションにも伝える', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    await service.setPermissionMode('task-1', 'plan');
+    assert.deepStrictEqual(runner.last.modes, ['plan']);
+    assert.strictEqual((await service.load('task-1'))?.permissionMode, 'plan');
+  });
+
+  test('ExitPlanMode を許可すると、タスクの承認方式も default に戻る', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD, permissionMode: 'plan' });
+    assert.strictEqual(runner.last.options.permissionMode, 'plan');
+    await runner.last.requestPermission({
+      toolName: 'ExitPlanMode',
+      input: { plan: '# Plan' },
+      suggestions: [],
+    });
+    assert.strictEqual((await service.load('task-1'))?.permissionMode, 'default');
+  });
+});
+
+suite('TaskService: MCP サーバーの状態', () => {
+  test('セッションが動いている間だけ聞く。無ければ undefined', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.mcp = [{ name: 'github', status: 'connected' }];
+    assert.deepStrictEqual(await service.mcpServers('task-1'), [
+      { name: 'github', status: 'connected' },
+    ]);
+    runner.last.emit({ type: 'turn-end', ok: true });
+    runner.last.close();
+    await settle();
+    assert.strictEqual(await service.mcpServers('task-1'), undefined);
+  });
+});
+
+suite('TaskService: コンテキストの圧縮', () => {
+  test('返答を待っている間だけ圧縮できる。動いている間と、セッションが無い時は断る', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    await assert.rejects(service.compact('task-1'), /running/);
+    runner.last.emit({ type: 'init', sessionId: 's', model: 'm' });
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await service.compact('task-1');
+    assert.strictEqual(runner.last.compacted, 1);
+    runner.last.close();
+    await settle();
+    await assert.rejects(service.compact('task-1'), /session/);
+  });
+});

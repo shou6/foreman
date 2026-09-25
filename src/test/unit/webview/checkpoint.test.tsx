@@ -187,3 +187,50 @@ suite('webview: コンテキストのメーター（M11）', () => {
     assert.ok(/class="checkpoint"[\s\S]*class="turn-tokens"/.test(html));
   });
 });
+
+suite('webview: コンテキストの圧縮', () => {
+  test('使用量があり、動いていなければ見出しに「圧縮」のボタンを出す。動いている間は出さない', () => {
+    const idle = render(
+      <App
+        state={state({
+          status: 'waiting',
+          turnOpen: false,
+          usage: { used: 84000, window: 200000, ratio: 0.42 },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/class="icon-button compact"[^>]*title="Compact the context"/.test(idle));
+    const busy = render(
+      <App
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          usage: { used: 84000, window: 200000, ratio: 0.42 },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!busy.includes('class="icon-button compact"'));
+    const message: ToExtension = { type: 'compact' };
+    assert.strictEqual(message.type, 'compact');
+  });
+
+  test('圧縮した所は、区切り行に「コンテキストを圧縮（27.6k → 2.5k）」と出す', () => {
+    const html = render(
+      <App
+        state={state({
+          items: [
+            { kind: 'prompt', turn: 0, text: 'p' },
+            { kind: 'turn-end', turn: 0, ok: true },
+            { kind: 'compact', turn: 0, preTokens: 27596, postTokens: 2537 },
+          ],
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(
+      /class="checkpoint compacted"[\s\S]*?Context compacted \(27\.6k → 2\.5k\)/.test(html)
+    );
+  });
+});

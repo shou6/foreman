@@ -63,7 +63,7 @@ export function primaryActionOf(kind: StatusKind): PrimaryAction | undefined {
 }
 
 /** 承認カードの問いかけの種類 */
-export type ApprovalKind = 'command' | 'edit' | 'web' | 'other';
+export type ApprovalKind = 'command' | 'edit' | 'web' | 'plan' | 'other';
 
 export function approvalKindOf(toolName: string): ApprovalKind {
   switch (toolName) {
@@ -77,6 +77,8 @@ export function approvalKindOf(toolName: string): ApprovalKind {
     case 'WebFetch':
     case 'WebSearch':
       return 'web';
+    case 'ExitPlanMode':
+      return 'plan';
     default:
       return 'other';
   }

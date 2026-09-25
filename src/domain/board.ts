@@ -1,4 +1,5 @@
 import { shortBranch } from './labels';
+import { stripPromptMarks } from './promptBlocks';
 import { elapsedMinutes } from './sidebar';
 import { statusKindOf, type PendingKind, type StatusKind } from './status';
 import { canUnapprove, isTurnOpen, type Task, type TaskStatus } from './task';
@@ -101,7 +102,7 @@ export function cardOf(task: Task, input: BoardInput = {}): BoardCard {
         ? undefined
         : shortBranch(task.worktree.branch, input.branchPrefix),
     changes: last?.changes.length ?? 0,
-    prompt: task.draftPrompt ?? last?.prompt,
+    prompt: stripPromptMarks(task.draftPrompt ?? last?.prompt ?? '') || undefined,
     updatedAt: task.updatedAt,
   };
 }

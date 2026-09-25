@@ -4,7 +4,9 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { AgentSdkModelCatalog } from './adapters/agentSdkModelCatalog';
+import { AgentSdkCommandCatalog } from './adapters/agentSdkCommandCatalog';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
+import { AgentSdkUsage } from './adapters/agentSdkUsage';
 import { ScriptedRunner } from './adapters/scriptedRunner';
 import type { AgentRunner } from './ports/agentRunner';
 import { resolveClaudePath } from './adapters/claudePath';
@@ -17,7 +19,9 @@ import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
 import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
+import { CommandService } from './app/commandService';
 import { ModelService } from './app/modelService';
+import { RateLimitService } from './app/rateLimitService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
 import { WorktreeService } from './app/worktreeService';
@@ -37,6 +41,11 @@ import { CheckpointActions } from './vscode/checkpointActions';
 import { ReviewActions } from './vscode/reviewActions';
 import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
+import { PlanDocuments, PLAN_SCHEME } from './vscode/planDocuments';
+import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
+import { tasksToPrune } from './domain/retention';
+import { OrphanCleaner } from './app/orphanCleaner';
+import { FsRunRecordStore, WindowsProcessTable } from './adapters/windowsProcesses';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -46,6 +55,9 @@ export interface TestApi {
   approvals: ApprovalService;
   diffs: DiffService;
   panels: TaskPanels;
+  plans: PlanDocuments;
+  /** claude CLI の場所を探す（見つからなければ設定を案内するエラー） */
+  locateClaude: () => string;
 }
 
 export async function activate(
@@ -61,12 +73,36 @@ export async function activate(
 
   // 統合テストでは Claude を起動せず、台本の Runner を差し込む
   const scripted = process.env.FOREMAN_SCRIPTED_RUNNER === '1' ? new ScriptedRunner() : undefined;
+  // Windows では、異常終了で残ったプロセスを次の起動で止めるため、起動した claude を記録する（NFR-5）。
+  // macOS と Linux は親が落ちると子の親が付け替わり、同じ方法では確かめられないので入れない
+  const orphans =
+    process.platform === 'win32' && scripted === undefined
+      ? new OrphanCleaner({
+          table: new WindowsProcessTable(),
+          records: new FsRunRecordStore(path.join(context.globalStorageUri.fsPath, 'processes')),
+          host: { pid: process.pid, startedAt: Date.now() - process.uptime() * 1000 },
+          log: (line) => output.appendLine(line),
+        })
+      : undefined;
+  if (orphans !== undefined) {
+    void orphans
+      .cleanup()
+      .then((stopped) => {
+        if (stopped.length > 0) {
+          output.appendLine(
+            `stopped ${stopped.length} process(es) left by a previous crash: ${stopped.join(', ')}`
+          );
+        }
+      })
+      .catch((error: unknown) => output.appendLine(`orphan cleanup failed: ${String(error)}`));
+  }
   const runner: AgentRunner =
     scripted ??
     new AgentSdkRunner({
       query: sdk.query,
       claudePath: () => locateClaude(),
       log: (line) => output.append(line),
+      processes: orphans,
     });
   // モデルの選択肢は起動後に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
   const models = new ModelService(
@@ -83,6 +119,37 @@ export async function activate(
       )
   );
   void models.load();
+  // Claude Code のコマンドとスキル。作業フォルダで聞く（プロジェクトのコマンドも出るように）。統合テストでは聞かない
+  const commands = new CommandService(
+    scripted !== undefined
+      ? { list: async () => [] }
+      : new AgentSdkCommandCatalog({ query: sdk.query, claudePath: () => locateClaude() }),
+    (error) =>
+      output.appendLine(
+        `command list failed: ${error instanceof Error ? error.message : String(error)}`
+      )
+  );
+  void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
+  // 契約の利用枠。起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
+  const rateLimits = new RateLimitService(
+    scripted !== undefined
+      ? { usage: async () => undefined }
+      : new AgentSdkUsage({
+          query: sdk.query,
+          claudePath: () => locateClaude(),
+          cwd: () => os.tmpdir(),
+        }),
+    {
+      now: () => new Date().toISOString(),
+      onError: (error) =>
+        output.appendLine(
+          `plan usage failed: ${error instanceof Error ? error.message : String(error)}`
+        ),
+    }
+  );
+  void rateLimits.refresh();
+  const usageTimer = setInterval(() => void rateLimits.refresh(), 10 * 60_000);
+  context.subscriptions.push({ dispose: () => clearInterval(usageTimer) });
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -105,6 +172,7 @@ export async function activate(
         `${stamp()} [${taskId}] session ${event.sessionId} model=${event.model} turn=${turn}`
       );
     } else if (event.type === 'turn-end') {
+      void rateLimits.refreshAfterTurn();
       const usage =
         event.ok && event.usage !== undefined
           ? ` in=${event.usage.inputTokens} cacheRead=${event.usage.cacheReadInputTokens} cacheWrite=${event.usage.cacheCreationInputTokens} out=${event.usage.outputTokens}`
@@ -129,6 +197,21 @@ export async function activate(
     isIgnored: (dir, paths) => git.ignored(dir, paths),
     baseline: (dir, file) => git.showHead(dir, file),
   });
+  // 完了から保存期間を過ぎたタスクのスナップショットを消す（NFR-4）
+  {
+    const now = new Date().toISOString();
+    const ids = tasksToPrune(await service.list(), now, readSettings().snapshotRetentionDays);
+    if (ids.length > 0) {
+      void diffs
+        .prune(ids, now)
+        .then(() => output.appendLine(`${now} pruned snapshots of ${ids.length} task(s)`))
+        .catch((error: unknown) =>
+          output.appendLine(
+            `snapshot pruning failed: ${error instanceof Error ? error.message : String(error)}`
+          )
+        );
+    }
+  }
   const worktrees = new WorktreeService({
     git,
     sep: path.sep,
@@ -171,6 +254,8 @@ export async function activate(
   });
   const sources = new AttachmentSources(git);
   context.subscriptions.push(sources);
+  // 計画（ExitPlanMode）をエディターで読むための読み取り専用の文書
+  const plans = new PlanDocuments();
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
@@ -178,6 +263,7 @@ export async function activate(
     approvals,
     diffs,
     models,
+    commands,
     finish: {
       merge: (taskId) => worktreeActions.merge(taskId),
       discard: (taskId) => worktreeActions.discard(taskId),
@@ -187,6 +273,10 @@ export async function activate(
     unapprove: (taskId) => review.unapprove(taskId),
     sources,
     savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
+    openPlan: async (taskId, plan) => {
+      const task = await service.load(taskId);
+      await plans.open(taskId, task?.title ?? '', plan);
+    },
     renameTask: (taskId) => renameTask(service, taskId),
     moreActions: (taskId) => moreActions(service, taskId),
     checkpoint: {
@@ -219,6 +309,12 @@ export async function activate(
     now: () => new Date().toISOString(),
   });
   const details = new DetailsView({
+    models,
+    // 下の区画（セッション）の高さはウィンドウをまたいで覚えておく
+    dockHeight: {
+      get: () => context.globalState.get<number>('foreman.details.dockHeight'),
+      set: (height) => context.globalState.update('foreman.details.dockHeight', height),
+    },
     extensionUri: context.extensionUri,
     service,
     approvals,
@@ -239,6 +335,7 @@ export async function activate(
     extensionUri: context.extensionUri,
     service,
     approvals,
+    rateLimits,
     activeTaskId: () => panels.activeTaskId,
     onDidChangeActive: (listener) => panels.onDidChangeActive(listener),
     openTask: (taskId) => panels.open(taskId),
@@ -251,13 +348,25 @@ export async function activate(
     },
   });
 
+  const statusBar = new StatusBar(
+    service,
+    {
+      id: () => panels.activeTaskId,
+      onDidChange: (listener) => panels.onDidChangeActive(listener),
+    },
+    rateLimits
+  );
   context.subscriptions.push(
     output,
     panels,
     board,
-    new StatusBar(service, {
-      id: () => panels.activeTaskId,
-      onDidChange: (listener) => panels.onDidChangeActive(listener),
+    statusBar,
+    // 利用枠の表示の設定が変わったら描き直す
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('foreman.planUsage')) {
+        void statusBar.refresh();
+        void sidebar.refresh();
+      }
     }),
     new Notifications(
       service,
@@ -268,6 +377,8 @@ export async function activate(
     vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
     details,
     vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
+    plans,
+    vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, plans),
     // 差分エディタの左側（変更前）をスナップショットから出す
     vscode.workspace.registerTextDocumentContentProvider(SNAPSHOT_SCHEME, {
       provideTextDocumentContent: async (uri) =>
@@ -300,6 +411,11 @@ export async function activate(
       newDraft: (folder) => review.newDraft(folder),
     },
     openBoard: () => board.open(),
+    refreshUsage: () => rateLimits.refresh(),
+    sessions: new AgentSdkSessionCatalog({
+      listSessions: sdk.listSessions,
+      getSessionMessages: sdk.getSessionMessages,
+    }),
     settings: readSettings,
     worktrees,
     worktreeActions,
@@ -313,7 +429,7 @@ export async function activate(
   void cleanupWorktrees(service, worktrees, output);
   return scripted === undefined
     ? undefined
-    : { testApi: { service, runner: scripted, approvals, diffs, panels } };
+    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans, locateClaude } };
 }
 
 export function deactivate(): void {}

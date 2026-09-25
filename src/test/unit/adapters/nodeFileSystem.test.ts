@@ -37,7 +37,8 @@ suite('NodeFileSystem', () => {
     const stop = nfs.watch(dir, (p) => seen.push(p));
     await new Promise((resolve) => setTimeout(resolve, 300));
     fs.writeFileSync(path.join(dir, 'c.txt'), 'c');
-    for (let i = 0; i < 40 && seen.length === 0; i++) {
+    // 最初の知らせを待つだけだと、macOS ではフォルダ自体の知らせが先に届いて終わってしまう
+    for (let i = 0; i < 40 && !seen.some((p) => p.endsWith('c.txt')); i++) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     stop();

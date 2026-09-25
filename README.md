@@ -23,19 +23,22 @@ To prepare tasks without starting them, open the task board and click "New draft
 
 - **Tasks, not one chat**: each task is its own Claude Code session. The sidebar groups tasks by what they need: "Your turn" (a tool call to approve, a question to answer, a reply to read, or a failed or interrupted turn), running, review, draft and done. An icon shows each state, and done tasks show when they finished.
 - **Task board**: open the board from the sidebar to see the draft, running, "Your turn", review and done columns. Each card has one main action, such as start, stop, open, mark as done, or approve and finish. Right-click a card for the other actions: stop, approve, fork, edit a draft, rename, export, undo an approval, discard a worktree, or delete. The same menu is on the sidebar list, which also offers merge. Drag a draft into "Running" to start it, or a reviewed task into "Done" to approve it.
-- **Task view in an editor tab**: streamed output, tool calls and follow-up prompts (Ctrl+Enter). The header shows the state, the main action and a "…" menu, then the branch and the context meter. While Claude works, the running tool and the elapsed time stay on one line, and you can already type your next instruction.
+- **Task view in an editor tab**: streamed output, tool calls and follow-up prompts (Ctrl+Enter). The header shows the state, the main action and a "…" menu, then the branch and the context meter. While Claude works, the running tool and the elapsed time stay on one line, and you can already type your next instruction. Tool calls made by a subagent are nested under the Agent call that started it. A date divider marks the first turn of each day, each prompt shows when you sent it, and each turn divider shows when the turn ended and how long it took.
 - **Approvals in the task view**: each request asks a plain question, such as "Run this command?", and shows the command or file. Allow it, always allow it in this task (the scope appears below the buttons), or deny it with a reason.
+- **Permission mode and plan first**: the selector next to the input box switches the task between "Ask each time", "Auto-accept edits" and "Plan only" at any time (a new task starts with `foreman.defaultPermissionMode`). In "Plan only", Claude reads and writes a plan without editing anything, then asks you to approve it. The plan appears as a card, and "Open in editor" shows it as a Markdown preview in an editor tab so you can read a long plan at full size. "Approve and implement" lets Claude continue, and "Deny" with a reason sends it back to planning. Approving the plan switches the task out of "Plan only".
 - **Questions from Claude**: pick a choice with the mouse or the number keys, or write your own answer under "Other". When Claude asks more than one question, switch between them with tabs and send all the answers from the last tab.
 - **Diff cards without Git**: every turn shows which files changed and the line counts. Open an inline diff or the Visual Studio Code diff editor. Revert a file with one click, or every file of the latest turn with "Revert all". "Approve and finish" marks the task as done, and you can undo the approval until you merge or discard the worktree. This works in folders that are not Git repositories.
 - **Pass along**: the toolbar in the input box attaches the editor selection, the errors and warnings from Problems, the uncommitted `git diff`, or files from a picker. Paste a screenshot from the clipboard to attach it as an image. You can also right-click a file in the Explorer or an editor tab and choose "Attach to Task", right-click in the editor for "Attach Selection to Task", or drop files onto the task view (hold Shift when you drag from the editor area).
 - **Model per turn**: pick the model for the next turn in the input box. The list comes from your Claude Code, so it matches your plan and version. If the previous turn ran on a different model, the input box says so.
 - **Notifications and status bar**: get a notification when a task needs you, has changes to review, or failed. The status bar counts the running tasks and the tasks that wait for you, shows the model and context usage of the task you are looking at, and opens the task list on click.
-- **Prompt presets and Context panel**: type `/fix`, `/test` or `/review` at the start of a prompt to expand a preset (edit them in `foreman.presets`). The "What Claude will receive" line above the input shows the directory, the permission mode and the number of attachments. Open it to see the exact text Foreman will send and the rules you always allowed.
-- **Token usage**: the task view and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens, and the sidebar shows today's total for all tasks.
+- **Prompt presets, commands and Context panel**: type `/fix`, `/test` or `/review` at the start of a prompt to expand a preset (edit them in `foreman.presets`). Keep typing after `/` to filter your Claude Code commands and skills (read from your Claude Code once at startup, matched by prefix on any `:`-separated part), pick one with the arrow keys and Enter, and Claude Code runs it as usual. The "What Claude will receive" line above the input shows the number of attachments. Open it to see the exact text Foreman will send.
+- **Token usage**: the task view and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens, and the sidebar shows today's total for all tasks. When the context grows, the compact icon next to the meter runs `/compact`, and a divider shows how many tokens it freed.
+- **Plan usage**: with a Pro or Max plan, the sidebar and the status bar show how much of your 5-hour, 7-day and per-model limits you have used, and the sidebar adds when they reset. Choose what each place shows with `foreman.planUsage.sidebar` and `foreman.planUsage.statusBar`. Foreman reads the figures from your Claude Code at startup, after a turn ends, every 10 minutes, and when you click the refresh icon in the sidebar. Reading them uses none of your limits.
 - **Persistence**: tasks, history and diff cards survive a restart. An interrupted task keeps its session, so your next prompt continues it.
 - **Git worktrees**: run a task in its own worktree and branch. For a worktree task, the "Finish" section in the secondary side bar walks you through approving the changes, reviewing the whole diff and merging into the branch you started from. You can also discard the worktree there. Worktrees live in `.foreman/worktrees` inside the repository.
+- **Import a session**: "Import a Claude Code Session..." in the sidebar's "…" menu lists the sessions you started in this folder with the CLI or other tools. Pick one to turn it into a task with its past prompts, output and tool calls. Your next prompt continues the same session, so avoid using it from the CLI at the same time. File changes made before the import have no diff cards.
 - **Checkpoints and forks**: every finished turn is a checkpoint. Hover over the turn divider to rewind the files, or the files and the conversation, to that point, or to fork a new task from it. A worktree task forks from its own branch, and merging the fork brings its changes back into that branch.
-- **Changes and checkpoints in the secondary side bar**: the "Foreman Task" view follows the task you are looking at and lists its changes and checkpoints by turn.
+- **Changes, checkpoints and session in the secondary side bar**: the "Foreman Task" view follows the task you are looking at and lists its changes and checkpoints by turn, grouped by day. The area at the bottom shows the session in three tabs: Overview (context and compact, model, effort, permission mode, directory), MCP (your MCP servers, problems first, while Claude Code is running for the task) and Always allowed. Drag its top edge to resize it; Foreman remembers the height. "Session" in the line above the input brings it to the front.
 - **Export**: save a task as a Markdown file from the "…" menu.
 
 ## Screenshots
@@ -69,13 +72,16 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | `foreman.claudePath` | Path to the `claude` executable. Leave empty to search `PATH` and `~/.local/bin`. |
 | `foreman.defaultModel` | Model for new tasks. Leave empty to use the model Claude Code recommends. See [Models](#models). |
 | `foreman.defaultEffort` | Effort for new tasks: `low`, `medium`, `high`, `xhigh` or `max`. Leave empty to follow Claude Code. See [Models](#models). |
-| `foreman.defaultPermissionMode` | `default` (the default) asks before every tool call. `acceptEdits` allows file edits automatically. Set per new task; it cannot change after the task starts. |
+| `foreman.defaultPermissionMode` | `default` (the default) asks before every tool call. `acceptEdits` allows file edits automatically. `plan` starts in plan mode. You can change the mode of each task in the input box. |
 | `foreman.notifications` | `all` (the default): waiting for input, changes to review, and failed. `waiting`: waiting for input only. `none`: never. |
 | `foreman.useWorktree` | Preselect "in a worktree" when Foreman asks where to run a new task in a Git repository. Default `false`. Foreman asks every time. |
 | `foreman.worktreeBranchPrefix` | Prefix for worktree branches. Default `foreman/`. |
 | `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. The default model is `haiku`. |
 | `foreman.toolCalls` | `collapsed` (the default) or `expanded`: how tool calls appear in the task view. |
+| `foreman.thinking` | `collapsed` (the default) shows a "Thinking…" line while Claude thinks. `hidden` leaves it out. Claude Code hands the thinking text itself only to sessions that Anthropic hosts, so Foreman cannot show it; when it does arrive, it appears as a collapsed line you can open. |
+| `foreman.snapshotRetentionDays` | Days to keep the saved file contents behind the diff cards and revert for completed tasks. Default: 60. Older ones are removed when VS Code starts; the task and its conversation stay, but its diffs and revert are no longer available. `0` keeps them forever. |
 | `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. Default `72`; `0` uses the full width. |
+| `foreman.planUsage.sidebar` / `foreman.planUsage.statusBar` | Which parts of the plan usage each place shows: `fiveHour`, `sevenDay`, `models`. Default: all three. An empty list hides it there. |
 | `foreman.presets` | Prompt presets used as `/name`. `{input}` is replaced with the rest of the prompt. |
 
 ## Models
@@ -94,6 +100,8 @@ Foreman shows Visual Studio Code notifications and nothing else. For Windows des
 
 Foreman talks to Claude Code through the official Claude Agent SDK. Each task maps to one Claude Code session, identified by its session ID. Your Claude Code settings, permission rules and hooks apply to Foreman tasks as well. Foreman keeps task data, display history, file snapshots and pasted images in the extension's workspace storage, outside your repository. When you run a task in a worktree, Foreman creates it under `.foreman/worktrees` in the repository and adds `.foreman/` to `.git/info/exclude`, so Git ignores that folder without touching `.gitignore`.
 
+If Visual Studio Code stops abruptly while Claude is running a command, that command (a dev server or a long test run, for example) can keep running. On Windows, Foreman records the Claude Code processes it starts and, the next time it starts, stops what they left behind. It only stops processes whose parent, name and start time match its records. macOS and Linux do not have this yet.
+
 ## Pricing and terms
 
 - Foreman is not affiliated with Anthropic. It runs your own Claude Code, under your own plan or API key, and adds no service of its own.
@@ -105,13 +113,13 @@ Foreman talks to Claude Code through the official Claude Agent SDK. Each task ma
 
 - Foreman sends data to nobody but Anthropic, through your `claude` CLI. It has no telemetry and no server of its own.
 - What reaches Claude: your prompts, the attachments you pass along (selection, Problems, `git diff`, files, pasted images), and the first prompt of a task for its title.
-- What stays on your machine: tasks, history, snapshots for the diff cards, and pasted images, in the extension's workspace storage. Deleting a task removes them. The session transcript that Claude Code itself keeps in `~/.claude` stays there.
+- What stays on your machine: tasks, history, snapshots for the diff cards, and pasted images, in the extension's workspace storage. Deleting a task removes them, and snapshots of completed tasks are removed after `foreman.snapshotRetentionDays`. The session transcript that Claude Code itself keeps in `~/.claude` stays there.
 
 ## Known limitations
 
 - Changes made by shell commands (not by the edit tools) show up without their previous content, so you cannot revert them from the diff card.
 - A turn that was running when Visual Studio Code closed is not part of the Claude Code conversation. Foreman repeats that instruction when you continue the task.
-- Your remaining subscription quota is not shown yet, because the Agent SDK API for it remains experimental.
+- The plan usage comes from an experimental Agent SDK API. If a Claude Code update changes it, the meters disappear and everything else keeps working. It is not available with an API key.
 
 ## License
 

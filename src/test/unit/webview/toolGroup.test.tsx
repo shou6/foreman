@@ -168,3 +168,65 @@ suite('webview: タスク名の変更', () => {
     assert.strictEqual(message.type, 'rename');
   });
 });
+
+suite('webview: 考えている途中（thinking）', () => {
+  const items = [
+    { kind: 'prompt' as const, turn: 0, text: 'p' },
+    { kind: 'thinking' as const, turn: 0, text: 'First, read the file.' },
+    { kind: 'text' as const, turn: 0, text: 'Done' },
+  ];
+
+  test('既定ではたたんで出し、開くと中身が読める。動いている間は「考え中…」', () => {
+    const html = render(<App state={state({ items, thinking: 'collapsed' })} post={() => {}} />);
+    assert.ok(/<details class="item thinking"(?![^>]*open)[^>]*>/.test(html));
+    assert.ok(/<summary[^>]*>(<i[^>]*><\/i>)?Thought<\/summary>/.test(html));
+    assert.ok(html.includes('First, read the file.'));
+    const running = render(
+      <App
+        state={state({
+          status: 'running',
+          turnOpen: true,
+          items: items.slice(0, 2),
+          thinking: 'collapsed',
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/<summary[^>]*>(<i[^>]*><\/i>)?Thinking…<\/summary>/.test(running));
+  });
+
+  test('設定 hidden なら出さない', () => {
+    const html = render(<App state={state({ items, thinking: 'hidden' })} post={() => {}} />);
+    assert.ok(!html.includes('class="item thinking"'));
+    assert.ok(!html.includes('First, read the file.'));
+  });
+
+  test('文の無い thinking は、動いている間だけ「考え中…」の印を出し、終わったら何も残さない', () => {
+    const empty = [
+      { kind: 'prompt' as const, turn: 0, text: 'p' },
+      { kind: 'thinking' as const, turn: 0, text: '' },
+    ];
+    const running = render(
+      <App
+        state={state({ status: 'running', turnOpen: true, items: empty, thinking: 'collapsed' })}
+        post={() => {}}
+      />
+    );
+    assert.ok(/class="item thinking-indicator"[^>]*>(<i[^>]*><\/i>)?Thinking…</.test(running));
+    assert.ok(!running.includes('<details class="item thinking"'));
+    const done = render(
+      <App
+        state={state({ items: [...empty, { kind: 'text', turn: 0, text: 'Done' }] })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!done.includes('thinking-indicator') && !done.includes('class="item thinking"'));
+    const hidden = render(
+      <App
+        state={state({ status: 'running', turnOpen: true, items: empty, thinking: 'hidden' })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!hidden.includes('thinking-indicator'));
+  });
+});

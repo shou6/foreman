@@ -1,6 +1,7 @@
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
-import type { EffortLevel } from '../domain/task';
+import type { EffortLevel, PermissionMode } from '../domain/task';
+import type { McpServerInfo } from '../domain/mcp';
 
 /**
  * 台本で動かす Runner。Claude を起動せず、テストがイベントを外から起こす。
@@ -10,6 +11,7 @@ export class ScriptedRunHandle implements RunHandle {
   readonly sent: string[] = [];
   readonly models: (string | undefined)[] = [];
   readonly efforts: (EffortLevel | undefined)[] = [];
+  readonly modes: PermissionMode[] = [];
   interrupted = false;
   closed = false;
   private resolveDone!: () => void;
@@ -25,6 +27,12 @@ export class ScriptedRunHandle implements RunHandle {
     this.sent.push(prompt);
   }
 
+  compacted = 0;
+
+  compact(): void {
+    this.compacted++;
+  }
+
   async interrupt(): Promise<void> {
     this.interrupted = true;
     this.emit({ type: 'turn-end', ok: false, interrupted: true, reason: 'interrupted' });
@@ -36,6 +44,17 @@ export class ScriptedRunHandle implements RunHandle {
 
   async setEffort(effort: EffortLevel | undefined): Promise<void> {
     this.efforts.push(effort);
+  }
+
+  async setPermissionMode(mode: PermissionMode): Promise<void> {
+    this.modes.push(mode);
+  }
+
+  /** mcpServers が返す状態 */
+  mcp: McpServerInfo[] = [];
+
+  async mcpServers(): Promise<McpServerInfo[]> {
+    return this.mcp;
   }
 
   close(): void {
@@ -63,23 +82,26 @@ export class ScriptedRunHandle implements RunHandle {
 export class ScriptedRunner implements AgentRunner {
   readonly starts: ScriptedRunHandle[] = [];
   readonly resumes: { sessionId: string; handle: ScriptedRunHandle }[] = [];
+  /** 起動と再開を、行った順に */
+  private readonly all: ScriptedRunHandle[] = [];
 
   start(options: StartOptions): RunHandle {
     const handle = new ScriptedRunHandle(options);
     this.starts.push(handle);
+    this.all.push(handle);
     return handle;
   }
 
   resume(sessionId: string, options: StartOptions): RunHandle {
     const handle = new ScriptedRunHandle(options);
     this.resumes.push({ sessionId, handle });
+    this.all.push(handle);
     return handle;
   }
 
-  /** 直近に起動または再開したハンドル */
+  /** 直近に起動または再開したハンドル（行った順で最後のもの） */
   get last(): ScriptedRunHandle {
-    const all = [...this.starts, ...this.resumes.map((r) => r.handle)];
-    const handle = all[all.length - 1];
+    const handle = this.all[this.all.length - 1];
     if (handle === undefined) {
       throw new Error('no run has been started');
     }
