@@ -181,6 +181,14 @@ export class DiffService {
     }
   }
 
+  /** 今のターンで監視や編集ツールが拾ったパス（cwd からの相対）。統合テストが監視の動きを確かめるのに使う */
+  pendingPaths(taskId: string): string[] {
+    const active = this.active.get(taskId);
+    return active === undefined
+      ? []
+      : [...active.entries.keys()].map((p) => this.relative(active.cwd, p));
+  }
+
   /** インライン差分の材料（FR-DIFF-3） */
   async diffOf(
     taskId: string,
