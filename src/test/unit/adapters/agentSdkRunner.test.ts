@@ -277,6 +277,10 @@ interface FakeQuery {
   appliedEffort?: string | null;
   /** mcpServerStatus が返す MCP サーバーの状態 */
   mcp: Record<string, unknown>[];
+  /** true なら interrupt が返らない（応答しない CLI のまね） */
+  hangInterrupt: boolean;
+  /** 指示のストリームが閉じられた（stdin の EOF に当たる） */
+  promptsEnded: boolean;
 }
 
 function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
@@ -290,6 +294,8 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     modes: [],
     prompts: [],
     mcp: [],
+    hangInterrupt: false,
+    promptsEnded: false,
     push: (m) => {
       queue.push(m);
       wake?.();
@@ -315,6 +321,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
         const content = m.message.content;
         fake.prompts.push(typeof content === 'string' ? content : JSON.stringify(content));
       }
+      fake.promptsEnded = true;
     })();
     const iterator = {
       async next(): Promise<IteratorResult<SdkMessage, void>> {
@@ -335,6 +342,9 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       },
       interrupt: async () => {
         fake.interrupts++;
+        if (fake.hangInterrupt) {
+          await new Promise(() => {});
+        }
         return undefined;
       },
       setModel: async (model?: string) => {
@@ -650,6 +660,72 @@ suite('AgentSdkRunner: M9', () => {
     assert.strictEqual(opts?.resume, 'sess-1');
     assert.strictEqual(opts?.resumeSessionAt, 'u1');
     assert.strictEqual(opts?.forkSession, true);
+  });
+});
+
+suite('AgentSdkRunner: 止まらない CLI の停止', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('interrupt に応答が無ければ、時間切れで入力を閉じ、中断の turn-end を出して done を解決する', async () => {
+    const { query, fake } = fakeQuery();
+    fake.hangInterrupt = true;
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c', stopTimeoutMs: 50 });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await handle.interrupt();
+    assert.deepStrictEqual(events, [
+      {
+        type: 'turn-end',
+        ok: false,
+        interrupted: true,
+        reason: 'Claude Code did not respond to the stop request; the process was closed',
+      },
+    ]);
+    await handle.done;
+    await settle();
+    assert.strictEqual(fake.promptsEnded, true, '入力を閉じてプロセスを終わらせる');
+    // 止めた後に届いたメッセージは無視する（二重の turn-end を出さない）
+    fake.push(msg({ type: 'result', subtype: 'success', usage: {}, modelUsage: {} }));
+    await settle();
+    assert.strictEqual(events.length, 1);
+  });
+
+  test('interrupt は返るが result が届かないなら、result を待たずに戻り、時間切れで後から止める', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c', stopTimeoutMs: 50 });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await handle.interrupt();
+    assert.strictEqual(fake.interrupts, 1);
+    assert.strictEqual(events.length, 0, 'interrupt の応答があれば、その場では止めない');
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    assert.strictEqual(events[0]?.type, 'turn-end');
+    await handle.done;
+    await settle();
+    assert.strictEqual(fake.promptsEnded, true);
+  });
+
+  test('interrupt に CLI が応答すれば（result が届けば）、時間切れの処理はしない', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c', stopTimeoutMs: 200 });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    const stopping = handle.interrupt();
+    fake.push(
+      msg({ type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['x'] })
+    );
+    await stopping;
+    assert.strictEqual(events.length, 1);
+    assert.ok(events[0]?.type === 'turn-end' && !events[0].ok && events[0].interrupted);
+    assert.strictEqual(fake.promptsEnded, false, '応答したので入力は閉じない');
+    fake.push(null);
+    await handle.done;
   });
 });
 
