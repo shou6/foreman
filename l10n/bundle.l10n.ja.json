@@ -214,5 +214,9 @@
   "Refresh": "更新",
   "Drag to resize": "ドラッグで高さを変える",
   "Today": "今日",
-  "Yesterday": "昨日"
+  "Yesterday": "昨日",
+  "Ask each time": "毎回聞く",
+  "Auto-accept edits": "編集は自動で許可",
+  "Claude asks before each tool call": "ツールを使う前に毎回聞く",
+  "File edits are allowed automatically; other tools still ask": "ファイルの編集は自動で許可し、ほかのツールは聞く"
 }

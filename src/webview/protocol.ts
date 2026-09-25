@@ -47,8 +47,9 @@ export interface PanelStrings {
   openPlan: string;
   /** 右サイドバーのセッションの区画を開くリンク */
   showSession: string;
-  planMode: string;
-  planModeHint: string;
+  /** 承認方式の 3 択の名前と、マウスを乗せた時の説明 */
+  permissionModes: Record<PermissionMode, string>;
+  permissionModeHints: Record<PermissionMode, string>;
   /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
   questionKeys: string;
   questionTabKeys: string;

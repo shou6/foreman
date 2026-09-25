@@ -8,7 +8,7 @@ import {
   modelLabel,
   type ModelOption,
 } from '../domain/models';
-import type { EffortLevel } from '../domain/task';
+import type { EffortLevel, PermissionMode } from '../domain/task';
 import { applyPreset } from '../domain/presets';
 import { slashSuggestions } from '../domain/slashCommands';
 import { inlineCode, promptBlocks } from '../domain/promptBlocks';
@@ -487,20 +487,28 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
               {state.strings.addFile}
             </button>
             <span class="composer-spacer" />
-            <label class="plan-mode" title={state.strings.planModeHint}>
-              <input
-                class="plan-toggle"
-                type="checkbox"
-                checked={state.permissionMode === 'plan'}
+            <label
+              class="mode-select"
+              title={state.strings.permissionModeHints[state.permissionMode ?? 'default']}
+            >
+              <Icon name={state.permissionMode === 'plan' ? 'checklist' : 'workspace-trusted'} />
+              <span class="sr-only">{state.strings.permissionMode}</span>
+              <select
+                class="mode-select"
+                value={state.permissionMode ?? 'default'}
                 onChange={(e) =>
                   post({
                     type: 'setPermissionMode',
-                    mode: (e.target as HTMLInputElement).checked ? 'plan' : 'default',
+                    mode: (e.target as HTMLSelectElement).value as PermissionMode,
                   })
                 }
-              />
-              <Icon name="checklist" />
-              {state.strings.planMode}
+              >
+                {(['default', 'acceptEdits', 'plan'] as const).map((mode) => (
+                  <option key={mode} value={mode} title={state.strings.permissionModeHints[mode]}>
+                    {state.strings.permissionModes[mode]}
+                  </option>
+                ))}
+              </select>
             </label>
             {previousModel !== undefined && (
               <span class="previous-model">

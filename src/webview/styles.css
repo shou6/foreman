@@ -451,6 +451,8 @@ body {
   box-sizing: border-box;
   resize: vertical;
   padding: 0.6em;
+  /* つまみで縮めても 1 行分（と上下の余白）は残す */
+  min-height: calc(1lh + 1.2em);
   color: var(--vscode-input-foreground);
   background: transparent;
   border: none;
@@ -1563,22 +1565,27 @@ body.dragging .drop-hint {
 }
 
 /* 入力欄の「計画だけ」のトグル */
-.plan-mode {
+/* 承認方式の 3 択。モデルの選択欄と同じ見た目 */
+label.mode-select {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
-  cursor: pointer;
 }
 
-.plan-mode .codicon {
+label.mode-select .codicon {
   font-size: 13px;
 }
 
-.plan-mode:has(.plan-toggle:checked) {
-  color: var(--vscode-foreground);
+select.mode-select {
+  padding: 1px 2px;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 2px;
+  font: inherit;
 }
 
 /* 計画の承認カード。計画は Markdown で描く */

@@ -39,8 +39,16 @@ export const PANEL_STRINGS: PanelStrings = {
   approvePlan: 'Approve and implement',
   openPlan: 'Open in editor',
   showSession: 'Session',
-  planMode: 'Plan only',
-  planModeHint: 'Claude reads and plans, and asks before it edits',
+  permissionModes: {
+    default: 'Ask each time',
+    acceptEdits: 'Auto-accept edits',
+    plan: 'Plan only',
+  },
+  permissionModeHints: {
+    default: 'Claude asks before each tool call',
+    acceptEdits: 'File edits are allowed automatically; other tools still ask',
+    plan: 'Claude reads and plans, and asks before it edits',
+  },
   inputDetails: 'Input details (JSON)',
   answer: 'Answer',
   other: 'Other (write your own)',

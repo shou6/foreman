@@ -235,8 +235,13 @@ suite('webview: Context パネル（M13）', () => {
     assert.ok(html.includes('Attached files:'));
     assert.ok(html.includes('D:\\w\\a.ts'));
     assert.ok(/class="context-brief"[^>]*>1 attached</.test(html), '1 行には添付の数だけ');
-    assert.ok(!html.includes('acceptEdits'), '承認方式は右サイドバーへ');
-    assert.ok(!html.includes('Bash(npm test)'), '常に許可は右サイドバーへ');
+    // Context パネルの中だけを見る（承認方式の選択欄は入力欄の下にある）
+    const panel = html.slice(
+      html.indexOf('class="context-panel'),
+      html.indexOf('</details>', html.indexOf('class="context-panel'))
+    );
+    assert.ok(!panel.includes('acceptEdits'), '承認方式は右サイドバーへ');
+    assert.ok(!panel.includes('Bash(npm test)'), '常に許可は右サイドバーへ');
     assert.ok(!html.includes('context-facts'));
     assert.ok(/<button[^>]*class="link show-session"[^>]*>[\s\S]*?Session<\/button>/.test(html));
   });
