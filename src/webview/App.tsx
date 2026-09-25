@@ -1479,7 +1479,17 @@ function ToolRow({
 
 /** ツールの入力から、対象が分かる 1 行を作る */
 function summarize(input: Record<string, unknown>): string {
-  for (const key of ['file_path', 'notebook_path', 'command', 'pattern', 'path', 'url', 'skill']) {
+  for (const key of [
+    'file_path',
+    'notebook_path',
+    'command',
+    'pattern',
+    'path',
+    'url',
+    'skill',
+    // Agent（サブエージェント）は、何をさせるかの短い説明
+    'description',
+  ]) {
     const value = input[key];
     if (typeof value === 'string') {
       return value;

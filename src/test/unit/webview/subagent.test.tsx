@@ -94,4 +94,48 @@ suite('webview: サブエージェントの活動', () => {
       '子の実行中の行は別に出さない'
     );
   });
+
+  test('Agent の対象は、JSON ではなく description（何をさせるか）を出す', () => {
+    const html = render(
+      <App
+        state={state([
+          { kind: 'prompt', turn: 0, text: 'p' },
+          {
+            kind: 'tool',
+            turn: 0,
+            id: 'agent-1',
+            name: 'Agent',
+            input: {
+              description: 'README英日を修正',
+              subagent_type: 'general-purpose',
+              prompt: 'long',
+            },
+            status: 'ok',
+          },
+        ])}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('<span class="tool-target">README英日を修正</span>'));
+  });
+
+  test('command と description の両方があるツール（Bash）は、command を出す', () => {
+    const html = render(
+      <App
+        state={state([
+          { kind: 'prompt', turn: 0, text: 'p' },
+          {
+            kind: 'tool',
+            turn: 0,
+            id: 'b1',
+            name: 'Bash',
+            input: { command: 'npm test', description: 'Run tests' },
+            status: 'ok',
+          },
+        ])}
+        post={() => {}}
+      />
+    );
+    assert.ok(html.includes('<span class="tool-target">npm test</span>'));
+  });
 });
