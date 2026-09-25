@@ -54,6 +54,10 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
       }
       return [];
     case 'stream_event': {
+      // サブエージェントの出力は本文に混ぜない（活動は親の呼び出しの中にツールとして出す）
+      if ((m.parent_tool_use_id ?? null) !== null) {
+        return [];
+      }
       const event = m.event;
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
         return [{ type: 'text', text: event.delta.text }];
@@ -63,12 +67,22 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
       }
       return [];
     }
-    case 'assistant':
-      return m.message.content.flatMap((block) =>
+    case 'assistant': {
+      const parentId = m.parent_tool_use_id ?? undefined;
+      return m.message.content.flatMap((block): RunnerEvent[] =>
         block.type === 'tool_use'
-          ? [{ type: 'tool-call', id: block.id, name: block.name, input: asRecord(block.input) }]
+          ? [
+              {
+                type: 'tool-call',
+                id: block.id,
+                name: block.name,
+                input: asRecord(block.input),
+                ...(parentId !== undefined ? { parentId } : {}),
+              },
+            ]
           : []
       );
+    }
     case 'user': {
       const content = m.message.content;
       if (typeof content === 'string') {
@@ -103,7 +117,8 @@ export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
 
 /** assistant メッセージの text ブロックをつないだもの。text ブロックが無ければ undefined */
 function finalTextOf(m: SDKMessage): string | undefined {
-  if (m.type !== 'assistant') {
+  // サブエージェントの文は本文にしない
+  if (m.type !== 'assistant' || (m.parent_tool_use_id ?? null) !== null) {
     return undefined;
   }
   const texts = m.message.content.flatMap((block) => (block.type === 'text' ? [block.text] : []));

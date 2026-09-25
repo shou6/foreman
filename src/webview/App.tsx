@@ -50,19 +50,31 @@ export interface AppProps {
 
 type ToolItem = TranscriptItem & { kind: 'tool' };
 
-/** 連続するツールの呼び出しを 1 つにまとめた、描画用の項目 */
-type Block = { kind: 'tools'; turn: number; tools: ToolItem[] } | Exclude<TranscriptItem, ToolItem>;
+/**
+ * 連続するツールの呼び出しを 1 つにまとめた、描画用の項目。
+ * children はサブエージェントの呼び出し（親の呼び出しの ID ごと）。親の行の中に入れ子で出す
+ */
+type Block =
+  | { kind: 'tools'; turn: number; tools: ToolItem[]; children: ReadonlyMap<string, ToolItem[]> }
+  | Exclude<TranscriptItem, ToolItem>;
 
 /** 連続するツールの呼び出しをまとめる（ラフの「Read … · Read … · Grep …」の 1 行） */
 function groupTools(items: readonly TranscriptItem[]): Block[] {
+  const ids = new Set(items.flatMap((item) => (item.kind === 'tool' ? [item.id] : [])));
+  const children = new Map<string, ToolItem[]>();
   const blocks: Block[] = [];
   for (const item of items) {
     const last = blocks[blocks.length - 1];
+    // 親が見つかるサブエージェントの呼び出しは、親の下に回す（グループを分けない）
+    if (item.kind === 'tool' && item.parentId !== undefined && ids.has(item.parentId)) {
+      children.set(item.parentId, [...(children.get(item.parentId) ?? []), item]);
+      continue;
+    }
     if (item.kind === 'tool') {
       if (last?.kind === 'tools' && last.turn === item.turn) {
         last.tools.push(item);
       } else {
-        blocks.push({ kind: 'tools', turn: item.turn, tools: [item] });
+        blocks.push({ kind: 'tools', turn: item.turn, tools: [item], children });
       }
     } else {
       blocks.push(item);
@@ -782,27 +794,28 @@ function BlockView({
               <span class="tool-names">{names}</span>
             </summary>
             {block.tools.map((tool) => (
-              <details class="tool" data-status={tool.status} key={tool.id}>
-                <summary>
-                  <span class="tool-name">{tool.name}</span>
-                  <span class="tool-target">{summarize(tool.input)}</span>
-                </summary>
-                {tool.output !== undefined && (
-                  <Scroll class="tool-output-scroll" as="pre" viewportClass="tool-output">
-                    {tool.output}
-                  </Scroll>
-                )}
-              </details>
+              <ToolRow key={tool.id} tool={tool} subagents={block.children} strings={strings} />
             ))}
           </details>
-          {running.map((tool) => (
-            <div class="tool-running" key={`running-${tool.id}`}>
-              <Icon name="loading~spin" />
-              <span class="tool-name">{tool.name}</span>
-              <span class="tool-target">{summarize(tool.input)}</span>
-              <span class="tool-elapsed">{toolElapsed(tool.id)}</span>
-            </div>
-          ))}
+          {running.map((tool) => {
+            // サブエージェントが動いている間は、今動いている子のツールを添える
+            const sub = [...(block.children.get(tool.id) ?? [])]
+              .reverse()
+              .find((t) => t.status === 'running');
+            return (
+              <div class="tool-running" key={`running-${tool.id}`}>
+                <Icon name="loading~spin" />
+                <span class="tool-name">{tool.name}</span>
+                <span class="tool-target">{summarize(tool.input)}</span>
+                {sub !== undefined && (
+                  <span class="tool-sub">
+                    {sub.name} {summarize(sub.input)}
+                  </span>
+                )}
+                <span class="tool-elapsed">{toolElapsed(tool.id)}</span>
+              </div>
+            );
+          })}
           {reserve && running.length === 0 && (
             <div class="tool-running idle" aria-hidden="true">
               <Icon name="loading" />
@@ -1374,6 +1387,48 @@ function PromptView({ text }: { text: string }) {
         }
       })}
     </div>
+  );
+}
+
+/**
+ * ツールの呼び出しの 1 行。サブエージェントを始めた呼び出し（Agent）なら、
+ * その中の呼び出しを入れ子で出し、件数を添える
+ */
+function ToolRow({
+  tool,
+  subagents,
+  strings,
+}: {
+  tool: ToolItem;
+  /** サブエージェントの呼び出し（親の呼び出しの ID ごと） */
+  subagents: ReadonlyMap<string, ToolItem[]>;
+  strings: PanelStrings;
+}) {
+  const subs = subagents.get(tool.id) ?? [];
+  return (
+    <details class="tool" data-status={tool.status}>
+      <summary>
+        <span class="tool-name">{tool.name}</span>
+        <span class="tool-target">{summarize(tool.input)}</span>
+        {subs.length > 0 && (
+          <span class="subagent-count">
+            {strings.toolCalls.replace('{0}', String(subs.length))}
+          </span>
+        )}
+      </summary>
+      {subs.length > 0 && (
+        <div class="subagent-tools">
+          {subs.map((sub) => (
+            <ToolRow key={sub.id} tool={sub} subagents={subagents} strings={strings} />
+          ))}
+        </div>
+      )}
+      {tool.output !== undefined && (
+        <Scroll class="tool-output-scroll" as="pre" viewportClass="tool-output">
+          {tool.output}
+        </Scroll>
+      )}
+    </details>
   );
 }
 

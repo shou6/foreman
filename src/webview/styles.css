@@ -378,6 +378,33 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+/* サブエージェントが今動かしているツール */
+.tool-running .tool-sub {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.tool-running .tool-sub::before {
+  content: '↳ ';
+}
+
+/* サブエージェントの呼び出し。親（Agent）の行の中に、字下げと左の線で入れ子にする */
+.subagent-count {
+  flex: none;
+  margin-left: 0.6em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.subagent-tools {
+  margin: 0.2em 0 0.3em 0.6em;
+  padding-left: 0.6em;
+  border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border));
+}
+
 /* 実行中のツールが無い間も、同じ高さの場所を取っておく */
 .tool-running.idle {
   visibility: hidden;

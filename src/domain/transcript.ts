@@ -17,6 +17,8 @@ export type TranscriptItem =
       input: Record<string, unknown>;
       status: 'running' | 'ok' | 'error';
       output?: string;
+      /** サブエージェントの呼び出しなら、親（Agent）の呼び出しの ID */
+      parentId?: string;
     }
   /** コンテキストの圧縮（区切りとして出す） */
   | { kind: 'compact'; turn: number; preTokens: number; postTokens: number | undefined }
@@ -79,6 +81,7 @@ export function applyEvent(
           name: event.name,
           input: event.input,
           status: 'running',
+          ...(event.parentId !== undefined ? { parentId: event.parentId } : {}),
         },
       ];
     case 'tool-result':

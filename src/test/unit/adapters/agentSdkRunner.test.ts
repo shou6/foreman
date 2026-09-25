@@ -75,6 +75,34 @@ suite('normalizeMessage', () => {
     );
   });
 
+  test('サブエージェントの tool_use は、親の呼び出しの ID を parentId に付ける', () => {
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'assistant',
+          parent_tool_use_id: 'agent-1',
+          message: {
+            content: [{ type: 'tool_use', id: 'tu9', name: 'Grep', input: { pattern: 'x' } }],
+          },
+        })
+      ),
+      [{ type: 'tool-call', id: 'tu9', name: 'Grep', input: { pattern: 'x' }, parentId: 'agent-1' }]
+    );
+  });
+
+  test('サブエージェントの出力の断片は、本文に混ぜない', () => {
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'stream_event',
+          parent_tool_use_id: 'agent-1',
+          event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'sub' } },
+        })
+      ),
+      []
+    );
+  });
+
   test('user の tool_result → tool-result。内容は文字列に平らにする', () => {
     assert.deepStrictEqual(
       normalizeMessage(
@@ -674,6 +702,31 @@ suite('AgentSdkRunner: 出力の確定', () => {
     assert.ok(
       order.indexOf('text-final') < order.indexOf('tool-call'),
       'text-final は tool-call より前'
+    );
+  });
+
+  test('サブエージェントの text は本文にしない（text-final を出さない）', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({
+      ...base,
+      onEvent: (e) => events.push(e),
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.push(
+      msg({
+        type: 'assistant',
+        uuid: 'u1',
+        parent_tool_use_id: 'agent-1',
+        message: { content: [{ type: 'text', text: 'sub report' }] },
+      })
+    );
+    fake.push(null);
+    await handle.done;
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'text-final' || e.type === 'text'),
+      []
     );
   });
 

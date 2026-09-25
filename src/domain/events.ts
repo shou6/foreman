@@ -17,7 +17,14 @@ export type RunnerEvent =
    */
   | { type: 'text-final'; text: string; streamed: number }
   /** ツールの呼び出し */
-  | { type: 'tool-call'; id: string; name: string; input: Record<string, unknown> }
+  | {
+      type: 'tool-call';
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+      /** サブエージェントの呼び出しなら、そのサブエージェントを始めた呼び出しの ID */
+      parentId?: string;
+    }
   /** ツールの結果 */
   | { type: 'tool-result'; id: string; ok: boolean; output: string }
   /**

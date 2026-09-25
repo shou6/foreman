@@ -182,4 +182,24 @@ suite('applyEvent: compact', () => {
       postTokens: 2537,
     });
   });
+
+  test('サブエージェントのツールの呼び出しは、親の ID（parentId）を持つ', () => {
+    let items: TranscriptItem[] = startTurn([], 0, 'p');
+    items = applyEvent(items, 0, {
+      type: 'tool-call',
+      id: 'c1',
+      name: 'Read',
+      input: {},
+      parentId: 'agent-1',
+    });
+    assert.deepStrictEqual(items[1], {
+      kind: 'tool',
+      turn: 0,
+      id: 'c1',
+      name: 'Read',
+      input: {},
+      status: 'running',
+      parentId: 'agent-1',
+    });
+  });
 });
