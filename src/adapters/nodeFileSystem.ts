@@ -33,10 +33,16 @@ export class NodeFileSystem implements FileSystem {
         if (filename === null || filename === undefined) {
           return;
         }
-        const full = path.join(dir, filename.toString());
+        const name = filename.toString();
+        const full = path.join(dir, name);
         // フォルダの変更は知らせない（中のファイルの変更は別に届く）。消えたパスは判別できないので知らせる
         fsSync.stat(full, (error, stat) => {
           if (error === null && stat.isDirectory()) {
+            return;
+          }
+          // macOS は監視しているフォルダ自体の変更を、そのフォルダの名前で知らせる。
+          // 中に同じ名前のものが無ければ、それはフォルダ自体の知らせなので、消えたファイルとして扱わない
+          if (error !== null && name === path.basename(root)) {
             return;
           }
           onChange(full);
