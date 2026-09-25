@@ -10,3 +10,6 @@ echo "[pre-commit] npm run compile"
 npm run compile --silent
 echo "[pre-commit] npm run test:unit"
 npm run test:unit --silent
+# 手元だけの文書と設定（foreman-docs で管理）がステージされていたら、コミットの前に止める
+echo "[pre-commit] node scripts/check-private-files.js"
+node scripts/check-private-files.js

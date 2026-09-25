@@ -22,11 +22,6 @@ Thumbs.db
 *.log
 *.stackdump
 
-# 手元の開発環境だけで使うもの（AI 向けの指示と設定、作業メモ、公開手順などのメモ）
-CLAUDE.md
-.claude/
-.automation/
-docs/
-
-# 技術検証のスクリプト（手元だけで使う。結果は docs/spike-results.md に残す）
-spikes/
+# 手元だけで使う文書と設定（docs/、CLAUDE.md、.claude/、.automation/、spikes/）は、
+# 非公開の foreman-docs リポジトリで管理する。公開側では .git/info/exclude で無視し、
+# 追跡されていないことを npm run verify:package で検査する
