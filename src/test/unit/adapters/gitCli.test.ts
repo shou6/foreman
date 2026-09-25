@@ -13,6 +13,8 @@ function makeRepo(): string {
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 'test@example.com');
   git('config', 'user.name', 'test');
+  // CI の Windows は core.autocrlf が true で、チェックアウトの時に改行を CRLF に変える
+  git('config', 'core.autocrlf', 'false');
   fs.writeFileSync(path.join(dir, 'a.txt'), 'a\n');
   git('add', '.');
   git('commit', '-q', '-m', 'init');
