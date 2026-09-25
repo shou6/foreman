@@ -24,13 +24,30 @@
   },
   "categories": [
     "AI",
+    "Chat",
     "Other"
   ],
   "keywords": [
     "claude",
     "claude code",
+    "anthropic",
+    "ai",
     "agent",
-    "tasks"
+    "coding agent",
+    "agentic",
+    "tasks",
+    "task board",
+    "parallel",
+    "sessions",
+    "code review",
+    "diff",
+    "approval",
+    "permissions",
+    "worktree",
+    "git worktree",
+    "plan mode",
+    "subagent",
+    "mcp"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",

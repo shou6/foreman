@@ -8,7 +8,7 @@ Run Claude Code sessions as tasks inside Visual Studio Code. Start them side by 
 
 Foreman uses the `claude` CLI that is already installed and logged in on your machine. It works with your own Claude subscription (Pro / Max) or API key. You need neither a GitHub Copilot subscription nor a GitHub sign-in.
 
-![Tasks in the sidebar, a task view with its diff card, and the changes of the task in the secondary side bar](images/task-view.png)
+![Tasks in the sidebar, a task view with two turns and their diff cards, and the changes and session of the task in the secondary side bar](images/task-view.png)
 
 ## Getting started
 
@@ -55,7 +55,7 @@ The task board, with one main action per card:
 
 ![Task board with draft, running, your turn, review and done columns](images/board.png)
 
-The screenshots show the Japanese display language. The extension follows the display language of Visual Studio Code.
+The extension follows the display language of Visual Studio Code (English and Japanese).
 
 ## Requirements
 
