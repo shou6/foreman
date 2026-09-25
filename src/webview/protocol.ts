@@ -96,6 +96,8 @@ export interface PanelStrings {
   compact: string;
   compacted: string;
   commandsHint: string;
+  /** 候補の下の案内。{0} に出していない件数 */
+  moreCandidates: string;
   /** 見出しの「…」（ほかの操作） */
   more: string;
   /** 題名を押した時の説明（名前の変更） */

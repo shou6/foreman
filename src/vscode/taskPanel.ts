@@ -478,6 +478,7 @@ export class TaskPanels implements vscode.Disposable {
         compact: vscode.l10n.t('Compact the context'),
         compacted: vscode.l10n.t('Context compacted ({0} → {1})', '{0}', '{1}'),
         commandsHint: vscode.l10n.t('Claude Code commands and skills'),
+        moreCandidates: vscode.l10n.t('{0} more: keep typing to filter', '{0}'),
         more: vscode.l10n.t('More actions'),
         rename: vscode.l10n.t('Rename'),
         contextPanel: vscode.l10n.t('What Claude will receive'),

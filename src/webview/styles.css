@@ -1343,33 +1343,73 @@ body.dragging .drop-hint {
   color: var(--vscode-descriptionForeground);
 }
 
-/* 指示のプリセットの候補 */
-.preset-list {
-  margin: 0;
-  padding: 0.3em 0.6em;
-  list-style: none;
+/* / の候補（プリセットと Claude Code のコマンド）。名前の列は固定幅、説明は 1 行 */
+.suggestions {
   border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
   border-radius: 4px;
   background: var(--vscode-editorWidget-background);
   font-size: 0.9em;
 }
 
+.preset-list {
+  margin: 0;
+  padding: 0.2em 0;
+  list-style: none;
+}
+
 .preset-list li {
-  display: flex;
-  gap: 0.8em;
+  display: grid;
+  grid-template-columns: 14em 6em minmax(0, 1fr);
+  gap: 0 0.8em;
   align-items: baseline;
-  padding: 0.1em 0;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+}
+
+.preset-list li[data-selected='true'] {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
 }
 
 .preset {
-  font-family: var(--vscode-editor-font-family);
-}
-
-.preset-prompt {
-  color: var(--vscode-descriptionForeground);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.preset-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+.preset-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+
+.preset-list li[data-selected='true'] .preset,
+.preset-list li[data-selected='true'] .preset-hint,
+.preset-list li[data-selected='true'] .preset-desc {
+  color: inherit;
+}
+
+/* 選んでいる候補の説明の全文と、出していない件数 */
+.preset-detail,
+.preset-more {
+  padding: 0.3em 0.6em;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
 }
 
 /* Context パネル（次に送る内容） */

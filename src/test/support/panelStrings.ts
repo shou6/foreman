@@ -85,6 +85,7 @@ export const PANEL_STRINGS: PanelStrings = {
   compact: 'Compact the context',
   compacted: 'Context compacted ({0} → {1})',
   commandsHint: 'Claude Code commands and skills',
+  moreCandidates: '{0} more: keep typing to filter',
   more: 'More actions',
   rename: 'Rename',
   contextPanel: 'What Claude will receive',

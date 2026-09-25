@@ -10,7 +10,7 @@ import {
 } from '../domain/models';
 import type { EffortLevel } from '../domain/task';
 import { applyPreset } from '../domain/presets';
-import { matchSlash } from '../domain/slashCommands';
+import { slashSuggestions } from '../domain/slashCommands';
 import { inlineCode, promptBlocks } from '../domain/promptBlocks';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
@@ -94,6 +94,9 @@ function useTicking(active: boolean): number {
 /** タスク画面。状態は拡張機能から届いたものをそのまま描く */
 export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
   const [draft, setDraftState] = useState(initialDraft ?? '');
+  // / の候補で選んでいる項目と、Esc で閉じた時の入力（同じ入力の間は出さない）
+  const [selected, setSelected] = useState(0);
+  const [dismissed, setDismissed] = useState<string | undefined>(undefined);
   // 実行中のツールとターンを最初に見た時刻（開始の時刻が分からない時の経過に使う）
   const seen = useRef(new Map<string, number>());
   const now = useTicking(state?.turnOpen === true);
@@ -115,7 +118,18 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
     post({ type: 'send', prompt: composed, attachments: state.attachments });
     setDraft('');
   };
-  const candidates = matchSlash(draft, state.presets, state.commands ?? []);
+  // / の候補。↑↓ で選び、Enter か Tab で確定、Esc で閉じる
+  const suggestions =
+    dismissed === draft ? undefined : slashSuggestions(draft, state.presets, state.commands ?? []);
+  const candidates = suggestions?.items ?? [];
+  const selectedIndex = Math.min(selected, Math.max(0, candidates.length - 1));
+  const accept = (index: number): void => {
+    const c = candidates[index];
+    if (c !== undefined) {
+      setDraft('/' + c.name + ' ');
+      setSelected(0);
+    }
+  };
   const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
   // 指定のモデルに当たる選択肢。正式な ID（claude-sonnet-5）も中身で照合する（Sonnet）
   const chosen =
@@ -329,18 +343,36 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
           model={state.activeModel ?? state.model}
           strings={state.strings}
         />
-        {candidates.length > 0 && (
-          <ul class="preset-list">
-            {candidates.map((c) => (
-              <li key={`${c.source}:${c.name}`} data-source={c.source}>
-                <button class="link preset" onClick={() => setDraft('/' + c.name + ' ')}>
-                  /{c.name}
-                </button>
-                {c.argumentHint !== '' && <span class="preset-hint">{c.argumentHint}</span>}
-                <span class="preset-prompt">{c.description}</span>
-              </li>
-            ))}
-          </ul>
+        {suggestions !== undefined && (candidates.length > 0 || suggestions.hidden > 0) && (
+          <div class="suggestions">
+            {candidates.length > 0 && (
+              <ul class="preset-list">
+                {candidates.map((c, i) => (
+                  <li
+                    key={`${c.source}:${c.name}`}
+                    data-source={c.source}
+                    data-selected={i === selectedIndex ? 'true' : undefined}
+                    title={c.description}
+                    onMouseEnter={() => setSelected(i)}
+                  >
+                    <button class="link preset" onClick={() => accept(i)}>
+                      /{c.name}
+                    </button>
+                    <span class="preset-hint">{c.argumentHint}</span>
+                    <span class="preset-desc">{c.description}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {candidates[selectedIndex] !== undefined && (
+              <div class="preset-detail">{candidates[selectedIndex]?.description}</div>
+            )}
+            {suggestions.hidden > 0 && (
+              <div class="preset-more">
+                {state.strings.moreCandidates.replace('{0}', String(suggestions.hidden))}
+              </div>
+            )}
+          </div>
         )}
         <div class="composer-box">
           {state.attachments.length > 0 && (
@@ -381,6 +413,21 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
                   submit();
+                  return;
+                }
+                if (candidates.length === 0) {
+                  return;
+                }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  const step = e.key === 'ArrowDown' ? 1 : -1;
+                  setSelected((selectedIndex + step + candidates.length) % candidates.length);
+                } else if (e.key === 'Enter' || e.key === 'Tab') {
+                  e.preventDefault();
+                  accept(selectedIndex);
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setDismissed(draft);
                 }
               }}
             />

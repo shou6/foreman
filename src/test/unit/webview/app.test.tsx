@@ -374,9 +374,10 @@ suite('webview: Claude Code のコマンドとスキルの補完', () => {
   const commands = [
     { name: 'compact', description: 'Clear history but keep a summary', argumentHint: '' },
     { name: 'frontend-design', description: 'Design UI', argumentHint: '<page>' },
+    { name: 'commit', description: 'Commit changes', argumentHint: '' },
   ];
 
-  test('/ の候補にプリセットと並べてコマンドを出し、説明と引数のヒントを添える', () => {
+  test('/ だけならプリセットだけを出し、コマンドは件数の案内にする', () => {
     const html = render(
       <App
         state={state({ status: 'done', turnOpen: false, presets, commands })}
@@ -385,13 +386,28 @@ suite('webview: Claude Code のコマンドとスキルの補完', () => {
       />
     );
     const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
-    assert.ok(list.indexOf('/fix') < list.indexOf('/compact'));
-    assert.ok(
-      /data-source="command"[^>]*>\/compact</.test(list) ||
-        /data-source="command"[\s\S]*?\/compact/.test(list)
+    assert.ok(list.includes('/fix'));
+    assert.ok(!list.includes('/compact'));
+    assert.ok(html.includes('3 more: keep typing to filter'));
+  });
+
+  test('文字を打つと絞り込み、名前・引数のヒント・説明を 1 行に並べ、全文は title に入れる', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets, commands })}
+        post={() => {}}
+        initialDraft="/com"
+      />
     );
-    assert.ok(list.includes('Clear history but keep a summary'));
-    assert.ok(list.includes('&lt;page>'));
+    const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
+    assert.ok(list.includes('/compact') && list.includes('/commit') && !list.includes('/fix'));
+    assert.ok(/<li[^>]*title="Clear history but keep a summary"/.test(list));
+    assert.ok(/class="preset-desc"[^>]*>Clear history but keep a summary</.test(list));
+    assert.ok(/data-selected="true"[\s\S]*?\/compact/.test(list), '最初の候補が選ばれている');
+    assert.ok(
+      /class="preset-detail"[^>]*>Clear history but keep a summary</.test(html),
+      '選んだ候補の説明を全文で出す'
+    );
   });
 
   test('commands メッセージで一覧が入れ替わる', () => {

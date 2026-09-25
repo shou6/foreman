@@ -194,5 +194,6 @@
   "Thought": "考えたこと",
   "Compact the context": "コンテキストを圧縮",
   "Context compacted ({0} → {1})": "コンテキストを圧縮（{0} → {1}）",
-  "Claude Code commands and skills": "Claude Code のコマンドとスキル"
+  "Claude Code commands and skills": "Claude Code のコマンドとスキル",
+  "{0} more: keep typing to filter": "ほか {0} 件。文字を打つと絞り込み"
 }
