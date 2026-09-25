@@ -109,3 +109,21 @@ suite('OrphanCleaner: 起動時の後始末と、起動したプロセスの記�
     assert.deepStrictEqual(records.records, []);
   });
 });
+
+suite('OrphanCleaner: ホストのプロセスの番号の使い回し', () => {
+  test('落ちたホストと今のホストの番号が同じでも、起動時刻が違えば別のホストとして後始末する', async () => {
+    const crashed: HostRecord = {
+      hostPid: 12,
+      hostStartedAt: T - 3_600_000,
+      runs: [{ pid: 20, startedAt: T - 3_500_000 }],
+    };
+    const table = new FakeTable([
+      { pid: 12, ppid: 1, name: 'Code.exe', createdAt: T },
+      { pid: 30, ppid: 20, name: 'node.exe', createdAt: T - 3_400_000 },
+    ]);
+    const records = new FakeRecords([crashed]);
+    const cleaner = new OrphanCleaner({ table, records, host: { pid: 12, startedAt: T } });
+    assert.deepStrictEqual(await cleaner.cleanup(), [30]);
+    assert.deepStrictEqual(records.records, []);
+  });
+});

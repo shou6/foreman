@@ -98,3 +98,38 @@ suite('webview: スナップショットを消したタスクの、戻す操作'
     assert.ok(/<button[^>]*class="icon-button fork"(?![^>]*disabled)/.test(html));
   });
 });
+
+suite('webview: スナップショットを消したタスクの「全体の差分」', () => {
+  const task = (worktree: boolean) => ({
+    id: 't1',
+    title: 'README',
+    status: 'done' as const,
+    kind: 'done' as const,
+    turnOpen: false,
+    mergeable: true,
+    snapshotsPruned: true,
+    worktree: worktree ? { branch: 'foreman/readme', base: 'main' } : undefined,
+    turns: [
+      {
+        index: 0,
+        prompt: 'p',
+        ok: true,
+        changes: [
+          { path: 'a.ts', kind: 'modified' as const, added: 1, removed: 1, reverted: false },
+        ],
+      },
+    ],
+  });
+
+  test('worktree の無いタスクでも、worktree の仕上げの中でも、「全体の差分」は押せない', () => {
+    for (const worktree of [false, true]) {
+      const html = render(
+        <Details state={{ task: task(worktree), strings: DETAILS_STRINGS }} post={() => {}} />
+      );
+      assert.ok(
+        /<button[^>]*class="finish-button all-diff"[^>]*disabled/.test(html),
+        `worktree=${worktree}`
+      );
+    }
+  });
+});
