@@ -40,6 +40,8 @@ export interface TaskPanelDeps {
   moreActions: (taskId: string) => Promise<void>;
   /** 貼り付けた画像を保存して、そのパスを返す */
   savePastedImage: (mime: string, base64: string) => Promise<string>;
+  /** 計画をエディターの別のタブで開く */
+  openPlan: (taskId: string, plan: string) => Promise<void>;
   /** チェックポイントに戻す / そこから切り出す（確認は呼ぶ側が行う） */
   /** レビュー待ちの承認（変更を確認済みにして完了にする） */
   approve: (taskId: string) => Promise<void>;
@@ -303,6 +305,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'more':
           await this.deps.moreActions(taskId);
           return;
+        case 'openPlan':
+          await this.deps.openPlan(taskId, message.plan);
+          return;
         case 'compact':
           await this.deps.service.compact(taskId);
           return;
@@ -426,6 +431,7 @@ export class TaskPanels implements vscode.Disposable {
           plan: vscode.l10n.t('Approve the plan and start?'),
         },
         approvePlan: vscode.l10n.t('Approve and implement'),
+        openPlan: vscode.l10n.t('Open in editor'),
         planMode: vscode.l10n.t('Plan only'),
         planModeHint: vscode.l10n.t('Claude reads and plans, and asks before it edits'),
         inputDetails: vscode.l10n.t('Input details (JSON)'),

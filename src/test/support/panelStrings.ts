@@ -35,6 +35,7 @@ export const PANEL_STRINGS: PanelStrings = {
     plan: 'Approve the plan and start?',
   },
   approvePlan: 'Approve and implement',
+  openPlan: 'Open in editor',
   planMode: 'Plan only',
   planModeHint: 'Claude reads and plans, and asks before it edits',
   inputDetails: 'Input details (JSON)',

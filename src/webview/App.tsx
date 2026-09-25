@@ -1017,6 +1017,12 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
       <div class="approval-title">
         <Icon name={kind === 'plan' ? 'checklist' : 'shield'} />
         {title}
+        {plan !== undefined && (
+          <button class="link open-plan" onClick={() => post({ type: 'openPlan', plan })}>
+            <Icon name="go-to-file" />
+            {strings.openPlan}
+          </button>
+        )}
       </div>
       {plan !== undefined ? (
         <div

@@ -41,6 +41,7 @@ import { CheckpointActions } from './vscode/checkpointActions';
 import { ReviewActions } from './vscode/reviewActions';
 import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
+import { PlanDocuments, PLAN_SCHEME } from './vscode/planDocuments';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -50,6 +51,7 @@ export interface TestApi {
   approvals: ApprovalService;
   diffs: DiffService;
   panels: TaskPanels;
+  plans: PlanDocuments;
 }
 
 export async function activate(
@@ -207,6 +209,8 @@ export async function activate(
   });
   const sources = new AttachmentSources(git);
   context.subscriptions.push(sources);
+  // 計画（ExitPlanMode）をエディターで読むための読み取り専用の文書
+  const plans = new PlanDocuments();
   const panels = new TaskPanels({
     extensionUri: context.extensionUri,
     service,
@@ -224,6 +228,10 @@ export async function activate(
     unapprove: (taskId) => review.unapprove(taskId),
     sources,
     savePastedImage: (mime, data) => savePastedImage(path.join(storage, 'attachments'), mime, data),
+    openPlan: async (taskId, plan) => {
+      const task = await service.load(taskId);
+      await plans.open(taskId, task?.title ?? '', plan);
+    },
     renameTask: (taskId) => renameTask(service, taskId),
     moreActions: (taskId) => moreActions(service, taskId),
     checkpoint: {
@@ -318,6 +326,8 @@ export async function activate(
     vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
     details,
     vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
+    plans,
+    vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, plans),
     // 差分エディタの左側（変更前）をスナップショットから出す
     vscode.workspace.registerTextDocumentContentProvider(SNAPSHOT_SCHEME, {
       provideTextDocumentContent: async (uri) =>
@@ -364,7 +374,7 @@ export async function activate(
   void cleanupWorktrees(service, worktrees, output);
   return scripted === undefined
     ? undefined
-    : { testApi: { service, runner: scripted, approvals, diffs, panels } };
+    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans } };
 }
 
 export function deactivate(): void {}

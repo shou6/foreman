@@ -261,6 +261,36 @@ suite('webview: 承認カード', () => {
     assert.ok(/class="action deny"[^>]*>Deny…</.test(html));
   });
 
+  test('ExitPlanMode の承認カードには、計画をエディターで開くボタンがあり、ほかのカードには無い', () => {
+    const plan = render(
+      <App
+        state={state({
+          pending: {
+            id: 'req-1',
+            toolName: 'ExitPlanMode',
+            input: { plan: '# Plan' },
+            suggestions: [],
+          },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(
+      /class="approval-title"[\s\S]*?<button[^>]*class="link open-plan"[^>]*><i[^>]*codicon-go-to-file[^>]*><\/i>Open in editor<\/button>/.test(
+        plan
+      )
+    );
+    const edit = render(
+      <App
+        state={state({
+          pending: { id: 'req-1', toolName: 'Edit', input: {}, suggestions: [] },
+        })}
+        post={() => {}}
+      />
+    );
+    assert.ok(!edit.includes('open-plan'));
+  });
+
   test('承認待ちの間は、入力欄の代わりに待っている旨を出す', () => {
     const html = render(
       <App

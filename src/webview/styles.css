@@ -619,6 +619,19 @@ body.dragging .drop-hint {
   color: var(--vscode-editorWarning-foreground);
 }
 
+/* 計画をエディターで開く。見出しの右端に置く */
+.approval-title .open-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-weight: normal;
+}
+
+.approval-title .open-plan .codicon {
+  color: inherit;
+}
+
 .approval-target {
   margin: 0;
   padding: 0.5em 0.7em;

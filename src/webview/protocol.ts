@@ -40,6 +40,8 @@ export interface PanelStrings {
   otherPlaceholder: string;
   /** 計画の承認カードの「承認して実装」、入力欄の「計画だけ」のトグルとその説明 */
   approvePlan: string;
+  /** 計画をエディターの別のタブで開く */
+  openPlan: string;
   planMode: string;
   planModeHint: string;
   /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
@@ -253,6 +255,8 @@ export type ToExtension =
   | { type: 'more' }
   /** コンテキストを圧縮する */
   | { type: 'compact' }
+  /** 計画（ExitPlanMode）をエディターで開く */
+  | { type: 'openPlan'; plan: string }
   /** タスク名の変更（入力は拡張機能側のダイアログ） */
   | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */

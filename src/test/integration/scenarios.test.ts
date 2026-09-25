@@ -221,3 +221,24 @@ suite('Scenario: 完了の後に続きを指示する', function () {
     assert.strictEqual((await t.service.load(task.id))?.turns[1]?.changes.length, 1);
   });
 });
+
+suite('Scenario: 計画をエディターで開く', function () {
+  this.timeout(20000);
+
+  test('計画は読み取り専用の Markdown として開き、開き直すと新しい計画に置き換わる', async () => {
+    const t = await api();
+    const uri = await t.plans.open('task-plan', 'Refactor', '# Plan\n\n1. Read');
+    assert.strictEqual(uri.scheme, 'foreman-plan');
+    assert.ok(uri.path.endsWith('.md'), uri.path);
+    const doc = await vscode.workspace.openTextDocument(uri);
+    assert.strictEqual(doc.getText(), '# Plan\n\n1. Read');
+    assert.strictEqual(doc.languageId, 'markdown');
+
+    const again = await t.plans.open('task-plan', 'Refactor', '# Plan v2');
+    assert.strictEqual(again.toString(), uri.toString(), '同じタスクは同じ文書を使う');
+    await until(
+      async () => (await vscode.workspace.openTextDocument(uri)).getText() === '# Plan v2',
+      '計画の置き換え'
+    );
+  });
+});
