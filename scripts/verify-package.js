@@ -15,7 +15,17 @@ if (!fs.existsSync(helperPath)) {
   console.error('Run "npm run compile-tests" first (' + helperPath + ' is missing).');
   process.exit(1);
 }
-const { checkPackageFiles, parseVsceLs } = require(helperPath);
+const { checkPackageFiles, parseVsceLs, privateFilesTracked } = require(helperPath);
+
+// 手元だけの文書と設定（foreman-docs で管理）が、公開リポジトリに追跡されていないこと
+const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split(/\r?\n/);
+const leaked = privateFilesTracked(tracked);
+if (leaked.length > 0) {
+  console.error(
+    'Private docs or settings are tracked in the public repository:\n  ' + leaked.join('\n  ')
+  );
+  process.exit(1);
+}
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const vsce = path.join(root, 'node_modules', '@vscode', 'vsce', 'vsce');
