@@ -41,7 +41,11 @@ export interface AgentSdkRunnerDeps {
   processes?: { spawned(pid: number, startedAt: number): void; exited(pid: number): void };
   /** 自前で起動する時の spawn。テストで差し替える */
   spawn?: typeof nodeSpawn;
+  /** 停止の要求に CLI が応答しない時に、入力を閉じて打ち切るまでの時間（ミリ秒）。既定は 5 秒 */
+  stopTimeoutMs?: number;
 }
+
+const DEFAULT_STOP_TIMEOUT_MS = 5000;
 
 const EDIT_TOOLS = 'Edit|Write|MultiEdit|NotebookEdit';
 
@@ -186,12 +190,16 @@ export class AgentSdkRunner implements AgentRunner {
     const perms = sdkOptionsFromAlwaysAllowed(options.permissionMode, options.alwaysAllowed);
     let interruptRequested = false;
     let turnOpen = true;
+    // 停止を打ち切った後は、遅れて届いたメッセージを無視する
+    let abandoned = false;
+    let turnClosed: (() => void) | undefined;
 
     const emitTurnEnd = (event: RunnerEvent & { type: 'turn-end' }): void => {
       if (!turnOpen) {
         return;
       }
       turnOpen = false;
+      turnClosed?.();
       const withInterrupt: RunnerEvent =
         !event.ok && interruptRequested ? { ...event, interrupted: true } : event;
       interruptRequested = false;
@@ -279,9 +287,16 @@ export class AgentSdkRunner implements AgentRunner {
     let lastAssistantUuid: string | undefined;
     // 前回の確定からこれまでに流した断片の文字数。assistant の text で置き換える
     let streamed = 0;
-    const done = (async () => {
+    let resolveAbandoned: () => void = () => {};
+    const abandonedDone = new Promise<void>((resolve) => {
+      resolveAbandoned = resolve;
+    });
+    const loop = (async () => {
       try {
         for await (const message of query) {
+          if (abandoned) {
+            return;
+          }
           if (message.type === 'assistant' && (message.parent_tool_use_id ?? null) === null) {
             lastAssistantUuid = message.uuid;
           }
@@ -304,11 +319,52 @@ export class AgentSdkRunner implements AgentRunner {
           }
         }
       } catch (error) {
-        emitTurnEnd({ type: 'turn-end', ok: false, interrupted: false, reason: messageOf(error) });
+        if (!abandoned) {
+          emitTurnEnd({
+            type: 'turn-end',
+            ok: false,
+            interrupted: false,
+            reason: messageOf(error),
+          });
+        }
       } finally {
         prompts.end();
       }
     })();
+    // 打ち切った時は、CLI が終わるのを待たずにプロセスが終わったことにする（次の指示で再開できる）
+    const done = Promise.race([loop, abandonedDone]);
+
+    /** 停止を打ち切る。入力を閉じ（stdin の EOF で SDK がプロセスを終わらせる）、中断として片付ける */
+    const abandon = (): void => {
+      abandoned = true;
+      prompts.end();
+      emitTurnEnd({
+        type: 'turn-end',
+        ok: false,
+        interrupted: true,
+        reason: 'Claude Code did not respond to the stop request; the process was closed',
+      });
+      resolveAbandoned();
+    };
+
+    /** 今のターンが閉じるまで待つ。時間切れなら false */
+    const waitTurnClosed = (ms: number): Promise<boolean> =>
+      new Promise((resolve) => {
+        if (!turnOpen) {
+          resolve(true);
+          return;
+        }
+        const timer = setTimeout(() => {
+          turnClosed = undefined;
+          resolve(false);
+        }, ms);
+        timer.unref();
+        turnClosed = () => {
+          clearTimeout(timer);
+          turnClosed = undefined;
+          resolve(true);
+        };
+      });
 
     return {
       send: (prompt) => {
@@ -317,9 +373,31 @@ export class AgentSdkRunner implements AgentRunner {
       },
       // /compact は CLI が処理する。result は届くが、ターンは開いていないので終了にはしない
       compact: () => prompts.push('/compact'),
+      // 停止。CLI が応答しなければ（interrupt が返らない・失敗する、または result が届かない）、
+      // 入力を閉じてプロセスを終わらせ、中断として片付ける。devcontainer で止まらなくなった不具合への備え。
+      // interrupt の応答までは待つが、result は待たずに戻る（届かなければ後から打ち切る）
       interrupt: async () => {
         interruptRequested = true;
-        await query.interrupt();
+        const timeout = this.deps.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
+        const acknowledged = await Promise.race([
+          query.interrupt().then(
+            () => true,
+            () => false
+          ),
+          delay(timeout).then(() => false),
+        ]);
+        if (!turnOpen) {
+          return;
+        }
+        if (!acknowledged) {
+          abandon();
+          return;
+        }
+        void waitTurnClosed(timeout).then((closed) => {
+          if (!closed && turnOpen) {
+            abandon();
+          }
+        });
       },
       setModel: async (model) => {
         await query.setModel(model);
@@ -476,4 +554,10 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
     close: () => {},
     done: Promise.resolve(),
   };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms).unref();
+  });
 }

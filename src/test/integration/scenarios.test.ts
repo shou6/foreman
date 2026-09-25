@@ -350,3 +350,29 @@ suite('Scenario: 失敗（受け入れ 9.6）', function () {
     }
   });
 });
+
+suite('Scenario: 監視で拾う変更（VS Code のファイル監視）', function () {
+  this.timeout(30_000);
+
+  test('編集ツール以外（シェルなど）の変更も、ターンの間に監視で拾って記録する', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const cwd = workDir();
+    const task = await t.service.create({ prompt: 'run a script', cwd });
+    t.runner.last.emit({ type: 'init', sessionId: 'sess-w', model: 'm' });
+    // 監視が始まるのを待ってから、編集ツールを通さずにファイルを作る
+    await settle(500);
+    fs.writeFileSync(path.join(cwd, 'made-by-shell.txt'), 'x\n');
+    await until(async () => {
+      const current = await t.service.load(task.id);
+      return current !== undefined && t.diffs.pendingPaths(task.id).includes('made-by-shell.txt');
+    }, '監視がファイルを拾う');
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'review');
+    const change = (await t.service.load(task.id))?.turns[0]?.changes[0];
+    assert.strictEqual(change?.path, 'made-by-shell.txt');
+    assert.strictEqual(change?.source, 'watcher');
+    // 監視で拾った変更は、変更前が分からない（新規作成かどうかも判別できない）
+    assert.strictEqual(change?.before, undefined);
+  });
+});

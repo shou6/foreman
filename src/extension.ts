@@ -14,7 +14,7 @@ import { FsSnapshotStore } from './adapters/fsSnapshotStore';
 import { FsTaskStore } from './adapters/fsTaskStore';
 import { FsTranscriptStore } from './adapters/fsTranscriptStore';
 import { GitCli } from './adapters/gitCli';
-import { NodeFileSystem } from './adapters/nodeFileSystem';
+import { VsCodeFileSystem } from './vscode/vsCodeFileSystem';
 import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
 import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
@@ -191,7 +191,8 @@ export async function activate(
   const git = new GitCli();
   const diffs = new DiffService({
     service,
-    fs: new NodeFileSystem(),
+    // 監視は VS Code のファイル監視（Linux の Node の再帰的な監視は、大きなリポジトリで遅い）
+    fs: new VsCodeFileSystem(),
     snapshots,
     sep: path.sep,
     isIgnored: (dir, paths) => git.ignored(dir, paths),
