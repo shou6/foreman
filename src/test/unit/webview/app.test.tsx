@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { render } from 'preact-render-to-string';
 import { App } from '../../../webview/App';
 import type { PanelState, ToExtension } from '../../../webview/protocol';
+import { reduce } from '../../../webview/state';
 import { PANEL_STRINGS } from '../../support/panelStrings';
 
 const STRINGS = PANEL_STRINGS;
@@ -365,5 +366,36 @@ suite('webview: 見出しの状態（サイドバーと同じ呼び名）', () =
     assert.ok(
       /class="status"[^>]*data-kind="approval"[^>]*>(<i[^>]*><\/i>)Needs approval</.test(approval)
     );
+  });
+});
+
+suite('webview: Claude Code のコマンドとスキルの補完', () => {
+  const presets = [{ name: 'fix', prompt: 'Fix: {input}' }];
+  const commands = [
+    { name: 'compact', description: 'Clear history but keep a summary', argumentHint: '' },
+    { name: 'frontend-design', description: 'Design UI', argumentHint: '<page>' },
+  ];
+
+  test('/ の候補にプリセットと並べてコマンドを出し、説明と引数のヒントを添える', () => {
+    const html = render(
+      <App
+        state={state({ status: 'done', turnOpen: false, presets, commands })}
+        post={() => {}}
+        initialDraft="/"
+      />
+    );
+    const list = html.slice(html.indexOf('class="preset-list"'), html.indexOf('</ul>'));
+    assert.ok(list.indexOf('/fix') < list.indexOf('/compact'));
+    assert.ok(
+      /data-source="command"[^>]*>\/compact</.test(list) ||
+        /data-source="command"[\s\S]*?\/compact/.test(list)
+    );
+    assert.ok(list.includes('Clear history but keep a summary'));
+    assert.ok(list.includes('&lt;page>'));
+  });
+
+  test('commands メッセージで一覧が入れ替わる', () => {
+    const s = reduce(state({ status: 'done', turnOpen: false }), { type: 'commands', commands });
+    assert.deepStrictEqual(s?.commands, commands);
   });
 });

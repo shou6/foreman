@@ -40,13 +40,26 @@ const EDIT_TOOLS = 'Edit|Write|MultiEdit|NotebookEdit';
 export function normalizeMessage(m: SDKMessage): RunnerEvent[] {
   switch (m.type) {
     case 'system':
-      return m.subtype === 'init'
-        ? [{ type: 'init', sessionId: m.session_id, model: m.model }]
-        : [];
+      if (m.subtype === 'init') {
+        return [{ type: 'init', sessionId: m.session_id, model: m.model }];
+      }
+      if (m.subtype === 'compact_boundary') {
+        return [
+          {
+            type: 'compact',
+            preTokens: m.compact_metadata.pre_tokens,
+            postTokens: m.compact_metadata.post_tokens,
+          },
+        ];
+      }
+      return [];
     case 'stream_event': {
       const event = m.event;
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
         return [{ type: 'text', text: event.delta.text }];
+      }
+      if (event.type === 'content_block_delta' && event.delta.type === 'thinking_delta') {
+        return [{ type: 'thinking', text: event.delta.thinking }];
       }
       return [];
     }
@@ -276,6 +289,8 @@ export class AgentSdkRunner implements AgentRunner {
         turnOpen = true;
         prompts.push(prompt);
       },
+      // /compact は CLI が処理する。result は届くが、ターンは開いていないので終了にはしない
+      compact: () => prompts.push('/compact'),
       interrupt: async () => {
         interruptRequested = true;
         await query.interrupt();
@@ -390,6 +405,7 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
   );
   return {
     send: () => {},
+    compact: () => {},
     interrupt: async () => {},
     setModel: async () => {},
     setEffort: async () => {},

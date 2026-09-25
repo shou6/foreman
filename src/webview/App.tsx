@@ -9,7 +9,8 @@ import {
   type ModelOption,
 } from '../domain/models';
 import type { EffortLevel } from '../domain/task';
-import { applyPreset, matchPresets } from '../domain/presets';
+import { applyPreset } from '../domain/presets';
+import { matchSlash } from '../domain/slashCommands';
 import { inlineCode, promptBlocks } from '../domain/promptBlocks';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
@@ -114,7 +115,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
     post({ type: 'send', prompt: composed, attachments: state.attachments });
     setDraft('');
   };
-  const candidates = matchPresets(draft, state.presets);
+  const candidates = matchSlash(draft, state.presets, state.commands ?? []);
   const lastTurn = state.items.reduce((max, item) => Math.max(max, item.turn), -1);
   // 指定のモデルに当たる選択肢。正式な ID（claude-sonnet-5）も中身で照合する（Sonnet）
   const chosen =
@@ -227,6 +228,16 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
             {state.usage !== undefined && (
               <Meter usage={state.usage} label={state.strings.contextUsage} />
             )}
+            {state.usage !== undefined && !busy && (
+              <button
+                class="icon-button compact"
+                title={state.strings.compact}
+                aria-label={state.strings.compact}
+                onClick={() => post({ type: 'compact' })}
+              >
+                <Icon name="fold" />
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -237,6 +248,8 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
               key={i}
               block={block}
               expanded={state.toolCallsExpanded}
+              thinking={state.thinking ?? 'collapsed'}
+              thinkingOpen={state.turnOpen && i === blocks.length - 1}
               strings={state.strings}
               toolElapsed={(id) => elapsedSince(`tool:${id}`)}
               reserve={state.turnOpen && i === lastTools}
@@ -318,12 +331,13 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         />
         {candidates.length > 0 && (
           <ul class="preset-list">
-            {candidates.map((p) => (
-              <li key={p.name}>
-                <button class="link preset" onClick={() => setDraft('/' + p.name + ' ')}>
-                  /{p.name}
+            {candidates.map((c) => (
+              <li key={`${c.source}:${c.name}`} data-source={c.source}>
+                <button class="link preset" onClick={() => setDraft('/' + c.name + ' ')}>
+                  /{c.name}
                 </button>
-                <span class="preset-prompt">{p.prompt.split('\n')[0]}</span>
+                {c.argumentHint !== '' && <span class="preset-hint">{c.argumentHint}</span>}
+                <span class="preset-prompt">{c.description}</span>
               </li>
             ))}
           </ul>
@@ -643,10 +657,16 @@ function BlockView({
   strings,
   toolElapsed,
   reserve,
+  thinking,
+  thinkingOpen,
 }: {
   block: Block;
   expanded: boolean;
   strings: PanelStrings;
+  /** 考えている途中の出し方 */
+  thinking: 'collapsed' | 'hidden';
+  /** その thinking が今まさに進んでいる（最後の項目で、動いている） */
+  thinkingOpen: boolean;
   /** 実行中のツールの経過 */
   toolElapsed: (id: string) => string;
   /** 実行中のツールが無くても、その行の場所を取っておく（ツールごとに画面が揺れないように） */
@@ -655,6 +675,30 @@ function BlockView({
   switch (block.kind) {
     case 'prompt':
       return <PromptView text={block.text} />;
+    case 'thinking':
+      if (thinking === 'hidden') {
+        return null;
+      }
+      // Claude Code は第三者のクライアントに thinking の文を渡さない（断片は空）。
+      // その時は、考えている間だけ「考え中…」の印を出し、終わったら何も残さない
+      if (block.text === '') {
+        return thinkingOpen ? (
+          <div class="item thinking-indicator">
+            <Icon name="lightbulb" />
+            {strings.thinking}
+          </div>
+        ) : null;
+      }
+      // 文が取れる環境では、たたんで出す
+      return (
+        <details class="item thinking">
+          <summary>
+            <Icon name="lightbulb" />
+            {thinkingOpen ? strings.thinking : strings.thought}
+          </summary>
+          <div class="thinking-text">{block.text}</div>
+        </details>
+      );
     case 'text':
       return (
         <div
@@ -714,6 +758,20 @@ function BlockView({
         </>
       );
     }
+    case 'compact':
+      return (
+        <div class="checkpoint compacted">
+          <span class="checkpoint-turn">
+            <Icon name="fold" />
+            {strings.compacted
+              .replace('{0}', formatTokens(block.preTokens))
+              .replace(
+                '{1}',
+                block.postTokens === undefined ? '?' : formatTokens(block.postTokens)
+              )}
+          </span>
+        </div>
+      );
     case 'turn-end':
       return block.ok ? null : (
         <div class={block.interrupted ? 'item interrupted' : 'item error'}>{block.reason}</div>

@@ -13,7 +13,7 @@ First release.
 - Approvals: allow, deny with a reason, or always allow in this task; plan mode with a plan card to approve; answer questions from Claude with number keys, your own answer, and tabs for more than one question
 - Diff cards: per-turn file changes with line counts, inline diff, diff editor, revert (no Git required), and undoing an approval
 - Pass along: selection, Problems, `git diff`, files and pasted images, from the toolbar in the input box
-- Prompt presets (`/fix`, `/test`, `/review`) and the "What Claude will receive" panel
+- Prompt presets (`/fix`, `/test`, `/review`), Claude Code commands and skills in the `/` list, `/compact` from the context meter, and the "What Claude will receive" panel
 - Context meter and token counts per turn, plus today's total and the plan usage (5-hour and 7-day limits) in the sidebar
 - Git worktrees: run a task on its own branch, then approve, review the whole diff and merge, or discard
 - Checkpoints: rewind files or the conversation to a finished turn, or fork a new task from it

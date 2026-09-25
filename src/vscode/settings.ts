@@ -20,6 +20,8 @@ export interface Settings {
   worktreeBranchPrefix: string;
   /** ツールの呼び出しを最初から開いて見せるか */
   toolCallsExpanded: boolean;
+  /** 考えている途中を、たたんで出すか、出さないか */
+  thinking: 'collapsed' | 'hidden';
   /** 軽いモデルで短いタイトルを付けるか */
   autoTitle: boolean;
   /** タイトル付けに使うモデル */
@@ -49,6 +51,7 @@ export function readSettings(): Settings {
     useWorktree: config.get<boolean>('useWorktree', false),
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
+    thinking: config.get<string>('thinking', 'collapsed') === 'hidden' ? 'hidden' : 'collapsed',
     autoTitle: config.get<boolean>('autoTitle', true),
     titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),

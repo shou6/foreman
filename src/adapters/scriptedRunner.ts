@@ -26,6 +26,12 @@ export class ScriptedRunHandle implements RunHandle {
     this.sent.push(prompt);
   }
 
+  compacted = 0;
+
+  compact(): void {
+    this.compacted++;
+  }
+
   async interrupt(): Promise<void> {
     this.interrupted = true;
     this.emit({ type: 'turn-end', ok: false, interrupted: true, reason: 'interrupted' });

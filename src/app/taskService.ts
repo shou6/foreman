@@ -398,6 +398,22 @@ export class TaskService {
     await this.handles.get(id)?.setModel(model);
   }
 
+  /**
+   * コンテキストを圧縮する（/compact）。返答を待っている間だけ。
+   * 動いている間は断り、セッションが無い（再起動の後など）時は、次の指示で起こしてからにしてもらう
+   */
+  async compact(id: string): Promise<void> {
+    const task = await this.mustLoad(id);
+    if (isTurnOpen(task) || this.pendingPermission.has(id)) {
+      throw new Error(`Task "${id}" is running; wait for the turn to end before compacting`);
+    }
+    const handle = this.handles.get(id);
+    if (handle === undefined) {
+      throw new Error(`Task "${id}" has no live session; send a prompt first, then compact`);
+    }
+    handle.compact();
+  }
+
   /** 承認方式を変える（プランモードの出入り）。保存し、動いているセッションにも伝える */
   async setPermissionMode(id: string, mode: PermissionMode): Promise<void> {
     await this.mustLoad(id);

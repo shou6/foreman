@@ -6,6 +6,7 @@ import type { TranscriptDelta } from '../app/transcripts';
 import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { ModelOption } from '../domain/models';
+import type { SlashCommandInfo } from '../domain/slashCommands';
 import type { ApprovalKind, StatusKind } from '../domain/status';
 import type { EffortLevel, FileChange, PermissionMode, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
@@ -88,6 +89,13 @@ export interface PanelStrings {
   merging: string;
   /** {0} に件数が入る */
   toolCalls: string;
+  /** 考えている途中の見出し（動いている間 / 終わった後） */
+  thinking: string;
+  thought: string;
+  /** 圧縮のボタンと、圧縮した区切り（{0} 前、{1} 後のトークン数）。/ の候補のうちコマンドの見出し */
+  compact: string;
+  compacted: string;
+  commandsHint: string;
   /** 見出しの「…」（ほかの操作） */
   more: string;
   /** 題名を押した時の説明（名前の変更） */
@@ -166,8 +174,12 @@ export interface PanelState {
   worktree?: { branch: string; base: string };
   /** ツールの呼び出しを最初から開いて見せるか（設定 foreman.toolCalls） */
   toolCallsExpanded: boolean;
+  /** 考えている途中の出し方（設定 foreman.thinking）。無ければたたんで出す */
+  thinking?: 'collapsed' | 'hidden';
   /** 指示のプリセット（設定 foreman.presets） */
   presets: Preset[];
+  /** Claude Code のスラッシュコマンドとスキル（取得できた時だけ） */
+  commands?: SlashCommandInfo[];
   /** セッションの情報（Context パネルに出す） */
   context: { cwd: string; permissionMode: string; alwaysAllowed: string[] };
   /** worktree のマージ・破棄の処理中 */
@@ -202,6 +214,8 @@ export type ToWebview =
   | { type: 'finishing'; kind: 'merge' | 'discard' | undefined }
   /** モデルの一覧を取得し終えた */
   | { type: 'models'; models: ModelOption[]; defaultModel: ModelOption | undefined }
+  /** Claude Code のコマンドとスキルの一覧を取得し終えた */
+  | { type: 'commands'; commands: SlashCommandInfo[] }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
@@ -235,6 +249,8 @@ export type ToExtension =
   | { type: 'export' }
   /** 見出しの「…」。ほかの操作（名前の変更・書き出し・切り出し・削除）を選ぶ */
   | { type: 'more' }
+  /** コンテキストを圧縮する */
+  | { type: 'compact' }
   /** タスク名の変更（入力は拡張機能側のダイアログ） */
   | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */

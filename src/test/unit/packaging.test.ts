@@ -247,3 +247,16 @@ suite('設定の既定値: 承認方式', () => {
     );
   });
 });
+
+suite('設定の既定値: 考えている途中の表示', () => {
+  test('foreman.thinking は collapsed（既定）か hidden', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: {
+        configuration: { properties: Record<string, { default?: unknown; enum?: unknown[] }> };
+      };
+    };
+    const setting = pkg.contributes.configuration.properties['foreman.thinking'];
+    assert.strictEqual(setting?.default, 'collapsed');
+    assert.deepStrictEqual(setting?.enum, ['collapsed', 'hidden']);
+  });
+});

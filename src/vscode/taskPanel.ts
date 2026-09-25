@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { DiffService } from '../app/diffService';
+import type { CommandService } from '../app/commandService';
 import type { ModelService } from '../app/modelService';
 import type { TaskService } from '../app/taskService';
 import type { Transcripts } from '../app/transcripts';
@@ -27,6 +28,8 @@ export interface TaskPanelDeps {
   diffs: DiffService;
   /** モデルの選択肢（Claude Code から取得して覚えておく） */
   models: ModelService;
+  /** Claude Code のコマンドとスキル（取得して覚えておく） */
+  commands: CommandService;
   /** worktree のマージと破棄（確認や後始末は呼ぶ側が行う） */
   finish: { merge(taskId: string): Promise<void>; discard(taskId: string): Promise<void> };
   /** タスクを Markdown に書き出す */
@@ -107,6 +110,13 @@ export class TaskPanels implements vscode.Disposable {
           const { models, defaultModel } = deps.models.current();
           for (const taskId of this.panels.keys()) {
             this.post(taskId, { type: 'models', models, defaultModel });
+          }
+        }),
+      },
+      {
+        dispose: deps.commands.onDidChange(() => {
+          for (const taskId of this.panels.keys()) {
+            this.post(taskId, { type: 'commands', commands: deps.commands.current() });
           }
         }),
       },
@@ -293,6 +303,9 @@ export class TaskPanels implements vscode.Disposable {
         case 'more':
           await this.deps.moreActions(taskId);
           return;
+        case 'compact':
+          await this.deps.service.compact(taskId);
+          return;
         case 'rewind':
           await this.deps.checkpoint.rewind(taskId, message.turn);
           return;
@@ -376,6 +389,7 @@ export class TaskPanels implements vscode.Disposable {
       activeEffort: task.activeEffort,
       permissionMode: task.permissionMode,
       models: this.deps.models.current().models,
+      commands: this.deps.commands.current(),
       defaultModel: this.deps.models.current().defaultModel,
       items: this.deps.transcripts.get(task.id),
       pending: this.deps.approvals.pending(task.id),
@@ -385,6 +399,7 @@ export class TaskPanels implements vscode.Disposable {
       maxWidthEm: readSettings().taskViewWidth,
       worktree: task.worktree,
       toolCallsExpanded: readSettings().toolCallsExpanded,
+      thinking: readSettings().thinking,
       presets: readSettings().presets,
       context: {
         cwd: task.cwd,
@@ -458,6 +473,11 @@ export class TaskPanels implements vscode.Disposable {
         merge: vscode.l10n.t('Merge into {0}', '{0}'),
         merging: vscode.l10n.t('Merging…'),
         toolCalls: vscode.l10n.t('{0} tool calls', '{0}'),
+        thinking: vscode.l10n.t('Thinking…'),
+        thought: vscode.l10n.t('Thought'),
+        compact: vscode.l10n.t('Compact the context'),
+        compacted: vscode.l10n.t('Context compacted ({0} → {1})', '{0}', '{1}'),
+        commandsHint: vscode.l10n.t('Claude Code commands and skills'),
         more: vscode.l10n.t('More actions'),
         rename: vscode.l10n.t('Rename'),
         contextPanel: vscode.l10n.t('What Claude will receive'),

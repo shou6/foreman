@@ -21,6 +21,8 @@ export interface StartOptions {
 export interface RunHandle {
   /** 同じセッションへ追加の指示を送る */
   send(prompt: string): void;
+  /** コンテキストを圧縮する（/compact）。ターンは開かない */
+  compact(): void;
   /** 実行中のターンを止める */
   interrupt(): Promise<void>;
   /** 次のターンから使うモデルを変える。undefined で Claude Code の既定に戻す */

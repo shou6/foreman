@@ -4,6 +4,7 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { AgentSdkModelCatalog } from './adapters/agentSdkModelCatalog';
+import { AgentSdkCommandCatalog } from './adapters/agentSdkCommandCatalog';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
 import { AgentSdkUsage } from './adapters/agentSdkUsage';
 import { ScriptedRunner } from './adapters/scriptedRunner';
@@ -18,6 +19,7 @@ import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
 import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
+import { CommandService } from './app/commandService';
 import { ModelService } from './app/modelService';
 import { RateLimitService } from './app/rateLimitService';
 import { TaskService } from './app/taskService';
@@ -85,6 +87,17 @@ export async function activate(
       )
   );
   void models.load();
+  // Claude Code のコマンドとスキル。作業フォルダで聞く（プロジェクトのコマンドも出るように）。統合テストでは聞かない
+  const commands = new CommandService(
+    scripted !== undefined
+      ? { list: async () => [] }
+      : new AgentSdkCommandCatalog({ query: sdk.query, claudePath: () => locateClaude() }),
+    (error) =>
+      output.appendLine(
+        `command list failed: ${error instanceof Error ? error.message : String(error)}`
+      )
+  );
+  void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
   // 契約の利用枠。起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
   const rateLimits = new RateLimitService(
     scripted !== undefined
@@ -201,6 +214,7 @@ export async function activate(
     approvals,
     diffs,
     models,
+    commands,
     finish: {
       merge: (taskId) => worktreeActions.merge(taskId),
       discard: (taskId) => worktreeActions.discard(taskId),

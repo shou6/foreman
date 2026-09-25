@@ -189,5 +189,10 @@
   "Approve the plan and start?": "計画を承認して実装に進みますか？",
   "Approve and implement": "承認して実装",
   "Plan only": "計画だけ",
-  "Claude reads and plans, and asks before it edits": "Claude は読んで計画を書くだけで、編集の前に承認を求める"
+  "Claude reads and plans, and asks before it edits": "Claude は読んで計画を書くだけで、編集の前に承認を求める",
+  "Thinking…": "考え中…",
+  "Thought": "考えたこと",
+  "Compact the context": "コンテキストを圧縮",
+  "Context compacted ({0} → {1})": "コンテキストを圧縮（{0} → {1}）",
+  "Claude Code commands and skills": "Claude Code のコマンドとスキル"
 }

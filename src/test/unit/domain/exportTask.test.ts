@@ -138,3 +138,15 @@ suite('exportTaskMarkdown', () => {
     assert.ok(!md.includes('\n## Plan'));
   });
 });
+
+suite('exportTaskMarkdown: thinking', () => {
+  test('考えている途中は書き出さない', () => {
+    const md = exportTaskMarkdown(TASK, [
+      { kind: 'prompt', turn: 0, text: 'p' },
+      { kind: 'thinking', turn: 0, text: 'secret reasoning' },
+      { kind: 'text', turn: 0, text: 'answer' },
+    ]);
+    assert.ok(md.includes('answer'));
+    assert.ok(!md.includes('secret reasoning'));
+  });
+});

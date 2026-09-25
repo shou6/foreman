@@ -288,6 +288,61 @@ body {
   color: var(--vscode-editorError-foreground);
 }
 
+/* 考えている途中。文が取れない時は印だけ */
+.item.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0.3em 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.item.thinking-indicator .codicon {
+  font-size: 13px;
+}
+
+/* 考えている途中。たたんだ 1 行で出す */
+.item.thinking {
+  margin: 0.3em 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.item.thinking summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.item.thinking summary::-webkit-details-marker {
+  display: none;
+}
+
+.item.thinking summary::before {
+  content: '▸';
+  width: 1em;
+}
+
+.item.thinking[open] > summary::before {
+  content: '▾';
+}
+
+.item.thinking .codicon {
+  font-size: 13px;
+}
+
+.thinking-text {
+  margin: 0.3em 0 0 1.6em;
+  padding: 0.5em 0.8em;
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  white-space: pre-wrap;
+  font-style: italic;
+}
+
 .item.interrupted {
   color: var(--vscode-descriptionForeground);
   font-style: italic;
@@ -1449,4 +1504,21 @@ body.dragging .drop-hint {
   border-radius: 4px;
   background: var(--vscode-textCodeBlock-background);
   white-space: normal;
+}
+
+/* / の候補の引数のヒント */
+.preset-hint {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}
+
+/* 圧縮した区切り */
+.checkpoint.compacted .checkpoint-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.head-meta .icon-button.compact {
+  padding: 1px;
 }

@@ -431,6 +431,19 @@
           "default": "collapsed",
           "description": "%config.toolCalls%"
         },
+        "foreman.thinking": {
+          "type": "string",
+          "enum": [
+            "collapsed",
+            "hidden"
+          ],
+          "enumDescriptions": [
+            "%config.thinking.collapsed%",
+            "%config.thinking.hidden%"
+          ],
+          "default": "collapsed",
+          "description": "%config.thinking%"
+        },
         "foreman.autoTitle": {
           "type": "boolean",
           "default": true,

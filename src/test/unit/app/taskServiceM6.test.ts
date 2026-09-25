@@ -119,3 +119,20 @@ suite('TaskService: プランモード', () => {
     assert.strictEqual((await service.load('task-1'))?.permissionMode, 'default');
   });
 });
+
+suite('TaskService: コンテキストの圧縮', () => {
+  test('返答を待っている間だけ圧縮できる。動いている間と、セッションが無い時は断る', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    await assert.rejects(service.compact('task-1'), /running/);
+    runner.last.emit({ type: 'init', sessionId: 's', model: 'm' });
+    runner.last.emit({ type: 'turn-end', ok: true });
+    await settle();
+    await service.compact('task-1');
+    assert.strictEqual(runner.last.compacted, 1);
+    runner.last.close();
+    await settle();
+    await assert.rejects(service.compact('task-1'), /session/);
+  });
+});

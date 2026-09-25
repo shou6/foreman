@@ -9,6 +9,8 @@ export type RunnerEvent =
   | { type: 'init'; sessionId: string; model: string }
   /** Claude の出力の断片（ストリーミング） */
   | { type: 'text'; text: string }
+  /** 考えている途中の断片（extended thinking）。見せない設定でも届く */
+  | { type: 'thinking'; text: string }
   /**
    * 確定した出力。streamed は、前回の確定からこれまでに text で流した文字数。
    * その分を text に置き換える（API の再試行で断片が重なった時の修正）
@@ -23,6 +25,8 @@ export type RunnerEvent =
    * 起動した後と、モデルや Effort を変えた後に届く。対応していないモデルなら undefined
    */
   | { type: 'effort'; effort: EffortLevel | undefined }
+  /** コンテキストを圧縮した（/compact、または自動）。前後のトークン数 */
+  | { type: 'compact'; preTokens: number; postTokens: number | undefined }
   /** 編集ツールの直前・直後（差分カードの材料） */
   | { type: 'file-edit'; phase: 'before' | 'after'; path: string }
   /** ターンの終了 */

@@ -140,3 +140,46 @@ suite('applyEvent: effort', () => {
     assert.deepStrictEqual(applyEvent(items, 0, { type: 'effort', effort: 'high' }), items);
   });
 });
+
+suite('applyEvent: thinking', () => {
+  test('考えている途中の断片は、同じターンの直前の thinking につなぐ。出力を挟むと新しい項目', () => {
+    let items: TranscriptItem[] = [{ kind: 'prompt', turn: 0, text: 'p' }];
+    items = applyEvent(items, 0, { type: 'thinking', text: 'Let me ' });
+    items = applyEvent(items, 0, { type: 'thinking', text: 'check' });
+    items = applyEvent(items, 0, { type: 'text', text: 'Sure' });
+    items = applyEvent(items, 0, { type: 'thinking', text: 'again' });
+    assert.deepStrictEqual(items, [
+      { kind: 'prompt', turn: 0, text: 'p' },
+      { kind: 'thinking', turn: 0, text: 'Let me check' },
+      { kind: 'text', turn: 0, text: 'Sure' },
+      { kind: 'thinking', turn: 0, text: 'again' },
+    ]);
+  });
+
+  test('中身の無い断片（第三者のクライアントには文が渡らない）は、空の thinking を 1 つだけ残す', () => {
+    let items: TranscriptItem[] = [{ kind: 'prompt', turn: 0, text: 'p' }];
+    items = applyEvent(items, 0, { type: 'thinking', text: '' });
+    items = applyEvent(items, 0, { type: 'thinking', text: '' });
+    items = applyEvent(items, 0, { type: 'thinking', text: '' });
+    assert.deepStrictEqual(items, [
+      { kind: 'prompt', turn: 0, text: 'p' },
+      { kind: 'thinking', turn: 0, text: '' },
+    ]);
+  });
+});
+
+suite('applyEvent: compact', () => {
+  test('圧縮は区切りの項目として残す', () => {
+    const items = applyEvent([{ kind: 'prompt', turn: 0, text: 'p' }], 0, {
+      type: 'compact',
+      preTokens: 27596,
+      postTokens: 2537,
+    });
+    assert.deepStrictEqual(items[1], {
+      kind: 'compact',
+      turn: 0,
+      preTokens: 27596,
+      postTokens: 2537,
+    });
+  });
+});

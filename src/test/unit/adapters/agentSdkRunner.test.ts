@@ -38,6 +38,18 @@ suite('normalizeMessage', () => {
           event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: '…' } },
         })
       ),
+      [{ type: 'thinking', text: '…' }]
+    );
+    assert.deepStrictEqual(
+      normalizeMessage(
+        msg({
+          type: 'stream_event',
+          event: {
+            type: 'content_block_delta',
+            delta: { type: 'signature_delta', signature: 'x' },
+          },
+        })
+      ),
       []
     );
     assert.deepStrictEqual(
@@ -843,5 +855,50 @@ suite('AgentSdkRunner: 承認方式の切り替え', () => {
     });
     await settle();
     assert.strictEqual(fake.params[0]?.options?.permissionMode, 'plan');
+  });
+});
+
+suite('AgentSdkRunner: コンテキストの圧縮', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('compact は /compact を送るがターンは開かず、その result はターンの終了にしない', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const events: RunnerEvent[] = [];
+    const handle = runner.start({ ...base, onEvent: (e) => events.push(e) });
+    await settle();
+    fake.push(
+      msg({ type: 'result', subtype: 'success', is_error: false, usage: {}, modelUsage: {} })
+    );
+    await settle();
+    handle.compact();
+    await settle();
+    assert.deepStrictEqual(fake.prompts, ['hello', '/compact']);
+    fake.push(
+      msg({
+        type: 'system',
+        subtype: 'compact_boundary',
+        compact_metadata: { trigger: 'manual', pre_tokens: 27596, post_tokens: 2537 },
+      })
+    );
+    fake.push(
+      msg({ type: 'result', subtype: 'success', is_error: false, usage: {}, modelUsage: {} })
+    );
+    await settle();
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'turn-end').length,
+      1,
+      '圧縮の result でターンは終わらない'
+    );
+    assert.deepStrictEqual(
+      events.filter((e) => e.type === 'compact'),
+      [{ type: 'compact', preTokens: 27596, postTokens: 2537 }]
+    );
   });
 });
