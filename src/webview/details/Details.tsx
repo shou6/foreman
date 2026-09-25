@@ -93,7 +93,12 @@ export function Details({ state, post, initialTab }: DetailsProps) {
         ) : (
           <section class="finish">
             <div class="finish-actions">
-              <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
+              <button
+                class="finish-button all-diff"
+                disabled={task.snapshotsPruned === true}
+                title={task.snapshotsPruned === true ? strings.snapshotsPruned : undefined}
+                onClick={() => post({ type: 'allDiff' })}
+              >
                 {strings.allDiff}
               </button>
             </div>
@@ -209,7 +214,12 @@ function Finish({ task, worktree, busy, strings, post }: FinishProps) {
                 <span class="removed">−{totals.removed ?? 0}</span>
               </span>
             </span>
-            <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
+            <button
+              class="finish-button all-diff"
+              disabled={task.snapshotsPruned === true}
+              title={task.snapshotsPruned === true ? strings.snapshotsPruned : undefined}
+              onClick={() => post({ type: 'allDiff' })}
+            >
               {strings.allDiff}
             </button>
           </div>

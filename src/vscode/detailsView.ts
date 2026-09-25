@@ -132,6 +132,15 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
     if (task === undefined) {
       return;
     }
+    // 変更前の内容を消した後は、全体の差分を正しく出せない（全部が追加に見える）
+    if (task.snapshotsPrunedAt !== undefined) {
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t(
+          'Saved file contents were removed after the retention period. Diffs and revert are no longer available.'
+        )
+      );
+      return;
+    }
     const first = new Map<string, { before: string | undefined; deleted: boolean }>();
     for (const turn of task.turns) {
       for (const change of turn.changes) {
