@@ -231,6 +231,8 @@ interface FakeQuery {
   prompts: string[];
   /** applyFlagSettings に渡された設定 */
   flags: Record<string, unknown>[];
+  /** setPermissionMode に渡された承認方式 */
+  modes: string[];
   /** getSettings が返す、次に使う Effort。undefined なら getSettings を持たない（古い SDK） */
   appliedEffort?: string | null;
 }
@@ -243,6 +245,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     interrupts: 0,
     models: [],
     flags: [],
+    modes: [],
     prompts: [],
     push: (m) => {
       queue.push(m);
@@ -296,6 +299,9 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       },
       applyFlagSettings: async (settings: Record<string, unknown>) => {
         fake.flags.push(settings);
+      },
+      setPermissionMode: async (mode: string) => {
+        fake.modes.push(mode);
       },
       getSettings:
         fake.appliedEffort === undefined
@@ -804,5 +810,38 @@ suite('AgentSdkRunner: 常に許可の保存先', () => {
       result.updatedPermissions.map((p) => p.destination),
       ['session', 'session']
     );
+  });
+});
+
+suite('AgentSdkRunner: 承認方式の切り替え', () => {
+  test('setPermissionMode は SDK の setPermissionMode に渡す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await handle.setPermissionMode('plan');
+    await handle.setPermissionMode('acceptEdits');
+    assert.deepStrictEqual(fake.modes, ['plan', 'acceptEdits']);
+  });
+
+  test('起動時に plan を渡せる', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'plan',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    await settle();
+    assert.strictEqual(fake.params[0]?.options?.permissionMode, 'plan');
   });
 });

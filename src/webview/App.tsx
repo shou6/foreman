@@ -406,6 +406,21 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
               {state.strings.addFile}
             </button>
             <span class="composer-spacer" />
+            <label class="plan-mode" title={state.strings.planModeHint}>
+              <input
+                class="plan-toggle"
+                type="checkbox"
+                checked={state.permissionMode === 'plan'}
+                onChange={(e) =>
+                  post({
+                    type: 'setPermissionMode',
+                    mode: (e.target as HTMLInputElement).checked ? 'plan' : 'default',
+                  })
+                }
+              />
+              <Icon name="checklist" />
+              {state.strings.planMode}
+            </label>
             {previousModel !== undefined && (
               <span class="previous-model">
                 {state.strings.previousModel.replace('{0}', previousModel)}
@@ -886,18 +901,26 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
   const [reason, setReason] = useState('');
   const [denying, setDenying] = useState(false);
   const decide = (decision: ToExtension & { type: 'decision' }): void => post(decision);
-  const title = strings.approvalTitles[approvalKindOf(pending.toolName)].replace(
-    '{0}',
-    pending.toolName
-  );
+  const kind = approvalKindOf(pending.toolName);
+  const title = strings.approvalTitles[kind].replace('{0}', pending.toolName);
   const target = summarize(pending.input);
+  // 計画の承認（ExitPlanMode）は、計画を Markdown で描く
+  const plan =
+    kind === 'plan' && typeof pending.input.plan === 'string' ? pending.input.plan : undefined;
   return (
     <section class="approval">
       <div class="approval-title">
-        <Icon name="shield" />
+        <Icon name={kind === 'plan' ? 'checklist' : 'shield'} />
         {title}
       </div>
-      {target !== '{}' && <pre class="approval-target">{target}</pre>}
+      {plan !== undefined ? (
+        <div
+          class="approval-plan markdown"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(plan) }}
+        />
+      ) : (
+        target !== '{}' && <pre class="approval-target">{target}</pre>
+      )}
       <details class="approval-input">
         <summary>{strings.inputDetails}</summary>
         <pre>{JSON.stringify(pending.input, null, 2)}</pre>
@@ -918,7 +941,7 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
             decide({ type: 'decision', requestId: pending.id, decision: { behavior: 'allow' } })
           }
         >
-          {strings.allow}
+          {kind === 'plan' ? strings.approvePlan : strings.allow}
         </button>
         {pending.suggestions.length > 0 && (
           <button

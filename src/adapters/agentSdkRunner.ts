@@ -286,6 +286,7 @@ export class AgentSdkRunner implements AgentRunner {
         await reportEffort();
       },
       // Effort は途中で変えられるフラグ設定で伝える。null で Claude Code の既定に戻る
+      setPermissionMode: (mode) => query.setPermissionMode(mode),
       setEffort: async (effort) => {
         await query.applyFlagSettings({ effortLevel: effort ?? null });
         await reportEffort();
@@ -392,6 +393,7 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
     interrupt: async () => {},
     setModel: async () => {},
     setEffort: async () => {},
+    setPermissionMode: async () => {},
     close: () => {},
     done: Promise.resolve(),
   };

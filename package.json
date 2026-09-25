@@ -391,11 +391,13 @@
           "type": "string",
           "enum": [
             "default",
-            "acceptEdits"
+            "acceptEdits",
+            "plan"
           ],
           "enumDescriptions": [
             "%config.defaultPermissionMode.default%",
-            "%config.defaultPermissionMode.acceptEdits%"
+            "%config.defaultPermissionMode.acceptEdits%",
+            "%config.defaultPermissionMode.plan%"
           ],
           "default": "default",
           "description": "%config.defaultPermissionMode%"

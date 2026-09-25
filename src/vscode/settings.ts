@@ -43,7 +43,7 @@ export function readSettings(): Settings {
     claudePath: text('claudePath'),
     defaultModel: text('defaultModel'),
     defaultEffort: effortOf(text('defaultEffort')),
-    defaultPermissionMode: mode === 'acceptEdits' ? 'acceptEdits' : 'default',
+    defaultPermissionMode: mode === 'acceptEdits' || mode === 'plan' ? mode : 'default',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),

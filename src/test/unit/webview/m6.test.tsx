@@ -234,3 +234,27 @@ suite('webview: Effort', () => {
     assert.strictEqual(message.type, 'setEffort');
   });
 });
+
+suite('webview: プランモードの切り替え', () => {
+  test('入力欄に「計画だけ」のトグルがあり、承認方式が plan なら入になる', () => {
+    const off = render(<App state={state({ permissionMode: 'default' })} post={() => {}} />);
+    assert.ok(/<input[^>]*class="plan-toggle"[^>]*type="checkbox"(?![^>]*checked)/.test(off));
+    assert.ok(off.includes('Plan only'));
+    const on = render(<App state={state({ permissionMode: 'plan' })} post={() => {}} />);
+    assert.ok(/<input[^>]*class="plan-toggle"[^>]*checked/.test(on));
+  });
+
+  test('task メッセージで承認方式が入れ替わり、setPermissionMode のメッセージの型がある', () => {
+    const s = reduce(state({}), {
+      type: 'task',
+      status: 'done',
+      turnOpen: false,
+      mergeable: false,
+      title: 't',
+      permissionMode: 'plan',
+    });
+    assert.strictEqual(s?.permissionMode, 'plan');
+    const message: ToExtension = { type: 'setPermissionMode', mode: 'plan' };
+    assert.strictEqual(message.type, 'setPermissionMode');
+  });
+});

@@ -1,4 +1,5 @@
 import { promptWithAttachments, type Attachment } from '../domain/attachments';
+import { modeAfterDecision } from '../domain/planMode';
 import { resumePrompt } from '../domain/resumePrompt';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import {
@@ -397,6 +398,13 @@ export class TaskService {
     await this.handles.get(id)?.setModel(model);
   }
 
+  /** 承認方式を変える（プランモードの出入り）。保存し、動いているセッションにも伝える */
+  async setPermissionMode(id: string, mode: PermissionMode): Promise<void> {
+    await this.mustLoad(id);
+    await this.update(id, (task) => ({ ...task, permissionMode: mode }));
+    await this.handles.get(id)?.setPermissionMode(mode);
+  }
+
   /** 次のターンから使う Effort を変える。undefined で Claude Code に従う */
   async setEffort(id: string, effort: EffortLevel | undefined): Promise<void> {
     await this.mustLoad(id);
@@ -512,6 +520,8 @@ export class TaskService {
         decision.behavior === 'allow-always'
           ? [...task.alwaysAllowed, ...decision.permissions]
           : task.alwaysAllowed,
+      // 計画の承認でプランモードを抜ける（Claude Code 側も抜けるので、表示と再開の方式を合わせる）
+      permissionMode: modeAfterDecision(task.permissionMode, request.toolName, decision),
     }));
     return decision;
   }

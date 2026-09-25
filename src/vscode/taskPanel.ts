@@ -91,6 +91,7 @@ export class TaskPanels implements vscode.Disposable {
             activeModel: task.activeModel,
             effort: task.effort,
             activeEffort: task.activeEffort,
+            permissionMode: task.permissionMode,
             worktree: task.worktree,
           });
           for (const turn of task.turns) {
@@ -229,6 +230,9 @@ export class TaskPanels implements vscode.Disposable {
           return;
         case 'setEffort':
           await this.deps.service.setEffort(taskId, message.effort);
+          return;
+        case 'setPermissionMode':
+          await this.deps.service.setPermissionMode(taskId, message.mode);
           return;
         case 'dropped':
           this.attach(
@@ -370,6 +374,7 @@ export class TaskPanels implements vscode.Disposable {
       activeModel: task.activeModel,
       effort: task.effort,
       activeEffort: task.activeEffort,
+      permissionMode: task.permissionMode,
       models: this.deps.models.current().models,
       defaultModel: this.deps.models.current().defaultModel,
       items: this.deps.transcripts.get(task.id),
@@ -403,7 +408,11 @@ export class TaskPanels implements vscode.Disposable {
           edit: vscode.l10n.t('Edit this file?'),
           web: vscode.l10n.t('Access the web?'),
           other: vscode.l10n.t('Use {0}?', '{0}'),
+          plan: vscode.l10n.t('Approve the plan and start?'),
         },
+        approvePlan: vscode.l10n.t('Approve and implement'),
+        planMode: vscode.l10n.t('Plan only'),
+        planModeHint: vscode.l10n.t('Claude reads and plans, and asks before it edits'),
         inputDetails: vscode.l10n.t('Input details (JSON)'),
         answer: vscode.l10n.t('Answer'),
         other: vscode.l10n.t('Other (write your own)'),

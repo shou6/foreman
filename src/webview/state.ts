@@ -25,6 +25,7 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
         activeModel: message.activeModel,
         effort: message.effort,
         activeEffort: message.activeEffort,
+        permissionMode: message.permissionMode,
         worktree: message.worktree,
       };
     case 'pending':

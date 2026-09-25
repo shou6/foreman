@@ -24,6 +24,7 @@
   "config.defaultPermissionMode": "新しいタスクでのツール実行の承認方式。",
   "config.defaultPermissionMode.default": "ツールの実行のたびに確認する（Claude Code の既定）。",
   "config.defaultPermissionMode.acceptEdits": "ファイルの編集は自動で許可し、それ以外は確認する。",
+  "config.defaultPermissionMode.plan": "まず計画：Claude は読むだけで計画を書き、編集の前に計画の承認を求める。",
   "command.attachToTask": "タスクに添付",
   "config.taskViewWidth": "タスク画面の本文の最大の幅（em）。0 なら画面いっぱいに広げる。",
   "command.mergeTask": "worktree を元のブランチへマージ",

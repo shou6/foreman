@@ -95,3 +95,27 @@ suite('TaskService: 実際に使われる Effort', () => {
     assert.strictEqual((await service.load('task-1'))?.activeEffort, undefined);
   });
 });
+
+suite('TaskService: プランモード', () => {
+  test('承認方式の切り替えは保存し、動いているセッションにも伝える', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    await service.setPermissionMode('task-1', 'plan');
+    assert.deepStrictEqual(runner.last.modes, ['plan']);
+    assert.strictEqual((await service.load('task-1'))?.permissionMode, 'plan');
+  });
+
+  test('ExitPlanMode を許可すると、タスクの承認方式も default に戻る', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD, permissionMode: 'plan' });
+    assert.strictEqual(runner.last.options.permissionMode, 'plan');
+    await runner.last.requestPermission({
+      toolName: 'ExitPlanMode',
+      input: { plan: '# Plan' },
+      suggestions: [],
+    });
+    assert.strictEqual((await service.load('task-1'))?.permissionMode, 'default');
+  });
+});

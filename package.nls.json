@@ -24,6 +24,7 @@
   "config.defaultPermissionMode": "How tool calls are approved in new tasks.",
   "config.defaultPermissionMode.default": "Ask before every tool call (the Claude Code default).",
   "config.defaultPermissionMode.acceptEdits": "Allow file edits automatically; ask for everything else.",
+  "config.defaultPermissionMode.plan": "Plan first: Claude only reads and writes a plan, then asks you to approve it before editing.",
   "command.attachToTask": "Attach to Task",
   "config.taskViewWidth": "Maximum width of the task view content, in em. 0 uses the full width.",
   "command.mergeTask": "Merge Worktree into Base Branch",

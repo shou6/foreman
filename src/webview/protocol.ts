@@ -7,7 +7,7 @@ import type { DiffLine } from '../domain/diff';
 import type { PermissionDecision } from '../domain/events';
 import type { ModelOption } from '../domain/models';
 import type { ApprovalKind, StatusKind } from '../domain/status';
-import type { EffortLevel, FileChange, TaskStatus } from '../domain/task';
+import type { EffortLevel, FileChange, PermissionMode, TaskStatus } from '../domain/task';
 import type { TranscriptItem } from '../domain/transcript';
 
 export type { Attachment, DiffLine, FileChange, PendingRequest, Preset, TranscriptDelta };
@@ -37,6 +37,10 @@ export interface PanelStrings {
   /** 質問の「その他」と、その入力欄の案内 */
   other: string;
   otherPlaceholder: string;
+  /** 計画の承認カードの「承認して実装」、入力欄の「計画だけ」のトグルとその説明 */
+  approvePlan: string;
+  planMode: string;
+  planModeHint: string;
   /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
   questionKeys: string;
   questionTabKeys: string;
@@ -141,6 +145,8 @@ export interface PanelState {
   effort?: EffortLevel;
   /** セッションが実際に使う Effort。分からなければ undefined */
   activeEffort?: EffortLevel;
+  /** 承認方式。plan なら入力欄の「計画だけ」が入になる */
+  permissionMode?: PermissionMode;
   /** モデルの選択肢（Claude Code から取得。取得前は固定の一覧） */
   models: ModelOption[];
   /** 既定（モデルを指定しない時）の中身。分からなければ undefined */
@@ -186,6 +192,7 @@ export type ToWebview =
       activeModel?: string;
       effort?: EffortLevel;
       activeEffort?: EffortLevel;
+      permissionMode?: PermissionMode;
       worktree?: { branch: string; base: string };
     }
   | { type: 'pending'; pending: PendingRequest | undefined }
@@ -209,6 +216,8 @@ export type ToExtension =
   | { type: 'setModel'; model: string | undefined }
   /** 次のターンから使う Effort。undefined で Claude Code に従う */
   | { type: 'setEffort'; effort: EffortLevel | undefined }
+  /** 承認方式を変える（「計画だけ」の切り替え） */
+  | { type: 'setPermissionMode'; mode: PermissionMode }
   /** エクスプローラーやタブからドロップされた URI（text/uri-list） */
   | { type: 'dropped'; uris: string[] }
   /** クリップボードから貼り付けた画像（base64）。拡張機能が保存してファイルとして添付する */

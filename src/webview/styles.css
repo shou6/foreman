@@ -1421,3 +1421,32 @@ body.dragging .drop-hint {
   min-width: 3em;
   color: var(--vscode-foreground);
 }
+
+/* 入力欄の「計画だけ」のトグル */
+.plan-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.plan-mode .codicon {
+  font-size: 13px;
+}
+
+.plan-mode:has(.plan-toggle:checked) {
+  color: var(--vscode-foreground);
+}
+
+/* 計画の承認カード。計画は Markdown で描く */
+.approval-plan {
+  max-height: 24em;
+  overflow: auto;
+  padding: 0.5em 0.8em;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background);
+  white-space: normal;
+}
