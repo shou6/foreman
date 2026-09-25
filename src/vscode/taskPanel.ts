@@ -89,6 +89,7 @@ export class TaskPanels implements vscode.Disposable {
             turnOpen: isTurnOpen(task),
             turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
             turnTimes: turnTimesOf(task),
+            snapshotsPruned: task.snapshotsPrunedAt !== undefined,
             mergeable: canMerge(task),
             unapprovable: canUnapprove(task),
             usage: contextUsage(task),
@@ -401,6 +402,7 @@ export class TaskPanels implements vscode.Disposable {
       turnOpen: isTurnOpen(task),
       turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
       turnTimes: turnTimesOf(task),
+      snapshotsPruned: task.snapshotsPrunedAt !== undefined,
       locale: vscode.env.language,
       mergeable: canMerge(task),
       unapprovable: canUnapprove(task),
@@ -437,6 +439,9 @@ export class TaskPanels implements vscode.Disposable {
         elapsedMinutes: vscode.l10n.t('{0}m {1}s', '{0}', '{1}'),
         today: vscode.l10n.t('Today'),
         yesterday: vscode.l10n.t('Yesterday'),
+        snapshotsPruned: vscode.l10n.t(
+          'Saved file contents were removed after the retention period. Diffs and revert are no longer available.'
+        ),
         allow: vscode.l10n.t('Allow'),
         allowAlways: vscode.l10n.t('Always allow'),
         alwaysScope: vscode.l10n.t('Always allow covers: {0}', '{0}'),

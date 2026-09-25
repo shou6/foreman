@@ -21,6 +21,8 @@ export const PANEL_STRINGS: PanelStrings = {
   runningTurn: 'Turn {0} running · {1}',
   elapsedSeconds: '{0}s',
   elapsedMinutes: '{0}m {1}s',
+  snapshotsPruned:
+    'Saved file contents were removed after the retention period. Diffs and revert are no longer available.',
   today: 'Today',
   yesterday: 'Yesterday',
   allow: 'Allow',
@@ -157,6 +159,8 @@ export const DETAILS_STRINGS: DetailsStrings = {
   compact: 'Compact the context',
   refresh: 'Refresh',
   resizeDock: 'Drag to resize',
+  snapshotsPruned:
+    'Saved file contents were removed after the retention period. Diffs and revert are no longer available.',
   today: 'Today',
   yesterday: 'Yesterday',
   mcpNotRunning: 'Shown while Claude Code is running for this task',

@@ -6,6 +6,8 @@ import type { EffortLevel, PermissionMode } from '../domain/task';
 import { DEFAULT_PRESETS, normalizePresets, type Preset } from '../domain/presets';
 
 export interface Settings {
+  /** 完了したタスクのスナップショットを残す日数。0 以下は無期限 */
+  snapshotRetentionDays: number;
   claudePath: string | undefined;
   defaultModel: string | undefined;
   /** 新しいタスクの Effort。空なら Claude Code に従う */
@@ -53,6 +55,7 @@ export function readSettings(): Settings {
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
     thinking: config.get<string>('thinking', 'collapsed') === 'hidden' ? 'hidden' : 'collapsed',
     autoTitle: config.get<boolean>('autoTitle', true),
+    snapshotRetentionDays: config.get<number>('snapshotRetentionDays', 60),
     titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
     planUsage: {

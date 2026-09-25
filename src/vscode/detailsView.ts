@@ -203,6 +203,9 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         nothingToMergeHint: vscode.l10n.t(
           'No files have changed in this task yet. Once there are changes, approve them to merge from here.'
         ),
+        snapshotsPruned: vscode.l10n.t(
+          'Saved file contents were removed after the retention period. Diffs and revert are no longer available.'
+        ),
         today: vscode.l10n.t('Today'),
         yesterday: vscode.l10n.t('Yesterday'),
         overview: vscode.l10n.t('Overview'),
@@ -308,6 +311,7 @@ export function detailsOf(
     kind: statusKindOf(task.status, isTurnOpen(task), pending),
     turnOpen: isTurnOpen(task),
     mergeable: canMerge(task),
+    snapshotsPruned: task.snapshotsPrunedAt !== undefined,
     worktree:
       task.worktree === undefined
         ? undefined

@@ -77,6 +77,7 @@ Foreman は認証情報を読まず、保存もしない。ローカルの `clau
 | `foreman.autoTitle` / `foreman.titleModel` | 最初の指示から小さなモデルにタスク名を付けさせる。既定のモデルは `haiku` |
 | `foreman.toolCalls` | タスク画面のツールの呼び出しの出し方。`collapsed`（既定）はたたみ、`expanded` は開く |
 | `foreman.thinking` | Claude が考えている間の「考え中…」の印。`collapsed`（既定）は出し、`hidden` は出さない。考えている文そのものは、Claude Code が Anthropic のホストするセッションにしか渡さないため Foreman では出せない。届いた時だけ、たたんだ 1 行で出す |
+| `foreman.snapshotRetentionDays` | 完了したタスクの、差分カードと「戻す」に使うファイルの保存内容を残す日数。既定は 60。過ぎたものは VS Code の起動時に消す。タスクと会話の履歴は残るが、差分の表示と「戻す」は使えなくなる。`0` は無期限 |
 | `foreman.taskViewWidth` | タスク画面の本文の最大の幅（`em`）。既定は `72`。`0` で画面いっぱい |
 | `foreman.planUsage.sidebar` / `foreman.planUsage.statusBar` | 契約の利用枠のうち、その場所に出す項目（`fiveHour`、`sevenDay`、`models`）。既定は 3 つとも。空なら出さない |
 | `foreman.presets` | `/名前` で使う指示のプリセット。`{input}` に後ろに書いた文が入る |

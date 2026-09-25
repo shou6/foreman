@@ -78,7 +78,14 @@ export function Details({ state, post, initialTab }: DetailsProps) {
               locale={state.locale ?? 'en'}
               strings={strings}
             />
-            <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
+            <TurnView
+              key={turn.index}
+              turn={turn}
+              busy={busy}
+              pruned={task.snapshotsPruned === true}
+              strings={strings}
+              post={post}
+            />
           </>
         ))}
         {task.worktree !== undefined ? (
@@ -238,18 +245,20 @@ function Finish({ task, worktree, busy, strings, post }: FinishProps) {
 interface TurnProps {
   turn: DetailsTurn;
   busy: boolean;
+  /** スナップショットを消した（ファイルを戻せず、差分も開けない） */
+  pruned: boolean;
   strings: DetailsState['strings'];
   post: (message: FromDetails) => void;
 }
 
-function TurnView({ turn, busy, strings, post }: TurnProps) {
+function TurnView({ turn, busy, pruned, strings, post }: TurnProps) {
   const checkpoint = turn.ok === true && (
     <span class="checkpoint">
       <button
         class="icon-button rewind"
-        title={strings.rewindHere}
+        title={pruned ? strings.snapshotsPruned : strings.rewindHere}
         aria-label={strings.rewindHere}
-        disabled={busy}
+        disabled={busy || pruned}
         onClick={() => post({ type: 'rewind', turn: turn.index })}
       >
         <Icon name="discard" />
@@ -302,6 +311,8 @@ function TurnView({ turn, busy, strings, post }: TurnProps) {
             </span>
             <button
               class="link open-diff"
+              disabled={pruned}
+              title={pruned ? strings.snapshotsPruned : undefined}
               onClick={() => post({ type: 'openDiff', turn: turn.index, path: change.path })}
             >
               {strings.openDiff}
@@ -311,7 +322,8 @@ function TurnView({ turn, busy, strings, post }: TurnProps) {
             ) : (
               <button
                 class="link revert"
-                disabled={busy}
+                disabled={busy || pruned}
+                title={pruned ? strings.snapshotsPruned : undefined}
                 onClick={() => post({ type: 'revert', turn: turn.index, path: change.path })}
               >
                 {strings.revert}

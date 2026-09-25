@@ -22,6 +22,8 @@ export interface PanelStrings {
   /** 経過の表し方。{0} に秒 / {0} に分、{1} に秒 */
   elapsedSeconds: string;
   elapsedMinutes: string;
+  /** スナップショットを消したタスクの差分カードの案内 */
+  snapshotsPruned: string;
   /** 日付の区切りの「今日」「昨日」 */
   today: string;
   yesterday: string;
@@ -150,6 +152,8 @@ export interface PanelState {
   turnTimes?: TurnTime[];
   /** 日付と時刻の表し方に使う言語（VS Code の表示言語） */
   locale?: string;
+  /** 保存期間を過ぎてスナップショットを消した（差分と「戻す」を出さない） */
+  snapshotsPruned?: boolean;
   taskId: string;
   title: string;
   status: TaskStatus;
@@ -216,6 +220,7 @@ export type ToWebview =
       turnOpen: boolean;
       turnStartedAt?: string;
       turnTimes?: TurnTime[];
+      snapshotsPruned?: boolean;
       mergeable: boolean;
       unapprovable?: boolean;
       usage?: ContextUsage;

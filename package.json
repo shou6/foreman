@@ -441,6 +441,12 @@
           "default": "collapsed",
           "description": "%config.toolCalls%"
         },
+        "foreman.snapshotRetentionDays": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "%config.snapshotRetentionDays%"
+        },
         "foreman.thinking": {
           "type": "string",
           "enum": [

@@ -303,8 +303,12 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 <span class="checkpoint-actions">
                   <button
                     class="checkpoint-action rewind"
-                    title={state.strings.rewindHere}
-                    disabled={busy}
+                    title={
+                      state.snapshotsPruned === true
+                        ? state.strings.snapshotsPruned
+                        : state.strings.rewindHere
+                    }
+                    disabled={busy || state.snapshotsPruned === true}
                     onClick={() => post({ type: 'rewind', turn: block.turn })}
                   >
                     <Icon name="discard" />
@@ -333,6 +337,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 revertable={block.turn === lastChangedTurn}
                 approved={state.status === 'done' && block.turn === lastChangedTurn}
                 unapprovable={state.unapprovable === true}
+                pruned={state.snapshotsPruned === true}
                 post={post}
               />
             )}
@@ -871,6 +876,8 @@ interface DiffCardProps {
   approved: boolean;
   /** 承認を取り消せるなら、印の横に「取り消す」を出す */
   unapprovable: boolean;
+  /** スナップショットを消した（差分と「戻す」を出さない） */
+  pruned?: boolean;
   post: (message: ToExtension) => void;
 }
 
@@ -884,6 +891,7 @@ function DiffCard({
   revertable,
   approved,
   unapprovable,
+  pruned = false,
   post,
 }: DiffCardProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -902,7 +910,7 @@ function DiffCard({
           <span class="removed"> −{removed}</span>
         </span>
         <span class="head-spacer" />
-        {revertable && (
+        {revertable && !pruned && (
           <button
             class="revert-all"
             disabled={!revertible}
@@ -929,6 +937,7 @@ function DiffCard({
           </button>
         )}
       </div>
+      {pruned && <div class="diff-pruned">{strings.snapshotsPruned}</div>}
       {changes.map((change) => {
         const key = diffKey(turn, change.path);
         const lines = diffs[key];
@@ -942,6 +951,7 @@ function DiffCard({
               </span>
               <button
                 class="diff-file-name"
+                disabled={pruned}
                 onClick={() => {
                   const next = !(open[key] ?? lines !== undefined);
                   setOpen({ ...open, [key]: next });
@@ -967,26 +977,28 @@ function DiffCard({
                   </span>
                 )}
                 {change.reverted && <span class="reverted">{strings.reverted}</span>}
-                <span class="diff-row-actions">
-                  <button
-                    class="icon-button open-diff"
-                    title={strings.openDiff}
-                    aria-label={strings.openDiff}
-                    onClick={() => post({ type: 'openDiff', turn, path: change.path })}
-                  >
-                    <Icon name="diff" />
-                  </button>
-                  {canRevert && (
+                {!pruned && (
+                  <span class="diff-row-actions">
                     <button
-                      class="icon-button revert"
-                      title={strings.revert}
-                      aria-label={strings.revert}
-                      onClick={() => post({ type: 'revert', turn, path: change.path })}
+                      class="icon-button open-diff"
+                      title={strings.openDiff}
+                      aria-label={strings.openDiff}
+                      onClick={() => post({ type: 'openDiff', turn, path: change.path })}
                     >
-                      <Icon name="discard" />
+                      <Icon name="diff" />
                     </button>
-                  )}
-                </span>
+                    {canRevert && (
+                      <button
+                        class="icon-button revert"
+                        title={strings.revert}
+                        aria-label={strings.revert}
+                        onClick={() => post({ type: 'revert', turn, path: change.path })}
+                      >
+                        <Icon name="discard" />
+                      </button>
+                    )}
+                  </span>
+                )}
               </span>
             </div>
             {lines !== undefined && (open[key] ?? true) && (

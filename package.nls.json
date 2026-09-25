@@ -58,5 +58,6 @@
   "config.planUsage.sevenDay": "7-day limit",
   "config.planUsage.models": "Per-model 7-day limits",
   "config.presets.name": "Name used as /name.",
-  "config.presets.prompt": "Prompt text. Use {input} for the rest of what you typed."
+  "config.presets.prompt": "Prompt text. Use {input} for the rest of what you typed.",
+  "config.snapshotRetentionDays": "Days to keep the saved file contents (for diffs and revert) of completed tasks. Older ones are removed when VS Code starts; the task and its conversation are kept. 0 keeps them forever."
 }

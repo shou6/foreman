@@ -36,6 +36,8 @@ export interface DetailsStrings {
   endWithoutChanges: string;
   nothingToMerge: string;
   nothingToMergeHint: string;
+  /** スナップショットを消したタスクで、押せない操作に添える説明 */
+  snapshotsPruned: string;
   /** ターンの一覧の日付の見出し */
   today: string;
   yesterday: string;
@@ -100,6 +102,8 @@ export interface DetailsTask {
   worktree?: { branch: string; base: string };
   /** 承認済みで変更があり、マージできる */
   mergeable: boolean;
+  /** 保存期間を過ぎてスナップショットを消した（戻す・差分を開くを押せない） */
+  snapshotsPruned?: boolean;
 }
 
 export interface DetailsState {

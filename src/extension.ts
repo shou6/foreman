@@ -43,6 +43,7 @@ import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 import { PlanDocuments, PLAN_SCHEME } from './vscode/planDocuments';
 import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
+import { tasksToPrune } from './domain/retention';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -170,6 +171,21 @@ export async function activate(
     isIgnored: (dir, paths) => git.ignored(dir, paths),
     baseline: (dir, file) => git.showHead(dir, file),
   });
+  // 完了から保存期間を過ぎたタスクのスナップショットを消す（NFR-4）
+  {
+    const now = new Date().toISOString();
+    const ids = tasksToPrune(await service.list(), now, readSettings().snapshotRetentionDays);
+    if (ids.length > 0) {
+      void diffs
+        .prune(ids, now)
+        .then(() => output.appendLine(`${now} pruned snapshots of ${ids.length} task(s)`))
+        .catch((error: unknown) =>
+          output.appendLine(
+            `snapshot pruning failed: ${error instanceof Error ? error.message : String(error)}`
+          )
+        );
+    }
+  }
   const worktrees = new WorktreeService({
     git,
     sep: path.sep,

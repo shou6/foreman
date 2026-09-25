@@ -1686,3 +1686,11 @@ select.mode-select {
   font-family: var(--vscode-editor-font-family);
   color: var(--vscode-descriptionForeground);
 }
+
+/* 保存期間を過ぎてスナップショットを消したタスクの、差分カードの案内 */
+.diff-pruned {
+  padding: 0.4em 0.9em;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}

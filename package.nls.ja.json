@@ -58,5 +58,6 @@
   "config.planUsage.sevenDay": "7 日枠",
   "config.planUsage.models": "モデル別の 7 日枠",
   "config.presets.name": "/名前 として使う名前。",
-  "config.presets.prompt": "本文。{input} に、後ろに書いた文が入る。"
+  "config.presets.prompt": "本文。{input} に、後ろに書いた文が入る。",
+  "config.snapshotRetentionDays": "完了したタスクのファイルの保存内容（差分と「戻す」に使う）を残す日数。過ぎたものは VS Code の起動時に消す。タスクと会話の履歴は残る。0 は無期限。"
 }

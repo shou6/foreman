@@ -79,6 +79,7 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. The default model is `haiku`. |
 | `foreman.toolCalls` | `collapsed` (the default) or `expanded`: how tool calls appear in the task view. |
 | `foreman.thinking` | `collapsed` (the default) shows a "Thinking…" line while Claude thinks. `hidden` leaves it out. Claude Code hands the thinking text itself only to sessions that Anthropic hosts, so Foreman cannot show it; when it does arrive, it appears as a collapsed line you can open. |
+| `foreman.snapshotRetentionDays` | Days to keep the saved file contents behind the diff cards and revert for completed tasks. Default: 60. Older ones are removed when VS Code starts; the task and its conversation stay, but its diffs and revert are no longer available. `0` keeps them forever. |
 | `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. Default `72`; `0` uses the full width. |
 | `foreman.planUsage.sidebar` / `foreman.planUsage.statusBar` | Which parts of the plan usage each place shows: `fiveHour`, `sevenDay`, `models`. Default: all three. An empty list hides it there. |
 | `foreman.presets` | Prompt presets used as `/name`. `{input}` is replaced with the rest of the prompt. |

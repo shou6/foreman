@@ -100,6 +100,8 @@ export interface Task {
    * 完了でなくなった時と、worktree をマージ・破棄した時に消す
    */
   approvedFrom?: 'review' | 'waiting';
+  /** 保存期間を過ぎてスナップショットを消した日時。消した後は差分と「戻す」を使えない */
+  snapshotsPrunedAt?: string;
   model?: string;
   /** SDK の init が返した、実際に動いているモデル */
   activeModel?: string;
