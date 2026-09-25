@@ -419,7 +419,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
           ) : (
             <textarea
               class="prompt-input"
-              rows={2}
+              rows={4}
               value={draft}
               placeholder={
                 state.turnOpen

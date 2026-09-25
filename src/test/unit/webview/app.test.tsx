@@ -243,6 +243,11 @@ suite('webview: Context パネル（M13）', () => {
 });
 
 suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
+  test('入力欄の高さは、既定で 4 行分', () => {
+    const html = render(<App state={state({ status: 'done', turnOpen: false })} post={() => {}} />);
+    assert.ok(/<textarea[^>]*class="prompt-input"[^>]*rows="4"/.test(html));
+  });
+
   test('入力が空の間は送信を押せず、入力すると押せる', () => {
     const empty = render(
       <App state={state({ status: 'done', turnOpen: false })} post={() => {}} />
