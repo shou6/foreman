@@ -1,4 +1,5 @@
 import { Icon } from '../icons';
+import { dayKindOf, formatDate, sameLocalDay } from '../../domain/time';
 import type { DetailsState, DetailsTask, DetailsTurn, FromDetails } from '../detailsProtocol';
 import { SessionDock, type DockTab } from './SessionDock';
 
@@ -68,8 +69,17 @@ export function Details({ state, post, initialTab }: DetailsProps) {
             </span>
           )}
         </div>
-        {[...task.turns].reverse().map((turn) => (
-          <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
+        {[...task.turns].reverse().map((turn, i, turns) => (
+          <>
+            <TurnDay
+              key={`day-${turn.index}`}
+              turn={turn}
+              newer={turns[i - 1]}
+              locale={state.locale ?? 'en'}
+              strings={strings}
+            />
+            <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
+          </>
         ))}
         {task.worktree !== undefined ? (
           <Finish task={task} worktree={task.worktree} busy={busy} strings={strings} post={post} />
@@ -96,6 +106,38 @@ export function Details({ state, post, initialTab }: DetailsProps) {
       )}
     </div>
   );
+}
+
+/**
+ * ターンの一覧の日付の見出し（新しい順に並べた時の、日付の変わり目）。
+ * 今日・昨日はその呼び名、それより前は日付。時刻の無い古い記録には出さない
+ */
+function TurnDay({
+  turn,
+  newer,
+  locale,
+  strings,
+}: {
+  turn: DetailsTurn;
+  newer: DetailsTurn | undefined;
+  locale: string;
+  strings: DetailsState['strings'];
+}) {
+  if (turn.startedAt === undefined) {
+    return null;
+  }
+  if (newer?.startedAt !== undefined && sameLocalDay(newer.startedAt, turn.startedAt)) {
+    return null;
+  }
+  const now = new Date();
+  const kind = dayKindOf(turn.startedAt, now);
+  const label =
+    kind === 'today'
+      ? strings.today
+      : kind === 'yesterday'
+        ? strings.yesterday
+        : formatDate(turn.startedAt, locale, now);
+  return <div class="turn-day">{label}</div>;
 }
 
 interface FinishProps {

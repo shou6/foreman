@@ -22,6 +22,9 @@ export interface PanelStrings {
   /** 経過の表し方。{0} に秒 / {0} に分、{1} に秒 */
   elapsedSeconds: string;
   elapsedMinutes: string;
+  /** 日付の区切りの「今日」「昨日」 */
+  today: string;
+  yesterday: string;
   allow: string;
   /** 「常に許可」。後ろに許可する範囲を添える */
   allowAlways: string;
@@ -135,7 +138,17 @@ export interface PanelStrings {
   contextUsage: string;
 }
 
+/** ターンの開始と終了の時刻（ISO 8601）。添字はターンの番号 */
+export interface TurnTime {
+  startedAt: string;
+  endedAt?: string;
+}
+
 export interface PanelState {
+  /** ターンの時刻。日付の区切りと、指示・ターンの時刻に使う。古い記録には無い */
+  turnTimes?: TurnTime[];
+  /** 日付と時刻の表し方に使う言語（VS Code の表示言語） */
+  locale?: string;
   taskId: string;
   title: string;
   status: TaskStatus;
@@ -201,6 +214,7 @@ export type ToWebview =
       status: TaskStatus;
       turnOpen: boolean;
       turnStartedAt?: string;
+      turnTimes?: TurnTime[];
       mergeable: boolean;
       unapprovable?: boolean;
       usage?: ContextUsage;

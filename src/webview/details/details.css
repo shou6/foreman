@@ -539,3 +539,11 @@ body {
   font-family: var(--vscode-editor-font-family);
   overflow-wrap: anywhere;
 }
+
+/* ターンの一覧の日付の見出し */
+.turn-day {
+  padding: 6px 12px 2px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}

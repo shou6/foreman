@@ -176,6 +176,7 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
           : detailsOf(task, pending, readSettings().worktreeBranchPrefix),
       session: task === undefined ? undefined : this.sessionOf(task),
       dockHeight: this.deps.dockHeight.get(),
+      locale: vscode.env.language,
       strings: {
         noTask: vscode.l10n.t('Open a task to see its changes here.'),
         turn: vscode.l10n.t('Turn {0}', '{0}'),
@@ -202,6 +203,8 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         nothingToMergeHint: vscode.l10n.t(
           'No files have changed in this task yet. Once there are changes, approve them to merge from here.'
         ),
+        today: vscode.l10n.t('Today'),
+        yesterday: vscode.l10n.t('Yesterday'),
         overview: vscode.l10n.t('Overview'),
         mcpTab: vscode.l10n.t('MCP'),
         alwaysAllowedTab: vscode.l10n.t('Always allowed {0}', '{0}'),
@@ -313,6 +316,7 @@ export function detailsOf(
       index: turn.index,
       prompt: turn.prompt,
       ok: turn.result?.ok,
+      startedAt: turn.startedAt,
       changes: turn.changes.map((change) => ({
         path: change.path,
         kind: change.kind,

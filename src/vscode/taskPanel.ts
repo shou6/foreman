@@ -88,6 +88,7 @@ export class TaskPanels implements vscode.Disposable {
             status: task.status,
             turnOpen: isTurnOpen(task),
             turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
+            turnTimes: turnTimesOf(task),
             mergeable: canMerge(task),
             unapprovable: canUnapprove(task),
             usage: contextUsage(task),
@@ -389,6 +390,8 @@ export class TaskPanels implements vscode.Disposable {
       status: task.status,
       turnOpen: isTurnOpen(task),
       turnStartedAt: task.turns[task.turns.length - 1]?.startedAt,
+      turnTimes: turnTimesOf(task),
+      locale: vscode.env.language,
       mergeable: canMerge(task),
       unapprovable: canUnapprove(task),
       usage: contextUsage(task),
@@ -422,6 +425,8 @@ export class TaskPanels implements vscode.Disposable {
         runningTurn: vscode.l10n.t('Turn {0} running · {1}', '{0}', '{1}'),
         elapsedSeconds: vscode.l10n.t('{0}s', '{0}'),
         elapsedMinutes: vscode.l10n.t('{0}m {1}s', '{0}', '{1}'),
+        today: vscode.l10n.t('Today'),
+        yesterday: vscode.l10n.t('Yesterday'),
         allow: vscode.l10n.t('Allow'),
         allowAlways: vscode.l10n.t('Always allow'),
         alwaysScope: vscode.l10n.t('Always allow covers: {0}', '{0}'),
@@ -572,4 +577,9 @@ function tokensOf(task: Task): Record<number, TurnTokens> {
     }
   }
   return tokens;
+}
+
+/** ターンごとの開始と終了の時刻（画面の日付の区切りと時刻に使う） */
+function turnTimesOf(task: Task): { startedAt: string; endedAt?: string }[] {
+  return task.turns.map((turn) => ({ startedAt: turn.startedAt, endedAt: turn.endedAt }));
 }

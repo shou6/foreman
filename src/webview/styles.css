@@ -1631,3 +1631,51 @@ body.dragging .drop-hint {
   --os-handle-bg-hover: var(--vscode-scrollbarSlider-hoverBackground);
   --os-handle-bg-active: var(--vscode-scrollbarSlider-activeBackground);
 }
+
+/* いつのやり取りか。日付の区切り、指示の時刻、ターンの区切りの終了時刻と所要時間 */
+.day-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1em 0 0.4em;
+  font-size: 0.85em;
+}
+
+.day-divider::before,
+.day-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.day-divider > span {
+  padding: 0.05em 0.8em;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 1em;
+  color: var(--vscode-foreground);
+}
+
+/* 指示の吹き出しは幅の 90% まで。送った時刻は吹き出しの右下に置く（長い指示でも位置が変わらない） */
+.prompt-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 1em 0 1em 10%;
+}
+
+.prompt-row > .item.prompt {
+  max-width: 100%;
+  margin: 0;
+}
+
+.prompt-time {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.turn-time {
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-descriptionForeground);
+}

@@ -23,7 +23,7 @@ import {
 } from '../domain/question';
 import { approvalKindOf, pendingKindOf, statusKindOf } from '../domain/status';
 import { describeSuggestions } from '../domain/suggestions';
-import { splitElapsed } from '../domain/time';
+import { dayKindOf, formatDate, formatTime, sameLocalDay, splitElapsed } from '../domain/time';
 import type { TranscriptItem } from '../domain/transcript';
 import { Icon, STATUS_ICONS } from './icons';
 import { renderMarkdown } from './markdown';
@@ -271,9 +271,12 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
       <main class="transcript">
         {blocks.map((block, i) => (
           <>
+            {block.kind === 'prompt' && <DayDivider turn={block.turn} state={state} />}
             <BlockView
               key={i}
               block={block}
+              time={block.kind === 'prompt' ? state.turnTimes?.[block.turn]?.startedAt : undefined}
+              locale={state.locale ?? 'en'}
               expanded={state.toolCallsExpanded}
               thinking={state.thinking ?? 'collapsed'}
               thinkingOpen={state.turnOpen && i === blocks.length - 1}
@@ -286,6 +289,11 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                 <span class="checkpoint-turn">
                   {state.strings.turn.replace('{0}', String(block.turn + 1))}
                 </span>
+                <TurnTimeView
+                  time={state.turnTimes?.[block.turn]}
+                  locale={state.locale ?? 'en'}
+                  strings={state.strings}
+                />
                 {state.tokens?.[block.turn] !== undefined && (
                   <span class="turn-tokens" title="input / output tokens">
                     ↑{formatTokens(state.tokens[block.turn]?.input ?? 0)} ↓
@@ -706,6 +714,8 @@ function dirname(path: string): string {
 
 function BlockView({
   block,
+  time,
+  locale,
   expanded,
   strings,
   toolElapsed,
@@ -714,6 +724,9 @@ function BlockView({
   thinkingOpen,
 }: {
   block: Block;
+  /** 指示を送った時刻（指示の時だけ） */
+  time?: string;
+  locale: string;
   expanded: boolean;
   strings: PanelStrings;
   /** 考えている途中の出し方 */
@@ -727,7 +740,7 @@ function BlockView({
 }) {
   switch (block.kind) {
     case 'prompt':
-      return <PromptView text={block.text} />;
+      return <PromptView text={block.text} time={time} locale={locale} />;
     case 'thinking':
       if (thinking === 'hidden') {
         return null;
@@ -1356,28 +1369,86 @@ function QuestionCard({
  * ユーザーの指示の吹き出し。引用・コードブロック・インラインコードだけを描く。
  * HTML は組み立てず Preact の要素にするので、貼り付けた文字列がそのまま出る
  */
-function PromptView({ text }: { text: string }) {
+function PromptView({ text, time, locale }: { text: string; time?: string; locale: string }) {
   const inline = (line: string) =>
     inlineCode(line).map((part, i) => (part.code ? <code key={i}>{part.text}</code> : part.text));
   return (
-    <div class="item prompt">
-      {promptBlocks(text).map((block, i) => {
-        switch (block.kind) {
-          case 'quote':
-            return <blockquote key={i}>{inline(block.text)}</blockquote>;
-          case 'code':
-            return (
-              <Scroll key={i} class="prompt-code-scroll" as="pre">
-                <code data-lang={block.lang}>{block.text}</code>
-              </Scroll>
-            );
-          case 'text':
-            return <span key={i}>{inline(block.text)}</span>;
-          default:
-            return null;
-        }
-      })}
+    <div class="prompt-row">
+      <div class="item prompt">
+        {promptBlocks(text).map((block, i) => {
+          switch (block.kind) {
+            case 'quote':
+              return <blockquote key={i}>{inline(block.text)}</blockquote>;
+            case 'code':
+              return (
+                <Scroll key={i} class="prompt-code-scroll" as="pre">
+                  <code data-lang={block.lang}>{block.text}</code>
+                </Scroll>
+              );
+            case 'text':
+              return <span key={i}>{inline(block.text)}</span>;
+            default:
+              return null;
+          }
+        })}
+      </div>
+      {time !== undefined && (
+        <span class="prompt-time" title={new Date(time).toLocaleString(locale)}>
+          {formatTime(time, locale)}
+        </span>
+      )}
     </div>
+  );
+}
+
+/**
+ * 日付の区切り。最初のターンの前と、日付が変わったターンの前に出す。
+ * 今日と昨日は、その呼び名に日付を添える。時刻の無い古い記録には出さない
+ */
+function DayDivider({ turn, state }: { turn: number; state: PanelState }) {
+  const current = state.turnTimes?.[turn]?.startedAt;
+  if (current === undefined) {
+    return null;
+  }
+  const previous = state.turnTimes?.[turn - 1]?.startedAt;
+  if (previous !== undefined && sameLocalDay(previous, current)) {
+    return null;
+  }
+  const now = new Date();
+  const locale = state.locale ?? 'en';
+  const date = formatDate(current, locale, now);
+  const kind = dayKindOf(current, now);
+  const label =
+    kind === 'today'
+      ? `${state.strings.today} · ${date}`
+      : kind === 'yesterday'
+        ? `${state.strings.yesterday} · ${date}`
+        : date;
+  return (
+    <div class="day-divider">
+      <span>{label}</span>
+    </div>
+  );
+}
+
+/** ターンの区切りに添える、終わった時刻と所要時間 */
+function TurnTimeView({
+  time,
+  locale,
+  strings,
+}: {
+  time: { startedAt: string; endedAt?: string } | undefined;
+  locale: string;
+  strings: PanelStrings;
+}) {
+  if (time?.endedAt === undefined) {
+    return null;
+  }
+  const took = Date.parse(time.endedAt) - Date.parse(time.startedAt);
+  return (
+    <span class="turn-time" title={new Date(time.endedAt).toLocaleString(locale)}>
+      {`${formatTime(time.endedAt, locale)} · ${formatElapsed(took, strings)}`}
+    </span>
   );
 }
 

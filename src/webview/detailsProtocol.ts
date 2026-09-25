@@ -36,6 +36,9 @@ export interface DetailsStrings {
   endWithoutChanges: string;
   nothingToMerge: string;
   nothingToMergeHint: string;
+  /** ターンの一覧の日付の見出し */
+  today: string;
+  yesterday: string;
   /** 下の区画（セッション）のタブ。{0} に常に許可の件数 */
   overview: string;
   mcpTab: string;
@@ -82,6 +85,8 @@ export interface DetailsTurn {
   /** 正常に終わったターンだけがチェックポイントになる。未終了は undefined */
   ok?: boolean;
   changes: DetailsChange[];
+  /** 指示を送った時刻。古い記録には無い */
+  startedAt?: string;
 }
 
 export interface DetailsTask {
@@ -102,6 +107,8 @@ export interface DetailsState {
   task: DetailsTask | undefined;
   /** 下の区画（セッション）の中身。タスクが無ければ undefined */
   session?: DetailsSession;
+  /** 日付の表し方に使う言語 */
+  locale?: string;
   /** 下の区画の高さ（覚えている値）。無ければ既定 */
   dockHeight?: number;
   /** MCP サーバーの状態（MCP のタブを開いた時に聞く）。聞く前は無い */

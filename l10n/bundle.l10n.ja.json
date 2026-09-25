@@ -212,5 +212,7 @@
   "MCP": "MCP",
   "Always allowed {0}": "常に許可 {0}",
   "Refresh": "更新",
-  "Drag to resize": "ドラッグで高さを変える"
+  "Drag to resize": "ドラッグで高さを変える",
+  "Today": "今日",
+  "Yesterday": "昨日"
 }
