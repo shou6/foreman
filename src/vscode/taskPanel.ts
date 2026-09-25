@@ -194,6 +194,22 @@ export class TaskPanels implements vscode.Disposable {
     this.post(taskId, { type: 'attachments', attachments: next });
   }
 
+  /** ドロップされたファイル（URI の文字列）を添付に足す。ファイル以外は無視する */
+  attachUris(taskId: string, uris: readonly string[]): void {
+    this.attach(
+      taskId,
+      uris
+        .map((u) => vscode.Uri.parse(u))
+        .filter((u) => u.scheme === 'file')
+        .map((u) => ({ kind: 'file', path: u.fsPath }))
+    );
+  }
+
+  /** 次の指示に付ける添付 */
+  attachmentsOf(taskId: string): Attachment[] {
+    return this.attachments.get(taskId) ?? [];
+  }
+
   dispose(): void {
     for (const s of this.subscriptions) {
       s.dispose();
@@ -249,13 +265,7 @@ export class TaskPanels implements vscode.Disposable {
           await this.deps.service.setPermissionMode(taskId, message.mode);
           return;
         case 'dropped':
-          this.attach(
-            taskId,
-            message.uris
-              .map((u) => vscode.Uri.parse(u))
-              .filter((u) => u.scheme === 'file')
-              .map((u) => ({ kind: 'file', path: u.fsPath }))
-          );
+          this.attachUris(taskId, message.uris);
           return;
         case 'pasteImage': {
           const file = await this.deps.savePastedImage(message.mime, message.data);

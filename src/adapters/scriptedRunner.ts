@@ -82,23 +82,26 @@ export class ScriptedRunHandle implements RunHandle {
 export class ScriptedRunner implements AgentRunner {
   readonly starts: ScriptedRunHandle[] = [];
   readonly resumes: { sessionId: string; handle: ScriptedRunHandle }[] = [];
+  /** 起動と再開を、行った順に */
+  private readonly all: ScriptedRunHandle[] = [];
 
   start(options: StartOptions): RunHandle {
     const handle = new ScriptedRunHandle(options);
     this.starts.push(handle);
+    this.all.push(handle);
     return handle;
   }
 
   resume(sessionId: string, options: StartOptions): RunHandle {
     const handle = new ScriptedRunHandle(options);
     this.resumes.push({ sessionId, handle });
+    this.all.push(handle);
     return handle;
   }
 
-  /** 直近に起動または再開したハンドル */
+  /** 直近に起動または再開したハンドル（行った順で最後のもの） */
   get last(): ScriptedRunHandle {
-    const all = [...this.starts, ...this.resumes.map((r) => r.handle)];
-    const handle = all[all.length - 1];
+    const handle = this.all[this.all.length - 1];
     if (handle === undefined) {
       throw new Error('no run has been started');
     }

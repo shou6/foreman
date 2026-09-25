@@ -242,3 +242,111 @@ suite('Scenario: 計画をエディターで開く', function () {
     );
   });
 });
+
+suite('Scenario: 常に許可（受け入れ 9.3）', function () {
+  this.timeout(30_000);
+
+  test('「このタスクでは常に許可」は、そのタスクの再開に引き継ぎ、別のタスクには効かない', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const rule = {
+      type: 'addRules',
+      behavior: 'allow',
+      destination: 'session',
+      rules: [{ toolName: 'Edit' }],
+    };
+    const task = await t.service.create({ prompt: 'edit', cwd: workDir() });
+    t.runner.last.emit({ type: 'init', sessionId: 'sess-allow', model: 'm' });
+    const decision = t.runner.last.requestPermission({
+      toolName: 'Edit',
+      input: { file_path: 'a.txt' },
+      suggestions: [rule],
+    });
+    await untilStatus(t, task.id, 'waiting');
+    const pending = t.approvals.pending(task.id);
+    assert.ok(pending);
+    t.approvals.decide(task.id, pending.id, { behavior: 'allow-always', permissions: [rule] });
+    assert.deepStrictEqual(await decision, { behavior: 'allow-always', permissions: [rule] });
+    await until(
+      async () => (await t.service.load(task.id))?.alwaysAllowed.length === 1,
+      '常に許可の保存'
+    );
+
+    // プロセスが終わった後の次の指示（再開）にも、許可を引き継ぐ
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'waiting');
+    t.runner.last.close();
+    await settle(100);
+    await t.service.send(task.id, 'edit again');
+    assert.strictEqual(t.runner.resumes.at(-1)?.sessionId, 'sess-allow');
+    assert.deepStrictEqual(t.runner.last.options.alwaysAllowed, [rule]);
+
+    // 別のタスクには効かない
+    await t.service.create({ id: 'other-task', prompt: 'edit', cwd: workDir() });
+    assert.deepStrictEqual(t.runner.last.options.alwaysAllowed, []);
+  });
+});
+
+suite('Scenario: 添付（受け入れ 9.5）', function () {
+  this.timeout(30_000);
+
+  test('エクスプローラーの「タスクに添付」とドロップで入力欄に添付され、送るとファイルのパスが指示に付く', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const cwd = workDir();
+    const a = path.join(cwd, 'a.txt');
+    const b = path.join(cwd, 'b.txt');
+    fs.writeFileSync(a, 'a\n');
+    fs.writeFileSync(b, 'b\n');
+    const task = await t.service.create({ prompt: 'first', cwd });
+    t.runner.last.emit({ type: 'turn-end', ok: true });
+    await untilStatus(t, task.id, 'waiting');
+
+    // エクスプローラーの右クリック（タスクが 1 つなら選ぶ画面は出ない）
+    await vscode.commands.executeCommand('foreman.attachToTask', vscode.Uri.file(a));
+    // エクスプローラーからタスク画面へのドロップ
+    t.panels.attachUris(task.id, [vscode.Uri.file(b).toString()]);
+    // VS Code の URI から取るパス（Windows ではドライブ文字が小文字になる）
+    const fsA = vscode.Uri.file(a).fsPath;
+    const fsB = vscode.Uri.file(b).fsPath;
+    const attachments = t.panels.attachmentsOf(task.id);
+    assert.deepStrictEqual(
+      attachments.map((x) => (x.kind === 'file' ? x.path : x.kind)),
+      [fsA, fsB]
+    );
+
+    await t.service.send(task.id, 'use them', attachments);
+    assert.deepStrictEqual(t.runner.last.sent, [`use them\n\nAttached files:\n- ${fsA}\n- ${fsB}`]);
+  });
+});
+
+suite('Scenario: 失敗（受け入れ 9.6）', function () {
+  this.timeout(30_000);
+
+  test('claude CLI の場所が誤っていると、設定を案内するエラーになり、タスクは失敗になる', async () => {
+    const t = await api();
+    await clearTasks(t);
+    const missing = path.join(workDir(), 'no-such-claude.exe');
+    const config = vscode.workspace.getConfiguration('foreman');
+    await config.update('claudePath', missing, vscode.ConfigurationTarget.Global);
+    try {
+      assert.throws(() => t.locateClaude(), /foreman\.claudePath/);
+      const reason = (() => {
+        try {
+          t.locateClaude();
+          return '';
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      })();
+      // 起動できなかった Runner は、その理由で失敗のターンを終える
+      const task = await t.service.create({ prompt: 'hi', cwd: workDir() });
+      t.runner.last.emit({ type: 'turn-end', ok: false, interrupted: false, reason });
+      await untilStatus(t, task.id, 'failed');
+      const result = (await t.service.load(task.id))?.turns[0]?.result;
+      assert.ok(result !== undefined && !result.ok && result.reason.includes('foreman.claudePath'));
+    } finally {
+      await config.update('claudePath', undefined, vscode.ConfigurationTarget.Global);
+    }
+  });
+});

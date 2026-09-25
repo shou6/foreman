@@ -53,6 +53,8 @@ export interface TestApi {
   diffs: DiffService;
   panels: TaskPanels;
   plans: PlanDocuments;
+  /** claude CLI の場所を探す（見つからなければ設定を案内するエラー） */
+  locateClaude: () => string;
 }
 
 export async function activate(
@@ -385,7 +387,7 @@ export async function activate(
   void cleanupWorktrees(service, worktrees, output);
   return scripted === undefined
     ? undefined
-    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans } };
+    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans, locateClaude } };
 }
 
 export function deactivate(): void {}
