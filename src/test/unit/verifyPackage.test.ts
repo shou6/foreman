@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { checkPackageFiles, parseVsceLs } from '../../tooling/verifyPackage';
+import { checkPackageFiles, parseVsceLs, privateFilesTracked } from '../../tooling/verifyPackage';
 
 const COMMON = ['package.json', 'README.md', 'LICENSE', 'resources/icon.png'];
 
@@ -119,5 +119,34 @@ suite('checkPackageFiles: Webview のバンドル', () => {
       ),
       { unexpected: ['dist/webview.js'], missing: [] }
     );
+  });
+});
+
+suite('privateFilesTracked', () => {
+  test('手元だけの文書と設定（docs、CLAUDE.md、.claude、.automation、spikes）が追跡されていれば知らせる', () => {
+    assert.deepStrictEqual(
+      privateFilesTracked([
+        'src/extension.ts',
+        'docs/requirements.md',
+        'CLAUDE.md',
+        '.claude/rules/commit-message.md',
+        '.automation/manual-tasks.md',
+        'spikes/v1-start.mjs',
+        '.github/workflows/ci.yml',
+        'README.md',
+      ]),
+      [
+        'docs/requirements.md',
+        'CLAUDE.md',
+        '.claude/rules/commit-message.md',
+        '.automation/manual-tasks.md',
+        'spikes/v1-start.mjs',
+      ]
+    );
+  });
+
+  test('似た名前（docs.md、.claude.json など）は対象にしない。区切りは / でも \\ でもよい', () => {
+    assert.deepStrictEqual(privateFilesTracked(['docs.md', 'src/docs/a.md', '.claude.json']), []);
+    assert.deepStrictEqual(privateFilesTracked(['docs\\a.md']), ['docs/a.md']);
   });
 });
