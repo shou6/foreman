@@ -3,6 +3,12 @@
 All notable changes to this extension are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Stopping a task now works even when Claude Code does not answer the stop request: Foreman closes the process after a few seconds and marks the task as interrupted
+
 ## [0.1.0]
 
 First release.
