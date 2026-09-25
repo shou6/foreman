@@ -17,6 +17,7 @@ import { describeSuggestions } from '../domain/suggestions';
 import { randomNonce } from './nonce';
 import { statusKindLabels } from './statusLabel';
 import { snapshotUri } from './snapshotUri';
+import { taskPanelCsp } from '../webview/csp';
 
 /** スナップショットを差分エディタに出すための URI スキーム */
 
@@ -535,7 +536,7 @@ export class TaskPanels implements vscode.Disposable {
       '<html lang="en">',
       '<head>',
       '<meta charset="UTF-8">',
-      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">`,
+      `<meta http-equiv="Content-Security-Policy" content="${taskPanelCsp(webview.cspSource, nonce)}">`,
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
       `<link rel="stylesheet" href="${codicons.toString()}">`,
       `<link rel="stylesheet" href="${style.toString()}">`,

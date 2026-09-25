@@ -27,6 +27,7 @@ import { splitElapsed } from '../domain/time';
 import type { TranscriptItem } from '../domain/transcript';
 import { Icon, STATUS_ICONS } from './icons';
 import { renderMarkdown } from './markdown';
+import { Scroll } from './Scroll';
 import { hunksOf } from '../domain/diff';
 import {
   diffKey,
@@ -618,7 +619,9 @@ function ContextPanel({ prompt, attachments, context, model, strings }: ContextP
       {preview === undefined ? (
         <div class="context-empty">{strings.contextEmpty}</div>
       ) : (
-        <pre class="context-preview">{preview}</pre>
+        <Scroll class="context-preview-scroll" as="pre" viewportClass="context-preview">
+          {preview}
+        </Scroll>
       )}
       <dl class="context-facts">
         <dt>{strings.directory}</dt>
@@ -784,7 +787,11 @@ function BlockView({
                   <span class="tool-name">{tool.name}</span>
                   <span class="tool-target">{summarize(tool.input)}</span>
                 </summary>
-                {tool.output !== undefined && <pre class="tool-output">{tool.output}</pre>}
+                {tool.output !== undefined && (
+                  <Scroll class="tool-output-scroll" as="pre" viewportClass="tool-output">
+                    {tool.output}
+                  </Scroll>
+                )}
               </details>
             ))}
           </details>
@@ -958,7 +965,7 @@ function DiffCard({
               </span>
             </div>
             {lines !== undefined && (open[key] ?? true) && (
-              <pre class="diff-lines">
+              <Scroll class="diff-scroll" as="pre" viewportClass="diff-lines">
                 {hunksOf(lines, 3).flatMap((hunk, h) => [
                   <div class="diff-hunk" key={`h${h}`}>
                     @@ -{hunk.oldStart},{hunk.oldCount} +{hunk.newStart},{hunk.newCount} @@
@@ -976,7 +983,7 @@ function DiffCard({
                     </div>
                   )),
                 ])}
-              </pre>
+              </Scroll>
             )}
           </div>
         );
@@ -1025,16 +1032,19 @@ function ToolCard({ pending, strings, post }: ApprovalProps) {
         )}
       </div>
       {plan !== undefined ? (
-        <div
-          class="approval-plan markdown"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(plan) }}
+        <Scroll
+          class="approval-plan-scroll"
+          viewportClass="approval-plan markdown"
+          html={renderMarkdown(plan)}
         />
       ) : (
         target !== '{}' && <pre class="approval-target">{target}</pre>
       )}
       <details class="approval-input">
         <summary>{strings.inputDetails}</summary>
-        <pre>{JSON.stringify(pending.input, null, 2)}</pre>
+        <Scroll class="approval-input-scroll" as="pre">
+          {JSON.stringify(pending.input, null, 2)}
+        </Scroll>
       </details>
       {denying && (
         <textarea
@@ -1353,9 +1363,9 @@ function PromptView({ text }: { text: string }) {
             return <blockquote key={i}>{inline(block.text)}</blockquote>;
           case 'code':
             return (
-              <pre key={i}>
+              <Scroll key={i} class="prompt-code-scroll" as="pre">
                 <code data-lang={block.lang}>{block.text}</code>
-              </pre>
+              </Scroll>
             );
           case 'text':
             return <span key={i}>{inline(block.text)}</span>;

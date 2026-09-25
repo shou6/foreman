@@ -1,8 +1,11 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import 'overlayscrollbars/overlayscrollbars.css';
+import { OverlayScrollbars } from 'overlayscrollbars';
 import { App } from './App';
 import type { PanelState, ToExtension, ToWebview } from './protocol';
 import { reduce } from './state';
+import { enhanceScrollbars, Scroll } from './Scroll';
 import './styles.css';
 
 interface WebviewState {
@@ -84,17 +87,34 @@ function Root() {
       document.removeEventListener('paste', onPaste);
     };
   }, []);
+  // ページのスクロールは Scroll の中の要素で行う（window はスクロールしない）
+  const page = useRef<HTMLElement | undefined>(undefined);
   useEffect(() => {
-    window.scrollTo(0, document.body.scrollHeight);
+    page.current?.scrollTo(0, page.current.scrollHeight);
   }, [state?.items.length, state?.status, state?.pending?.id]);
+  useEffect(() => enhanceScrollbars(document.body), []);
   return (
-    <App
-      state={state}
-      post={(message) => vscode.postMessage(message)}
-      initialDraft={vscode.getState()?.draft}
-      onDraftChange={(draft) => vscode.setState({ draft })}
-    />
+    <Scroll
+      class="page"
+      onViewport={(viewport) => {
+        page.current = viewport;
+        viewport.scrollTo(0, viewport.scrollHeight);
+      }}
+    >
+      <App
+        state={state}
+        post={(message) => vscode.postMessage(message)}
+        initialDraft={vscode.getState()?.draft}
+        onDraftChange={(draft) => vscode.setState({ draft })}
+      />
+    </Scroll>
   );
+}
+
+// スクロールバーが環境の判定に使う style 要素に、スクリプトと同じ nonce を付ける（CSP で許すため）
+const nonce = (document.currentScript as HTMLScriptElement | null)?.nonce;
+if (nonce !== undefined && nonce !== '') {
+  OverlayScrollbars.nonce(nonce);
 }
 
 render(<Root />, document.body);
