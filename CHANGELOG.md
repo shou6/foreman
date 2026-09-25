@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Stopping a task now works even when Claude Code does not answer the stop request: Foreman closes the process after a few seconds and marks the task as interrupted
+- Tasks no longer take minutes to start in a dev container or on a large repository: Foreman now watches the working directory with Visual Studio Code's file watcher instead of Node's recursive watcher
 
 ## [0.1.0]
 
