@@ -24,7 +24,8 @@ export class OrphanCleaner {
   /** 終わったホストの記録から残ったプロセスを止め、その記録を消す。止めたプロセスの番号を返す */
   async cleanup(): Promise<number[]> {
     const others = (await this.deps.records.hosts()).filter(
-      (r) => r.hostPid !== this.record.hostPid
+      // 番号は使い回されるので、起動時刻も合う時だけ自分の記録とみなす
+      (r) => r.hostPid !== this.record.hostPid || r.hostStartedAt !== this.record.hostStartedAt
     );
     if (others.length === 0) {
       return [];
