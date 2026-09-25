@@ -2,10 +2,19 @@ import * as vscode from 'vscode';
 import type { ApprovalService } from '../app/approvalService';
 import type { DiffService } from '../app/diffService';
 import type { TaskService } from '../app/taskService';
+import type { ModelService } from '../app/modelService';
+import { defaultModelName, modelLabel } from '../domain/models';
+import { describeSuggestions } from '../domain/suggestions';
+import { contextUsage } from '../domain/usage';
 import { shortBranch } from '../domain/labels';
 import { statusKindOf, type PendingKind } from '../domain/status';
 import { canMerge, isTurnOpen, type Task } from '../domain/task';
-import type { DetailsState, FromDetails, ToDetails } from '../webview/detailsProtocol';
+import type {
+  DetailsSession,
+  DetailsState,
+  FromDetails,
+  ToDetails,
+} from '../webview/detailsProtocol';
 import { randomNonce } from './nonce';
 import { readSettings } from './settings';
 import { snapshotUri } from './snapshotUri';
@@ -27,6 +36,10 @@ export interface DetailsViewDeps {
   merge: (taskId: string) => Promise<void>;
   discard: (taskId: string) => Promise<void>;
   onError: (error: unknown) => void;
+  /** モデルの一覧（画面に出す名前に使う） */
+  models: ModelService;
+  /** 下の区画の高さを覚えておく場所 */
+  dockHeight: { get(): number | undefined; set(height: number): Thenable<void> };
 }
 
 export const DETAILS_VIEW_ID = 'foreman.details';
@@ -66,6 +79,10 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
       await this.refresh();
       return;
     }
+    if (message.type === 'dockHeight') {
+      await this.deps.dockHeight.set(message.height);
+      return;
+    }
     if (taskId === undefined) {
       return;
     }
@@ -94,6 +111,18 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
       case 'discard':
         await this.deps.discard(taskId);
         return;
+      case 'compact':
+        await this.deps.service.compact(taskId);
+        return;
+      case 'mcpServers': {
+        const servers = await this.deps.service.mcpServers(taskId);
+        const reply: ToDetails = {
+          type: 'mcp',
+          mcp: servers === undefined ? { running: false } : { running: true, servers },
+        };
+        await this.view?.webview.postMessage(reply);
+        return;
+      }
     }
   }
 
@@ -145,6 +174,8 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         task === undefined
           ? undefined
           : detailsOf(task, pending, readSettings().worktreeBranchPrefix),
+      session: task === undefined ? undefined : this.sessionOf(task),
+      dockHeight: this.deps.dockHeight.get(),
       strings: {
         noTask: vscode.l10n.t('Open a task to see its changes here.'),
         turn: vscode.l10n.t('Turn {0}', '{0}'),
@@ -171,10 +202,59 @@ export class DetailsView implements vscode.WebviewViewProvider, vscode.Disposabl
         nothingToMergeHint: vscode.l10n.t(
           'No files have changed in this task yet. Once there are changes, approve them to merge from here.'
         ),
+        overview: vscode.l10n.t('Overview'),
+        mcpTab: vscode.l10n.t('MCP'),
+        alwaysAllowedTab: vscode.l10n.t('Always allowed {0}', '{0}'),
+        context: vscode.l10n.t('Context'),
+        model: vscode.l10n.t('Model'),
+        effort: vscode.l10n.t('Effort'),
+        permissionMode: vscode.l10n.t('Permission mode'),
+        directory: vscode.l10n.t('Directory'),
+        compact: vscode.l10n.t('Compact the context'),
+        refresh: vscode.l10n.t('Refresh'),
+        resizeDock: vscode.l10n.t('Drag to resize'),
+        mcpNotRunning: vscode.l10n.t('Shown while Claude Code is running for this task'),
+        mcpStatus: {
+          connected: vscode.l10n.t('Connected'),
+          failed: vscode.l10n.t('Failed'),
+          'needs-auth': vscode.l10n.t('Needs authentication'),
+          pending: vscode.l10n.t('Connecting'),
+          disabled: vscode.l10n.t('Disabled'),
+        },
       },
     };
     const message: ToDetails = { type: 'state', state };
     await this.view.webview.postMessage(message);
+  }
+
+  /** 下の区画に出すセッションの情報。モデルと Effort は画面に出す名前にする */
+  private sessionOf(task: Task): DetailsSession {
+    const usage = contextUsage(task);
+    const list = this.deps.models.current();
+    const name = task.activeModel ?? task.model;
+    const fallback = defaultModelName(list.defaultModel);
+    const effort = task.activeEffort ?? task.effort;
+    const efforts = {
+      low: vscode.l10n.t('Low'),
+      medium: vscode.l10n.t('Medium'),
+      high: vscode.l10n.t('High'),
+      xhigh: vscode.l10n.t('Extra high'),
+      max: vscode.l10n.t('Max'),
+    };
+    return {
+      usage,
+      canCompact: usage !== undefined && !isTurnOpen(task),
+      model:
+        name !== undefined
+          ? modelLabel(name, list.models)
+          : fallback !== undefined
+            ? vscode.l10n.t('Default ({0})', fallback)
+            : vscode.l10n.t('Default'),
+      effort: effort === undefined ? undefined : efforts[effort],
+      permissionMode: task.permissionMode,
+      cwd: task.cwd,
+      alwaysAllowed: describeSuggestions(task.alwaysAllowed),
+    };
   }
 
   private html(webview: vscode.Webview): string {

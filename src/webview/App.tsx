@@ -28,7 +28,6 @@ import type { TranscriptItem } from '../domain/transcript';
 import { Icon, STATUS_ICONS } from './icons';
 import { renderMarkdown } from './markdown';
 import { Scroll } from './Scroll';
-import { McpServers } from './McpServers';
 import { hunksOf } from '../domain/diff';
 import {
   diffKey,
@@ -353,9 +352,6 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
         <ContextPanel
           prompt={composed}
           attachments={state.attachments}
-          context={state.context}
-          model={state.activeModel ?? state.model}
-          mcp={state.mcp}
           strings={state.strings}
           post={post}
         />
@@ -604,50 +600,42 @@ function EffortSlider({ levels, current, strings, onChange }: EffortSliderProps)
 interface ContextPanelProps {
   prompt: string;
   attachments: Attachment[];
-  context: PanelState['context'];
-  model: string | undefined;
-  mcp: PanelState['mcp'];
   strings: PanelStrings;
   post: (message: ToExtension) => void;
 }
 
-/** Context パネル（FR-VIEW-9）。次に Claude へ送る文と、セッションの条件をそのまま見せる */
-function ContextPanel({
-  prompt,
-  attachments,
-  context,
-  model,
-  mcp,
-  strings,
-  post,
-}: ContextPanelProps) {
+/**
+ * Context パネル（FR-VIEW-9）。次に Claude へ送る文（プリセットと添付を展開したもの）を見せる。
+ * セッションの情報（ディレクトリ、モデル、承認方式、常に許可、MCP）は右サイドバーの下の区画に出す
+ */
+function ContextPanel({ prompt, attachments, strings, post }: ContextPanelProps) {
   const preview =
     prompt.trim() === '' && attachments.length === 0
       ? undefined
       : promptWithAttachments(prompt, attachments);
-  // 閉じていても、ディレクトリ・承認方式・添付数は見えるようにする
-  const brief = [
-    context.cwd,
-    `${strings.permissionMode} ${context.permissionMode}`,
+  const brief =
     attachments.length === 0
       ? strings.noAttachments
-      : strings.attachmentCount.replace('{0}', String(attachments.length)),
-  ].join(' · ');
+      : strings.attachmentCount.replace('{0}', String(attachments.length));
   return (
-    <details
-      class="context-panel"
-      // 開くたびに MCP サーバーの状態を聞き直す（接続は途中で変わるため）
-      onToggle={(e) => {
-        if ((e.currentTarget as HTMLDetailsElement).open) {
-          post({ type: 'mcpServers' });
-        }
-      }}
-    >
+    <details class="context-panel">
       <summary class="context-summary">
         <span class="context-label">{strings.contextPanel}</span>
         <span class="context-brief" title={brief}>
           {brief}
         </span>
+        <button
+          class="link show-session"
+          onClick={(e) => {
+            // 開閉ではなく、右サイドバーの区画を出す
+            e.preventDefault();
+            e.stopPropagation();
+            post({ type: 'showSession' });
+          }}
+        >
+          <Icon name="layout-sidebar-right" />
+          {strings.showSession}
+        </button>
       </summary>
       {preview === undefined ? (
         <div class="context-empty">{strings.contextEmpty}</div>
@@ -656,38 +644,6 @@ function ContextPanel({
           {preview}
         </Scroll>
       )}
-      <dl class="context-facts">
-        <dt>{strings.directory}</dt>
-        <dd>{context.cwd}</dd>
-        {model !== undefined && (
-          <>
-            <dt>{strings.model}</dt>
-            <dd>{model}</dd>
-          </>
-        )}
-        <dt>{strings.permissionMode}</dt>
-        <dd>{context.permissionMode}</dd>
-        {context.alwaysAllowed.length > 0 && (
-          <>
-            <dt>{strings.alwaysAllowedList}</dt>
-            <dd>{context.alwaysAllowed.join(', ')}</dd>
-          </>
-        )}
-        {mcp !== undefined && (
-          <>
-            <dt>{strings.mcpServers}</dt>
-            {!mcp.running ? (
-              <dd>{strings.mcpNotRunning}</dd>
-            ) : mcp.servers.length === 0 ? (
-              <dd>{strings.mcpNone}</dd>
-            ) : (
-              <dd class="mcp-servers">
-                <McpServers servers={mcp.servers} strings={strings} />
-              </dd>
-            )}
-          </>
-        )}
-      </dl>
     </details>
   );
 }

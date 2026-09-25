@@ -212,7 +212,7 @@ suite('webview: 指示のプリセット（M13）', () => {
 });
 
 suite('webview: Context パネル（M13）', () => {
-  test('次に送る内容（プリセットと添付を展開した文）と、セッションの情報を出す', () => {
+  test('次に送る内容（プリセットと添付を展開した文）だけを出す。セッションの情報は右サイドバーへ', () => {
     const html = render(
       <App
         state={state({
@@ -234,8 +234,11 @@ suite('webview: Context パネル（M13）', () => {
     assert.ok(html.includes('Fix: the bug'));
     assert.ok(html.includes('Attached files:'));
     assert.ok(html.includes('D:\\w\\a.ts'));
-    assert.ok(html.includes('acceptEdits'));
-    assert.ok(html.includes('Bash(npm test)'));
+    assert.ok(/class="context-brief"[^>]*>1 attached</.test(html), '1 行には添付の数だけ');
+    assert.ok(!html.includes('acceptEdits'), '承認方式は右サイドバーへ');
+    assert.ok(!html.includes('Bash(npm test)'), '常に許可は右サイドバーへ');
+    assert.ok(!html.includes('context-facts'));
+    assert.ok(/<button[^>]*class="link show-session"[^>]*>[\s\S]*?Session<\/button>/.test(html));
   });
 });
 
@@ -293,7 +296,7 @@ suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
     );
   });
 
-  test('「Claude に渡す内容」は閉じていても、ディレクトリ・承認方式・添付数を 1 行で出す', () => {
+  test('「Claude に渡す内容」は閉じていても、添付数を 1 行で出す（ディレクトリと承認方式は右サイドバーへ）', () => {
     const none = render(
       <App
         state={state({
@@ -305,7 +308,7 @@ suite('webview: 入力欄と実行中の表示（UI の見直し）', () => {
       />
     );
     assert.ok(
-      /class="context-summary"[\s\S]*?What Claude will receive[\s\S]*?class="context-brief"[^>]*>D:\w\wt · Permission mode default · No attachments</.test(
+      /class="context-summary"[\s\S]*?What Claude will receive[\s\S]*?class="context-brief"[^>]*>No attachments</.test(
         none
       )
     );

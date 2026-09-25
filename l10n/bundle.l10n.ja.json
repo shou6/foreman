@@ -198,7 +198,6 @@
   "{0} more: keep typing to filter": "ほか {0} 件。文字を打つと絞り込み",
   "Open in editor": "エディターで開く",
   "{0} (plan)": "{0}（計画）",
-  "MCP servers": "MCP サーバー",
   "Shown while Claude Code is running for this task": "このタスクの Claude Code が動いている間に出る",
   "Connected": "接続済み",
   "Needs authentication": "認証が必要",
@@ -207,5 +206,11 @@
   "Open a folder before importing a session.": "セッションを取り込む前に、フォルダを開いてください。",
   "No Claude Code sessions to import in this folder.": "このフォルダには、取り込める Claude Code のセッションがありません。",
   "Import a Claude Code Session": "Claude Code のセッションを取り込む",
-  "Sessions in this folder, newest first": "このフォルダのセッション（新しい順）"
+  "Sessions in this folder, newest first": "このフォルダのセッション（新しい順）",
+  "Session": "セッション",
+  "Overview": "概要",
+  "MCP": "MCP",
+  "Always allowed {0}": "常に許可 {0}",
+  "Refresh": "更新",
+  "Drag to resize": "ドラッグで高さを変える"
 }

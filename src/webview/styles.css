@@ -1521,97 +1521,13 @@ body.dragging .drop-hint {
   font-family: var(--vscode-editor-font-family);
 }
 
-.context-facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.1em 0.8em;
-  margin: 0.4em 0 0;
-}
-
-.context-facts dt {
-  font-weight: 600;
-}
-
-.context-facts dd {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/*
- * MCP サーバーの状態。状態ごとの件数のボタンと、押した状態のサーバーの名前のチップ。
- * 状態はボタンの前の点の色で見せる。チップの並びは高さに上限を付けてスクロールする
- */
-.context-facts dd.mcp-servers {
-  white-space: normal;
-}
-
-.mcp-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3em;
-}
-
-.mcp-count {
+/* 右サイドバーのセッションの区画を開くリンク（1 行の右端） */
+.context-summary .show-session {
   display: inline-flex;
   align-items: center;
-  padding: 0 0.6em;
-  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
-  border-radius: 999px;
-  background: transparent;
-  color: var(--vscode-foreground);
-  font: inherit;
-  cursor: pointer;
-}
-
-.mcp-count:hover {
-  background: var(--vscode-toolbar-hoverBackground);
-}
-
-.mcp-count[aria-pressed='true'] {
-  border-color: var(--vscode-focusBorder);
-  background: var(--vscode-list-activeSelectionBackground);
-  color: var(--vscode-list-activeSelectionForeground);
-}
-
-.mcp-count::before {
-  content: '●';
-  margin-right: 0.35em;
-  font-size: 0.8em;
-  color: var(--vscode-descriptionForeground);
-}
-
-.mcp-count[data-status='connected']::before {
-  color: var(--vscode-testing-iconPassed, #73c991);
-}
-
-.mcp-count[data-status='failed']::before {
-  color: var(--vscode-errorForeground);
-}
-
-.mcp-count[data-status='needs-auth']::before {
-  color: var(--vscode-editorWarning-foreground);
-}
-
-.mcp-chips-scroll {
-  max-height: 7.5em;
-  margin-top: 0.35em;
-}
-
-.mcp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25em;
-}
-
-.mcp-chip {
-  padding: 0 0.5em;
-  border-radius: 3px;
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
-  font-size: 0.9em;
-  white-space: nowrap;
+  gap: 4px;
+  margin-left: auto;
+  flex: none;
 }
 
 /* 見出しの 2 行目のメーターは、行の文字の大きさに合わせる */

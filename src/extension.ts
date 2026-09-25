@@ -265,6 +265,12 @@ export async function activate(
     now: () => new Date().toISOString(),
   });
   const details = new DetailsView({
+    models,
+    // 下の区画（セッション）の高さはウィンドウをまたいで覚えておく
+    dockHeight: {
+      get: () => context.globalState.get<number>('foreman.details.dockHeight'),
+      set: (height) => context.globalState.update('foreman.details.dockHeight', height),
+    },
     extensionUri: context.extensionUri,
     service,
     approvals,

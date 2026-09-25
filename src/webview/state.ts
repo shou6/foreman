@@ -45,8 +45,6 @@ export function reduce(state: PanelState | undefined, message: ToWebview): Panel
       return { ...state, models: message.models, defaultModel: message.defaultModel };
     case 'commands':
       return { ...state, commands: message.commands };
-    case 'mcp':
-      return { ...state, mcp: message.mcp };
     case 'turn-start':
       return { ...state, items: startTurn(state.items, message.turn, message.prompt) };
     case 'event':

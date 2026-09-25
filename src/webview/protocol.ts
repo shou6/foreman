@@ -1,5 +1,4 @@
 import type { PendingRequest } from '../app/approvalService';
-import type { McpServerInfo, McpStatus } from '../domain/mcp';
 import type { Attachment } from '../domain/attachments';
 import type { ContextUsage, TurnTokens } from '../domain/usage';
 import type { Preset } from '../domain/presets';
@@ -43,11 +42,8 @@ export interface PanelStrings {
   approvePlan: string;
   /** 計画をエディターの別のタブで開く */
   openPlan: string;
-  mcpServers: string;
-  /** セッションが動いていない時の案内 */
-  mcpNotRunning: string;
-  mcpNone: string;
-  mcpStatus: Record<McpStatus, string>;
+  /** 右サイドバーのセッションの区画を開くリンク */
+  showSession: string;
   planMode: string;
   planModeHint: string;
   /** {0} に最後の番号（質問が 1 つの時 / タブで切り替える時） */
@@ -190,8 +186,6 @@ export interface PanelState {
   presets: Preset[];
   /** Claude Code のスラッシュコマンドとスキル（取得できた時だけ） */
   commands?: SlashCommandInfo[];
-  /** MCP サーバーの状態（Context パネルを開いた時に聞く）。聞く前は無い */
-  mcp?: { running: false } | { running: true; servers: McpServerInfo[] };
   /** セッションの情報（Context パネルに出す） */
   context: { cwd: string; permissionMode: string; alwaysAllowed: string[] };
   /** worktree のマージ・破棄の処理中 */
@@ -228,7 +222,6 @@ export type ToWebview =
   | { type: 'models'; models: ModelOption[]; defaultModel: ModelOption | undefined }
   /** Claude Code のコマンドとスキルの一覧を取得し終えた */
   | { type: 'commands'; commands: SlashCommandInfo[] }
-  | { type: 'mcp'; mcp: NonNullable<PanelState['mcp']> }
   | TranscriptDelta;
 
 /** Webview → 拡張機能 */
@@ -266,8 +259,8 @@ export type ToExtension =
   | { type: 'compact' }
   /** 計画（ExitPlanMode）をエディターで開く */
   | { type: 'openPlan'; plan: string }
-  /** MCP サーバーの状態を聞く（Context パネルを開いた時） */
-  | { type: 'mcpServers' }
+  /** 右サイドバーのセッションの区画を前面に出す */
+  | { type: 'showSession' }
   /** タスク名の変更（入力は拡張機能側のダイアログ） */
   | { type: 'rename' }
   /** 指定のターンの直後に戻す（ファイル、または会話も）。FR-DIFF-8 */

@@ -1,5 +1,6 @@
 import { Icon } from '../icons';
 import type { DetailsState, DetailsTask, DetailsTurn, FromDetails } from '../detailsProtocol';
+import { SessionDock, type DockTab } from './SessionDock';
 
 /** 全ターンの追加・削除の行数の合計。数えられない変更は除く。live なら戻した変更も除く */
 function lineTotals(
@@ -27,10 +28,15 @@ function lineTotals(
 interface DetailsProps {
   state: DetailsState | undefined;
   post: (message: FromDetails) => void;
+  /** 下の区画で最初に開いておくタブ */
+  initialTab?: DockTab;
 }
 
-/** 右サイドバー。今見ているタスクの変更（ターンごと）とチェックポイント、仕上げ */
-export function Details({ state, post }: DetailsProps) {
+/**
+ * 右サイドバー。今見ているタスクの変更（ターンごと）とチェックポイント、仕上げ。
+ * 下の区画に、セッションの情報（概要・MCP・常に許可）を出す
+ */
+export function Details({ state, post, initialTab }: DetailsProps) {
   if (state === undefined) {
     return null;
   }
@@ -42,38 +48,51 @@ export function Details({ state, post }: DetailsProps) {
   const totals = lineTotals(task.turns);
   const anyChanges = task.turns.some((turn) => turn.changes.length > 0);
   return (
-    <div class="details">
-      <header class="details-head">
-        <button class="title link" onClick={() => post({ type: 'open' })}>
-          {task.title}
-        </button>
-        <span class="status" data-kind={task.kind}>
-          {strings.statusLabels[task.kind]}
-        </span>
-      </header>
-      <div class="changes-title">
-        <span>{strings.changesTitle}</span>
-        {!anyChanges && <span class="none">{strings.none}</span>}
-        {(totals.added !== undefined || totals.removed !== undefined) && (
-          <span class="counts">
-            <span class="added">+{totals.added ?? 0}</span>
-            <span class="removed">−{totals.removed ?? 0}</span>
+    <div class="details-root">
+      <div class="details">
+        <header class="details-head">
+          <button class="title link" onClick={() => post({ type: 'open' })}>
+            {task.title}
+          </button>
+          <span class="status" data-kind={task.kind}>
+            {strings.statusLabels[task.kind]}
           </span>
+        </header>
+        <div class="changes-title">
+          <span>{strings.changesTitle}</span>
+          {!anyChanges && <span class="none">{strings.none}</span>}
+          {(totals.added !== undefined || totals.removed !== undefined) && (
+            <span class="counts">
+              <span class="added">+{totals.added ?? 0}</span>
+              <span class="removed">−{totals.removed ?? 0}</span>
+            </span>
+          )}
+        </div>
+        {[...task.turns].reverse().map((turn) => (
+          <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
+        ))}
+        {task.worktree !== undefined ? (
+          <Finish task={task} worktree={task.worktree} busy={busy} strings={strings} post={post} />
+        ) : (
+          <section class="finish">
+            <div class="finish-actions">
+              <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
+                {strings.allDiff}
+              </button>
+            </div>
+          </section>
         )}
       </div>
-      {[...task.turns].reverse().map((turn) => (
-        <TurnView key={turn.index} turn={turn} busy={busy} strings={strings} post={post} />
-      ))}
-      {task.worktree !== undefined ? (
-        <Finish task={task} worktree={task.worktree} busy={busy} strings={strings} post={post} />
-      ) : (
-        <section class="finish">
-          <div class="finish-actions">
-            <button class="finish-button all-diff" onClick={() => post({ type: 'allDiff' })}>
-              {strings.allDiff}
-            </button>
-          </div>
-        </section>
+      {state.session !== undefined && (
+        <SessionDock
+          taskId={task.id}
+          session={state.session}
+          mcp={state.mcp}
+          height={state.dockHeight}
+          strings={strings}
+          post={post}
+          initialTab={initialTab}
+        />
       )}
     </div>
   );
