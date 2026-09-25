@@ -16,7 +16,8 @@ function makeRepo(): string {
   fs.writeFileSync(path.join(dir, 'a.txt'), 'a\n');
   git('add', '.');
   git('commit', '-q', '-m', 'init');
-  return fs.realpathSync(dir);
+  // git は長い名前の実際のパスを返す。Windows の短い名前（RUNNER~1 など）を展開して比べる
+  return fs.realpathSync.native(dir);
 }
 
 suite('GitCli', function () {
