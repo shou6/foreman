@@ -1539,6 +1539,47 @@ body.dragging .drop-hint {
   white-space: nowrap;
 }
 
+/* MCP サーバーの状態。名前の前の点の色で状態を見せる */
+.context-facts dd.mcp-servers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 1em;
+  white-space: normal;
+}
+
+.mcp-server {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+
+.mcp-server::before {
+  content: '●';
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.mcp-server[data-status='connected']::before {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.mcp-server[data-status='failed']::before {
+  color: var(--vscode-errorForeground);
+}
+
+.mcp-server[data-status='needs-auth']::before {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.mcp-state,
+.mcp-error {
+  color: var(--vscode-descriptionForeground);
+}
+
+.mcp-error {
+  word-break: break-all;
+}
+
 /* 見出しの 2 行目のメーターは、行の文字の大きさに合わせる */
 .head-meta .meter {
   font-size: inherit;

@@ -306,6 +306,14 @@ export class TaskPanels implements vscode.Disposable {
         case 'more':
           await this.deps.moreActions(taskId);
           return;
+        case 'mcpServers': {
+          const servers = await this.deps.service.mcpServers(taskId);
+          this.post(taskId, {
+            type: 'mcp',
+            mcp: servers === undefined ? { running: false } : { running: true, servers },
+          });
+          return;
+        }
         case 'openPlan':
           await this.deps.openPlan(taskId, message.plan);
           return;
@@ -433,6 +441,16 @@ export class TaskPanels implements vscode.Disposable {
         },
         approvePlan: vscode.l10n.t('Approve and implement'),
         openPlan: vscode.l10n.t('Open in editor'),
+        mcpServers: vscode.l10n.t('MCP servers'),
+        mcpNotRunning: vscode.l10n.t('Shown while Claude Code is running for this task'),
+        mcpNone: vscode.l10n.t('None'),
+        mcpStatus: {
+          connected: vscode.l10n.t('Connected'),
+          failed: vscode.l10n.t('Failed'),
+          'needs-auth': vscode.l10n.t('Needs authentication'),
+          pending: vscode.l10n.t('Connecting'),
+          disabled: vscode.l10n.t('Disabled'),
+        },
         planMode: vscode.l10n.t('Plan only'),
         planModeHint: vscode.l10n.t('Claude reads and plans, and asks before it edits'),
         inputDetails: vscode.l10n.t('Input details (JSON)'),

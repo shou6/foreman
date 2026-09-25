@@ -275,6 +275,8 @@ interface FakeQuery {
   modes: string[];
   /** getSettings が返す、次に使う Effort。undefined なら getSettings を持たない（古い SDK） */
   appliedEffort?: string | null;
+  /** mcpServerStatus が返す MCP サーバーの状態 */
+  mcp: Record<string, unknown>[];
 }
 
 function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
@@ -287,6 +289,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
     flags: [],
     modes: [],
     prompts: [],
+    mcp: [],
     push: (m) => {
       queue.push(m);
       wake?.();
@@ -343,6 +346,7 @@ function fakeQuery(): { query: QueryFn; fake: FakeQuery } {
       setPermissionMode: async (mode: string) => {
         fake.modes.push(mode);
       },
+      mcpServerStatus: async () => fake.mcp,
       getSettings:
         fake.appliedEffort === undefined
           ? undefined
@@ -646,6 +650,37 @@ suite('AgentSdkRunner: M9', () => {
     assert.strictEqual(opts?.resume, 'sess-1');
     assert.strictEqual(opts?.resumeSessionAt, 'u1');
     assert.strictEqual(opts?.forkSession, true);
+  });
+});
+
+suite('AgentSdkRunner: MCP サーバーの状態', () => {
+  test('動いているセッションに MCP サーバーの状態を聞き、名前・状態・エラー・スコープだけにする', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start({
+      cwd: 'D:\\work',
+      prompt: 'hello',
+      permissionMode: 'default',
+      alwaysAllowed: [],
+      onEvent: () => {},
+      onPermissionRequest: async () => ({ behavior: 'allow' }),
+    });
+    fake.mcp = [
+      {
+        name: 'github',
+        status: 'connected',
+        serverInfo: { name: 'gh', version: '1' },
+        scope: 'user',
+        config: { type: 'http', url: 'https://example.com/mcp' },
+      },
+      { name: 'db', status: 'failed', error: 'spawn ENOENT' },
+    ];
+    assert.deepStrictEqual(await handle.mcpServers(), [
+      { name: 'github', status: 'connected', scope: 'user' },
+      { name: 'db', status: 'failed', error: 'spawn ENOENT' },
+    ]);
+    fake.push(null);
+    await handle.done;
   });
 });
 

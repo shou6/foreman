@@ -120,6 +120,22 @@ suite('TaskService: プランモード', () => {
   });
 });
 
+suite('TaskService: MCP サーバーの状態', () => {
+  test('セッションが動いている間だけ聞く。無ければ undefined', async () => {
+    const runner = new FakeAgentRunner();
+    const service = build(runner);
+    await service.create({ prompt: 'p', cwd: CWD });
+    runner.last.mcp = [{ name: 'github', status: 'connected' }];
+    assert.deepStrictEqual(await service.mcpServers('task-1'), [
+      { name: 'github', status: 'connected' },
+    ]);
+    runner.last.emit({ type: 'turn-end', ok: true });
+    runner.last.close();
+    await settle();
+    assert.strictEqual(await service.mcpServers('task-1'), undefined);
+  });
+});
+
 suite('TaskService: コンテキストの圧縮', () => {
   test('返答を待っている間だけ圧縮できる。動いている間と、セッションが無い時は断る', async () => {
     const runner = new FakeAgentRunner();

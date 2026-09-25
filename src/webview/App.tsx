@@ -354,7 +354,9 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
           attachments={state.attachments}
           context={state.context}
           model={state.activeModel ?? state.model}
+          mcp={state.mcp}
           strings={state.strings}
+          post={post}
         />
         {suggestions !== undefined && (candidates.length > 0 || suggestions.hidden > 0) && (
           <div class="suggestions">
@@ -603,11 +605,21 @@ interface ContextPanelProps {
   attachments: Attachment[];
   context: PanelState['context'];
   model: string | undefined;
+  mcp: PanelState['mcp'];
   strings: PanelStrings;
+  post: (message: ToExtension) => void;
 }
 
 /** Context パネル（FR-VIEW-9）。次に Claude へ送る文と、セッションの条件をそのまま見せる */
-function ContextPanel({ prompt, attachments, context, model, strings }: ContextPanelProps) {
+function ContextPanel({
+  prompt,
+  attachments,
+  context,
+  model,
+  mcp,
+  strings,
+  post,
+}: ContextPanelProps) {
   const preview =
     prompt.trim() === '' && attachments.length === 0
       ? undefined
@@ -621,7 +633,15 @@ function ContextPanel({ prompt, attachments, context, model, strings }: ContextP
       : strings.attachmentCount.replace('{0}', String(attachments.length)),
   ].join(' · ');
   return (
-    <details class="context-panel">
+    <details
+      class="context-panel"
+      // 開くたびに MCP サーバーの状態を聞き直す（接続は途中で変わるため）
+      onToggle={(e) => {
+        if ((e.currentTarget as HTMLDetailsElement).open) {
+          post({ type: 'mcpServers' });
+        }
+      }}
+    >
       <summary class="context-summary">
         <span class="context-label">{strings.contextPanel}</span>
         <span class="context-brief" title={brief}>
@@ -650,6 +670,31 @@ function ContextPanel({ prompt, attachments, context, model, strings }: ContextP
           <>
             <dt>{strings.alwaysAllowedList}</dt>
             <dd>{context.alwaysAllowed.join(', ')}</dd>
+          </>
+        )}
+        {mcp !== undefined && (
+          <>
+            <dt>{strings.mcpServers}</dt>
+            {!mcp.running ? (
+              <dd>{strings.mcpNotRunning}</dd>
+            ) : mcp.servers.length === 0 ? (
+              <dd>{strings.mcpNone}</dd>
+            ) : (
+              <dd class="mcp-servers">
+                {mcp.servers.map((server) => (
+                  <span
+                    class="mcp-server"
+                    data-status={server.status}
+                    key={server.name}
+                    title={server.scope}
+                  >
+                    {server.name}
+                    <span class="mcp-state">{strings.mcpStatus[server.status]}</span>
+                    {server.error !== undefined && <span class="mcp-error">{server.error}</span>}
+                  </span>
+                ))}
+              </dd>
+            )}
           </>
         )}
       </dl>

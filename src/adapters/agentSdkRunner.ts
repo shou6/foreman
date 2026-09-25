@@ -321,6 +321,13 @@ export class AgentSdkRunner implements AgentRunner {
         await query.applyFlagSettings({ effortLevel: effort ?? null });
         await reportEffort();
       },
+      mcpServers: async () =>
+        (await query.mcpServerStatus()).map((s) => ({
+          name: s.name,
+          status: s.status,
+          ...(s.error !== undefined ? { error: s.error } : {}),
+          ...(s.scope !== undefined ? { scope: s.scope } : {}),
+        })),
       close: () => prompts.end(),
       done,
     };
@@ -425,6 +432,7 @@ function failedHandle(options: StartOptions, reason: string): RunHandle {
     setModel: async () => {},
     setEffort: async () => {},
     setPermissionMode: async () => {},
+    mcpServers: async () => [],
     close: () => {},
     done: Promise.resolve(),
   };

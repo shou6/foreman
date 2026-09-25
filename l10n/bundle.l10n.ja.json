@@ -197,5 +197,11 @@
   "Claude Code commands and skills": "Claude Code のコマンドとスキル",
   "{0} more: keep typing to filter": "ほか {0} 件。文字を打つと絞り込み",
   "Open in editor": "エディターで開く",
-  "{0} (plan)": "{0}（計画）"
+  "{0} (plan)": "{0}（計画）",
+  "MCP servers": "MCP サーバー",
+  "Shown while Claude Code is running for this task": "このタスクの Claude Code が動いている間に出る",
+  "Connected": "接続済み",
+  "Needs authentication": "認証が必要",
+  "Connecting": "接続中",
+  "Disabled": "無効"
 }

@@ -1,5 +1,6 @@
 import type { EffortLevel, PermissionMode, PermissionRule } from '../domain/task';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
+import type { McpServerInfo } from '../domain/mcp';
 
 export interface StartOptions {
   cwd: string;
@@ -31,6 +32,8 @@ export interface RunHandle {
   setEffort(effort: EffortLevel | undefined): Promise<void>;
   /** 承認方式を変える（プランモードの出入りなど）。次のターンから効く */
   setPermissionMode(mode: PermissionMode): Promise<void>;
+  /** MCP サーバーの接続の状態を聞く（動いているセッションの Claude Code に） */
+  mcpServers(): Promise<McpServerInfo[]>;
   /** 入力を閉じてプロセスを終わらせる。セッションは resume で続けられる */
   close(): void;
   /** プロセスが終わった時に解決する。異常終了は reject ではなく、turn-end イベントで伝える */

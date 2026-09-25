@@ -17,6 +17,7 @@ import {
 } from '../domain/task';
 import { titleFromPrompt } from '../domain/taskTitle';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
+import type { McpServerInfo } from '../domain/mcp';
 import type { TaskStore } from '../ports/taskStore';
 
 export interface TaskServiceDeps {
@@ -412,6 +413,12 @@ export class TaskService {
       throw new Error(`Task "${id}" has no live session; send a prompt first, then compact`);
     }
     handle.compact();
+  }
+
+  /** MCP サーバーの接続の状態。セッションが動いている間だけ聞ける。無ければ undefined */
+  async mcpServers(id: string): Promise<McpServerInfo[] | undefined> {
+    await this.mustLoad(id);
+    return this.handles.get(id)?.mcpServers();
   }
 
   /** 承認方式を変える（プランモードの出入り）。保存し、動いているセッションにも伝える */

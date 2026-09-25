@@ -1,6 +1,7 @@
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../domain/events';
 import type { EffortLevel, PermissionMode } from '../domain/task';
+import type { McpServerInfo } from '../domain/mcp';
 
 /**
  * 台本で動かす Runner。Claude を起動せず、テストがイベントを外から起こす。
@@ -47,6 +48,13 @@ export class ScriptedRunHandle implements RunHandle {
 
   async setPermissionMode(mode: PermissionMode): Promise<void> {
     this.modes.push(mode);
+  }
+
+  /** mcpServers が返す状態 */
+  mcp: McpServerInfo[] = [];
+
+  async mcpServers(): Promise<McpServerInfo[]> {
+    return this.mcp;
   }
 
   close(): void {
