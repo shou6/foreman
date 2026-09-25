@@ -42,6 +42,7 @@
   "command.newDraft": "New Draft",
   "command.openBoard": "Open Task Board",
   "command.refreshUsage": "Refresh Plan Usage",
+  "command.importSession": "Import a Claude Code Session...",
   "config.toolCalls": "How tool calls are shown in the task view.",
   "config.toolCalls.collapsed": "One summary line per group; click to expand.",
   "config.toolCalls.expanded": "Show every tool call.",

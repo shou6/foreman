@@ -18,6 +18,7 @@ import {
 import { titleFromPrompt } from '../domain/taskTitle';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
 import type { McpServerInfo } from '../domain/mcp';
+import type { ImportedTurn } from '../domain/sessions';
 import type { TaskStore } from '../ports/taskStore';
 
 export interface TaskServiceDeps {
@@ -44,6 +45,17 @@ export interface CreateInput {
   attachments?: Attachment[];
   /** 使う worktree。渡すと Claude はその場所で動く */
   worktree?: Worktree;
+}
+
+/** 取り込むセッション（importSession） */
+export interface ImportInput {
+  id?: string;
+  sessionId: string;
+  title: string;
+  cwd: string;
+  model?: string;
+  effort?: EffortLevel;
+  permissionMode?: PermissionMode;
 }
 
 /** Runner から届いたイベント。表示（transcript）と差分の担当が受け取る */
@@ -354,6 +366,59 @@ export class TaskService {
       turns: t.turns.slice(0, turn + 1),
       resumeAt: target.lastMessageUuid,
     }));
+  }
+
+  /**
+   * CLI や公式拡張で始めたセッションをタスクとして取り込む。Claude は起動せず、次の指示を待つ状態にする。
+   * 過去のやり取りはターンごとに履歴へ流す（ターンを 1 つ足してから、そのターンのイベントを流す）。
+   * 次の指示で、同じセッションを再開する
+   */
+  async importSession(input: ImportInput, turns: readonly ImportedTurn[]): Promise<Task> {
+    const first = turns[0];
+    if (first === undefined) {
+      throw new Error(`Session "${input.sessionId}" has no prompts to import`);
+    }
+    if ((await this.list()).some((task) => task.sessionId === input.sessionId)) {
+      throw new Error(`Session "${input.sessionId}" is already a task`);
+    }
+    const now = this.deps.now();
+    let task: Task = {
+      ...createTask({
+        id: input.id ?? this.deps.newId(),
+        prompt: first.prompt,
+        cwd: input.cwd,
+        createdAt: now,
+        title: input.title,
+        model: input.model,
+        effort: input.effort,
+        permissionMode: input.permissionMode,
+      }),
+      status: 'waiting',
+      sessionId: input.sessionId,
+    };
+    return this.serialize(task.id, async () => {
+      for (const [index, imported] of turns.entries()) {
+        const turn: Turn = {
+          index,
+          prompt: imported.prompt,
+          attachments: [],
+          startedAt: imported.startedAt ?? now,
+          endedAt: now,
+          result: { ok: true },
+          changes: [],
+          ...(imported.lastMessageUuid !== undefined
+            ? { lastMessageUuid: imported.lastMessageUuid }
+            : {}),
+        };
+        task = await this.commit({ ...task, turns: [...task.turns, turn] });
+        for (const event of imported.events) {
+          for (const listener of this.eventListeners) {
+            listener({ taskId: task.id, turn: index, event });
+          }
+        }
+      }
+      return task;
+    });
   }
 
   /** 親の会話を引き継いだ新しいタスクを作る（FR-TASK-12）。fromTurn を指定すると、そのターンの直後から分岐する */

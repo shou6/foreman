@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { TaskService } from '../app/taskService';
+import type { SessionCatalog } from '../ports/sessionCatalog';
 import type { WorktreeService } from '../app/worktreeService';
 import { chooseWorktree } from './chooseWorktree';
 import { applyPreset } from '../domain/presets';
@@ -26,6 +27,8 @@ export interface CommandDeps {
   openBoard: () => void;
   /** 契約の利用枠を取り直す */
   refreshUsage: () => Promise<void>;
+  /** CLI などで始めた Claude Code のセッション */
+  sessions: SessionCatalog;
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
   /** エディタの選択範囲を添付の形にする（エディタの右クリック用） */
@@ -127,6 +130,67 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         });
         await panels.open(task.id);
         deps.afterCreate(task);
+      })
+    ),
+    vscode.commands.registerCommand(
+      'foreman.importSession',
+      withError(async () => {
+        const folder = vscode.workspace.workspaceFolders?.[0];
+        if (folder === undefined) {
+          void vscode.window.showErrorMessage(
+            vscode.l10n.t('Open a folder before importing a session.')
+          );
+          return;
+        }
+        // すでにタスクになっているセッションは出さない
+        const taken = new Set(
+          (await service.list()).flatMap((task) =>
+            task.sessionId !== undefined ? [task.sessionId] : []
+          )
+        );
+        const sessions = (await deps.sessions.list(folder.uri.fsPath)).filter(
+          (session) => !taken.has(session.sessionId)
+        );
+        if (sessions.length === 0) {
+          void vscode.window.showInformationMessage(
+            vscode.l10n.t('No Claude Code sessions to import in this folder.')
+          );
+          return;
+        }
+        const picked = await vscode.window.showQuickPick(
+          sessions.map((session) => ({
+            label: session.title,
+            description: new Date(session.lastModified).toLocaleString(),
+            detail: [session.gitBranch, session.firstPrompt]
+              .filter((part) => part !== undefined && part !== '')
+              .join(' · '),
+            session,
+          })),
+          {
+            title: vscode.l10n.t('Import a Claude Code Session'),
+            placeHolder: vscode.l10n.t('Sessions in this folder, newest first'),
+            matchOnDescription: true,
+            matchOnDetail: true,
+          }
+        );
+        if (picked === undefined) {
+          return;
+        }
+        const turns = await deps.sessions.history(picked.session.sessionId, folder.uri.fsPath);
+        const settings = deps.settings();
+        const task = await service.importSession(
+          {
+            id: deps.newId(),
+            sessionId: picked.session.sessionId,
+            title: picked.session.title,
+            cwd: picked.session.cwd ?? folder.uri.fsPath,
+            model: settings.defaultModel,
+            effort: settings.defaultEffort,
+            permissionMode: settings.defaultPermissionMode,
+          },
+          turns
+        );
+        await panels.open(task.id);
       })
     ),
     vscode.commands.registerCommand('foreman.openTask', (arg: unknown) => {

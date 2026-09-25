@@ -42,6 +42,7 @@
   "command.newDraft": "新しい下書き",
   "command.openBoard": "タスクボードを開く",
   "command.refreshUsage": "利用枠を取り直す",
+  "command.importSession": "Claude Code のセッションを取り込む...",
   "config.toolCalls": "タスク画面でのツールの呼び出しの見せ方。",
   "config.toolCalls.collapsed": "まとまりごとに 1 行の要約にたたむ。クリックで開く。",
   "config.toolCalls.expanded": "すべての呼び出しを開いて見せる。",

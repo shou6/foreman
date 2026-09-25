@@ -203,5 +203,9 @@
   "Connected": "接続済み",
   "Needs authentication": "認証が必要",
   "Connecting": "接続中",
-  "Disabled": "無効"
+  "Disabled": "無効",
+  "Open a folder before importing a session.": "セッションを取り込む前に、フォルダを開いてください。",
+  "No Claude Code sessions to import in this folder.": "このフォルダには、取り込める Claude Code のセッションがありません。",
+  "Import a Claude Code Session": "Claude Code のセッションを取り込む",
+  "Sessions in this folder, newest first": "このフォルダのセッション（新しい順）"
 }

@@ -42,6 +42,7 @@ import { ReviewActions } from './vscode/reviewActions';
 import { BoardPanel } from './vscode/boardPanel';
 import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 import { PlanDocuments, PLAN_SCHEME } from './vscode/planDocuments';
+import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -361,6 +362,10 @@ export async function activate(
     },
     openBoard: () => board.open(),
     refreshUsage: () => rateLimits.refresh(),
+    sessions: new AgentSdkSessionCatalog({
+      listSessions: sdk.listSessions,
+      getSessionMessages: sdk.getSessionMessages,
+    }),
     settings: readSettings,
     worktrees,
     worktreeActions,

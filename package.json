@@ -197,6 +197,11 @@
         "title": "%command.refreshUsage%",
         "category": "Foreman",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "foreman.importSession",
+        "title": "%command.importSession%",
+        "category": "Foreman"
       }
     ],
     "menus": {
@@ -257,6 +262,11 @@
           "command": "foreman.refreshUsage",
           "when": "view == foreman.tasks",
           "group": "navigation@3"
+        },
+        {
+          "command": "foreman.importSession",
+          "when": "view == foreman.tasks",
+          "group": "1_import@1"
         }
       ],
       "webview/context": [
