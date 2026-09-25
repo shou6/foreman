@@ -25,7 +25,11 @@ export class NodeFileSystem implements FileSystem {
   watch(dir: string, onChange: (file: string) => void): () => void {
     let watcher: fsSync.FSWatcher | undefined;
     try {
-      watcher = fsSync.watch(dir, { recursive: true }, (_event, filename) => {
+      // 実際のパスを監視する。Windows の短い名前（RUNNER~1 など）のままだと libuv が落ち、
+      // macOS のシンボリックリンク（/var → /private/var）のままだと、知らせるファイル名がずれる。
+      // 知らせるパスは、渡されたフォルダを基にする（呼び出し側のパスの形のまま比べられるように）
+      const root = fsSync.realpathSync.native(dir);
+      watcher = fsSync.watch(root, { recursive: true }, (_event, filename) => {
         if (filename === null || filename === undefined) {
           return;
         }
