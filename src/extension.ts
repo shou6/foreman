@@ -44,6 +44,8 @@ import { DetailsView, DETAILS_VIEW_ID } from './vscode/detailsView';
 import { PlanDocuments, PLAN_SCHEME } from './vscode/planDocuments';
 import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
 import { tasksToPrune } from './domain/retention';
+import { OrphanCleaner } from './app/orphanCleaner';
+import { FsRunRecordStore, WindowsProcessTable } from './adapters/windowsProcesses';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -71,12 +73,36 @@ export async function activate(
 
   // 統合テストでは Claude を起動せず、台本の Runner を差し込む
   const scripted = process.env.FOREMAN_SCRIPTED_RUNNER === '1' ? new ScriptedRunner() : undefined;
+  // Windows では、異常終了で残ったプロセスを次の起動で止めるため、起動した claude を記録する（NFR-5）。
+  // macOS と Linux は親が落ちると子の親が付け替わり、同じ方法では確かめられないので入れない
+  const orphans =
+    process.platform === 'win32' && scripted === undefined
+      ? new OrphanCleaner({
+          table: new WindowsProcessTable(),
+          records: new FsRunRecordStore(path.join(context.globalStorageUri.fsPath, 'processes')),
+          host: { pid: process.pid, startedAt: Date.now() - process.uptime() * 1000 },
+          log: (line) => output.appendLine(line),
+        })
+      : undefined;
+  if (orphans !== undefined) {
+    void orphans
+      .cleanup()
+      .then((stopped) => {
+        if (stopped.length > 0) {
+          output.appendLine(
+            `stopped ${stopped.length} process(es) left by a previous crash: ${stopped.join(', ')}`
+          );
+        }
+      })
+      .catch((error: unknown) => output.appendLine(`orphan cleanup failed: ${String(error)}`));
+  }
   const runner: AgentRunner =
     scripted ??
     new AgentSdkRunner({
       query: sdk.query,
       claudePath: () => locateClaude(),
       log: (line) => output.append(line),
+      processes: orphans,
     });
   // モデルの選択肢は起動後に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
   const models = new ModelService(

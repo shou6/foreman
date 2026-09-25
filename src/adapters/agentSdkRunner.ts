@@ -1,3 +1,4 @@
+import { spawn as nodeSpawn } from 'child_process';
 import type {
   CanUseTool,
   HookCallback,
@@ -7,6 +8,7 @@ import type {
   Query,
   SDKMessage,
   SDKUserMessage,
+  SpawnedProcess,
 } from '@anthropic-ai/claude-agent-sdk' with { 'resolution-mode': 'import' };
 import type { PermissionRequest, RunnerEvent } from '../domain/events';
 import { EFFORT_LEVELS } from '../domain/models';
@@ -32,6 +34,13 @@ export interface AgentSdkRunnerDeps {
   claudePath: () => string;
   /** SDK の stderr などの記録 */
   log?: (line: string) => void;
+  /**
+   * 起動した claude のプロセスの記録先（Windows の異常終了の後始末用、NFR-5）。
+   * 渡すと、プロセスの番号を知るために SDK の既定の起動の代わりに自前で起動する
+   */
+  processes?: { spawned(pid: number, startedAt: number): void; exited(pid: number): void };
+  /** 自前で起動する時の spawn。テストで差し替える */
+  spawn?: typeof nodeSpawn;
 }
 
 const EDIT_TOOLS = 'Edit|Write|MultiEdit|NotebookEdit';
@@ -242,6 +251,8 @@ export class AgentSdkRunner implements AgentRunner {
           PostToolUse: [{ matcher: EDIT_TOOLS, hooks: [fileEditHook('after')] }],
         },
         stderr: (data) => this.deps.log?.(data),
+        spawnClaudeCodeProcess:
+          this.deps.processes === undefined ? undefined : (o) => this.spawnTracked(o),
       },
     });
 
@@ -331,6 +342,35 @@ export class AgentSdkRunner implements AgentRunner {
       close: () => prompts.end(),
       done,
     };
+  }
+
+  /**
+   * SDK の既定と同じ設定で claude を起動し、プロセスの番号を記録先に知らせる。
+   * 自前で起動すると SDK は stderr を読まないので、こちらで記録に流す
+   */
+  private spawnTracked(o: {
+    command: string;
+    args: string[];
+    cwd?: string;
+    env: Record<string, string | undefined>;
+    signal: AbortSignal;
+  }): SpawnedProcess {
+    const spawn = this.deps.spawn ?? nodeSpawn;
+    const child = spawn(o.command, o.args, {
+      cwd: o.cwd,
+      env: o.env,
+      signal: o.signal,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    const pid = child.pid;
+    if (pid !== undefined) {
+      this.deps.processes?.spawned(pid, Date.now());
+      child.once('exit', () => this.deps.processes?.exited(pid));
+    }
+    child.stderr?.on('data', (data: Buffer | string) => this.deps.log?.(String(data)));
+    // stdio を pipe にしたので stdin と stdout はある。SDK の SpawnedProcess の形に合う
+    return child as unknown as SpawnedProcess;
   }
 }
 

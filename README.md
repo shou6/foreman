@@ -100,6 +100,8 @@ Foreman shows Visual Studio Code notifications and nothing else. For Windows des
 
 Foreman talks to Claude Code through the official Claude Agent SDK. Each task maps to one Claude Code session, identified by its session ID. Your Claude Code settings, permission rules and hooks apply to Foreman tasks as well. Foreman keeps task data, display history, file snapshots and pasted images in the extension's workspace storage, outside your repository. When you run a task in a worktree, Foreman creates it under `.foreman/worktrees` in the repository and adds `.foreman/` to `.git/info/exclude`, so Git ignores that folder without touching `.gitignore`.
 
+If Visual Studio Code stops abruptly while Claude is running a command, that command (a dev server or a long test run, for example) can keep running. On Windows, Foreman records the Claude Code processes it starts and, the next time it starts, stops what they left behind. It only stops processes whose parent, name and start time match its records. macOS and Linux do not have this yet.
+
 ## Pricing and terms
 
 - Foreman is not affiliated with Anthropic. It runs your own Claude Code, under your own plan or API key, and adds no service of its own.
@@ -111,7 +113,7 @@ Foreman talks to Claude Code through the official Claude Agent SDK. Each task ma
 
 - Foreman sends data to nobody but Anthropic, through your `claude` CLI. It has no telemetry and no server of its own.
 - What reaches Claude: your prompts, the attachments you pass along (selection, Problems, `git diff`, files, pasted images), and the first prompt of a task for its title.
-- What stays on your machine: tasks, history, snapshots for the diff cards, and pasted images, in the extension's workspace storage. Deleting a task removes them. The session transcript that Claude Code itself keeps in `~/.claude` stays there.
+- What stays on your machine: tasks, history, snapshots for the diff cards, and pasted images, in the extension's workspace storage. Deleting a task removes them, and snapshots of completed tasks are removed after `foreman.snapshotRetentionDays`. The session transcript that Claude Code itself keeps in `~/.claude` stays there.
 
 ## Known limitations
 

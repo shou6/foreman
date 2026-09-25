@@ -653,6 +653,76 @@ suite('AgentSdkRunner: M9', () => {
   });
 });
 
+suite('AgentSdkRunner: 起動したプロセスの記録（Windows の後始末用）', () => {
+  const base = {
+    cwd: 'D:\\work',
+    prompt: 'hello',
+    permissionMode: 'default' as const,
+    alwaysAllowed: [],
+    onEvent: () => {},
+    onPermissionRequest: async () => ({ behavior: 'allow' as const }),
+  };
+
+  test('記録先を渡すと、自前で起動してプロセスの番号を知らせ、終わったら外す。stderr は記録に流す', async () => {
+    const { query, fake } = fakeQuery();
+    const { EventEmitter } = await import('events');
+    const { PassThrough } = await import('stream');
+    const child = Object.assign(new EventEmitter(), {
+      pid: 4321,
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      killed: false,
+      exitCode: null,
+      kill: () => true,
+    });
+    const spawnCalls: unknown[][] = [];
+    const events: string[] = [];
+    const logs: string[] = [];
+    const runner = new AgentSdkRunner({
+      query,
+      claudePath: () => 'c',
+      log: (line) => logs.push(line),
+      processes: {
+        spawned: (pid) => events.push(`spawned ${pid}`),
+        exited: (pid) => events.push(`exited ${pid}`),
+      },
+      spawn: ((...args: unknown[]) => {
+        spawnCalls.push(args);
+        return child;
+      }) as never,
+    });
+    const handle = runner.start(base);
+    const spawnOption = fake.params[0]?.options?.spawnClaudeCodeProcess;
+    assert.ok(spawnOption, 'spawnClaudeCodeProcess を渡す');
+    spawnOption({
+      command: 'claude',
+      args: ['-p'],
+      cwd: 'D:\\work',
+      env: {},
+      signal: new AbortController().signal,
+    });
+    assert.strictEqual(spawnCalls[0]?.[0], 'claude');
+    assert.deepStrictEqual(events, ['spawned 4321']);
+    child.stderr.write('warn\n');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(logs.join('').includes('warn'));
+    child.emit('exit', 0, null);
+    assert.deepStrictEqual(events, ['spawned 4321', 'exited 4321']);
+    fake.push(null);
+    await handle.done;
+  });
+
+  test('記録先が無ければ、SDK の既定の起動のまま', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const handle = runner.start(base);
+    assert.strictEqual(fake.params[0]?.options?.spawnClaudeCodeProcess, undefined);
+    fake.push(null);
+    await handle.done;
+  });
+});
+
 suite('AgentSdkRunner: MCP サーバーの状態', () => {
   test('動いているセッションに MCP サーバーの状態を聞き、名前・状態・エラー・スコープだけにする', async () => {
     const { query, fake } = fakeQuery();

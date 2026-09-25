@@ -98,6 +98,8 @@ Foreman が出すのは VS Code の通知だけ。Windows のデスクトップ�
 
 Foreman は公式の Claude Agent SDK を通して Claude Code と対話する。1 つのタスクが 1 つの Claude Code のセッションに対応し、セッション ID で識別する。Claude Code の設定、許可のルール、hooks は Foreman のタスクにもそのまま効く。タスクのデータ、表示用の会話の履歴、差分カード用のファイルのスナップショット、貼り付けた画像は、拡張機能のワークスペース用ストレージに保存する（リポジトリの外）。worktree で動かす時は、リポジトリの `.foreman/worktrees` に worktree を作り、`.git/info/exclude` に `.foreman/` を足す。`.gitignore` は変えない。
 
+Claude がコマンドを実行している最中に VS Code が異常終了すると、そのコマンド（開発サーバーや長いテストなど）が動き続けることがある。Windows では、Foreman が起動した Claude Code のプロセスを記録しておき、次の起動時に、それが残したプロセスを止める。止めるのは、親・名前・起動時刻が記録と合うものだけ。macOS と Linux では、まだこの後始末をしない。
+
 ## 料金と契約
 
 - Foreman は Anthropic とは無関係の拡張機能。手元の Claude Code を、あなたの契約か API キーで動かすだけで、独自のサービスは持たない
@@ -109,7 +111,7 @@ Foreman は公式の Claude Agent SDK を通して Claude Code と対話する�
 
 - Foreman がデータを送る先は、`claude` CLI を通した Anthropic だけ。テレメトリも独自のサーバーも無い
 - Claude に届くもの：指示、渡すもの（選択範囲、問題パネル、`git diff`、ファイル、貼り付けた画像）、タスク名を付けるための最初の指示
-- 手元に残るもの：タスク、履歴、差分カード用のスナップショット、貼り付けた画像。拡張機能のワークスペース用ストレージにあり、タスクを削除すると消える。Claude Code 自身が `~/.claude` に残すセッションの記録はそのまま残る
+- 手元に残るもの：タスク、履歴、差分カード用のスナップショット、貼り付けた画像。拡張機能のワークスペース用ストレージにあり、タスクを削除すると消える。完了したタスクのスナップショットは `foreman.snapshotRetentionDays` の日数を過ぎると消える。Claude Code 自身が `~/.claude` に残すセッションの記録はそのまま残る
 
 ## 既知の制限
 
