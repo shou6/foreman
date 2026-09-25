@@ -24,6 +24,8 @@ export interface CommandDeps {
     newDraft(folder: string): Promise<import('../domain/task').Task | undefined>;
   };
   openBoard: () => void;
+  /** 契約の利用枠を取り直す */
+  refreshUsage: () => Promise<void>;
   newId: () => string;
   exportTask: (taskId: string) => Promise<void>;
   /** エディタの選択範囲を添付の形にする（エディタの右クリック用） */
@@ -244,6 +246,7 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
       })
     ),
     vscode.commands.registerCommand('foreman.openBoard', () => deps.openBoard()),
+    vscode.commands.registerCommand('foreman.refreshUsage', () => withError(deps.refreshUsage)()),
     vscode.commands.registerCommand('foreman.discardTask', (arg: unknown) => {
       const id = taskIdOf(arg);
       if (id !== undefined) {

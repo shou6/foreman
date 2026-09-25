@@ -201,3 +201,37 @@ suite('コマンドの表示名', () => {
     }
   });
 });
+
+suite('利用枠の取り直しのコマンド', () => {
+  test('foreman.refreshUsage があり、タスクの一覧の見出しに出る', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: {
+        commands: { command: string }[];
+        menus: { 'view/title': { command: string; when: string }[] };
+      };
+    };
+    assert.ok(pkg.contributes.commands.some((c) => c.command === 'foreman.refreshUsage'));
+    assert.ok(
+      pkg.contributes.menus['view/title'].some(
+        (m) => m.command === 'foreman.refreshUsage' && m.when.includes('foreman.tasks')
+      )
+    );
+  });
+});
+
+suite('設定の既定値: 契約の利用枠の表示', () => {
+  test('サイドバーとステータスバーの項目を選べ、既定はどちらもすべて', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+      contributes: {
+        configuration: {
+          properties: Record<string, { default?: unknown; items?: { enum?: unknown[] } }>;
+        };
+      };
+    };
+    for (const key of ['foreman.planUsage.sidebar', 'foreman.planUsage.statusBar']) {
+      const setting = pkg.contributes.configuration.properties[key];
+      assert.deepStrictEqual(setting?.default, ['fiveHour', 'sevenDay', 'models'], key);
+      assert.deepStrictEqual(setting?.items?.enum, ['fiveHour', 'sevenDay', 'models'], key);
+    }
+  });
+});

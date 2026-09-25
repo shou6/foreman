@@ -31,6 +31,15 @@ const STRINGS = {
     days: '{0}d ago',
   },
   today: 'Tokens today (all tasks)',
+  rateLimits: {
+    title: 'Plan usage',
+    fiveHour: '5-hour',
+    sevenDay: '7-day',
+    resetsIn: 'resets in {0}',
+    hoursMinutes: '{0}h {1}m',
+    minutes: '{0}m',
+    fetchedAt: 'as of {0}',
+  },
 };
 
 function state(overrides: Partial<SidebarState> = {}): SidebarState {
@@ -232,5 +241,57 @@ suite('webview: 左サイドバーの下端（今日のトークン）', () => {
     assert.ok(html.includes('1.3M'));
     assert.ok(!html.includes('class="context"'));
     assert.ok(!html.includes('meter-fill'));
+  });
+});
+
+suite('webview: 左サイドバーの下端（利用枠）', () => {
+  const limits = {
+    fiveHour: { utilization: 35, resetsAt: '2026-09-25T04:15:00.000Z' },
+    sevenDay: { utilization: 91, resetsAt: '2026-09-27T02:00:00.000Z' },
+    models: [{ name: 'Fable', utilization: 67, resetsAt: '2026-09-27T02:00:00.000Z' }],
+    fetchedAt: '2026-09-25T02:00:00.000Z',
+  };
+  const all = ['fiveHour' as const, 'sevenDay' as const, 'models' as const];
+
+  test('既定では 5 時間枠・7 日枠・モデル別のメーターと、回復までの時間を出す。90% 以上は high', () => {
+    const html = render(
+      <Sidebar
+        state={state({ rateLimits: limits, planUsageItems: all, now: '2026-09-25T02:00:00.000Z' })}
+        post={() => {}}
+      />
+    );
+    const footer = html.slice(html.indexOf('class="footer"'));
+    assert.ok(footer.includes('Plan usage'));
+    assert.ok(
+      /class="limit"[^>]*data-level="low"[\s\S]*?5-hour[\s\S]*?35%[\s\S]*?resets in 2h 15m/.test(
+        footer
+      )
+    );
+    assert.ok(/class="limit"[^>]*data-level="high"[\s\S]*?7-day[\s\S]*?91%/.test(footer));
+    assert.ok(/class="limit"[^>]*data-level="low"[\s\S]*?Fable[\s\S]*?67%/.test(footer));
+    assert.strictEqual(footer.split('class="limit"').length - 1, 3);
+    assert.ok(/class="meter-fill"[^>]*style="width: 35%/.test(footer));
+  });
+
+  test('設定で項目を絞れる。空なら見出しごと出さない', () => {
+    const only = render(
+      <Sidebar
+        state={state({ rateLimits: limits, planUsageItems: ['sevenDay'] })}
+        post={() => {}}
+      />
+    );
+    const footer = only.slice(only.indexOf('class="footer"'));
+    assert.strictEqual(footer.split('class="limit"').length - 1, 1);
+    assert.ok(footer.includes('7-day') && !footer.includes('5-hour') && !footer.includes('Fable'));
+    const none = render(
+      <Sidebar state={state({ rateLimits: limits, planUsageItems: [] })} post={() => {}} />
+    );
+    assert.ok(!none.includes('Plan usage'));
+  });
+
+  test('利用枠が無ければ（API キー、取得前）出さない', () => {
+    const html = render(<Sidebar state={state({ planUsageItems: all })} post={() => {}} />);
+    assert.ok(!html.includes('class="limit"'));
+    assert.ok(!html.includes('Plan usage'));
   });
 });

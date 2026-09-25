@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { EFFORT_LEVELS } from '../domain/models';
+import { normalizePlanUsageItems, type PlanUsageItem } from '../domain/rateLimits';
 import type { NotificationSetting } from '../domain/notifications';
 import type { EffortLevel, PermissionMode } from '../domain/task';
 import { DEFAULT_PRESETS, normalizePresets, type Preset } from '../domain/presets';
@@ -25,6 +26,8 @@ export interface Settings {
   titleModel: string;
   /** 指示のプリセット。/名前 で本文に置き換わる */
   presets: Preset[];
+  /** 契約の利用枠を、どこに何を出すか。空なら出さない */
+  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[] };
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -49,6 +52,10 @@ export function readSettings(): Settings {
     autoTitle: config.get<boolean>('autoTitle', true),
     titleModel: text('titleModel') ?? 'haiku',
     presets: normalizePresets(config.get<unknown[]>('presets', [...DEFAULT_PRESETS])),
+    planUsage: {
+      sidebar: normalizePlanUsageItems(config.get<unknown>('planUsage.sidebar')),
+      statusBar: normalizePlanUsageItems(config.get<unknown>('planUsage.statusBar')),
+    },
   };
 }
 

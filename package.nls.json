@@ -40,12 +40,18 @@
   "command.editDraft": "Edit Draft",
   "command.newDraft": "New Draft",
   "command.openBoard": "Open Task Board",
+  "command.refreshUsage": "Refresh Plan Usage",
   "config.toolCalls": "How tool calls are shown in the task view.",
   "config.toolCalls.collapsed": "One summary line per group; click to expand.",
   "config.toolCalls.expanded": "Show every tool call.",
   "config.autoTitle": "Ask a small model for a short task title right after a task is created. Uses one short request per task.",
   "config.titleModel": "Model used to write task titles. The alias `haiku` follows new versions of Haiku.",
   "config.presets": "Prompt presets. Type `/name` at the start of a prompt to replace it with the preset text. `{input}` is replaced with the rest of the prompt.",
+  "config.planUsage.sidebar": "Which parts of your plan usage (Pro / Max limits) the sidebar shows. Empty hides it there.",
+  "config.planUsage.statusBar": "Which parts of your plan usage (Pro / Max limits) the status bar shows. Empty hides it there.",
+  "config.planUsage.fiveHour": "5-hour limit",
+  "config.planUsage.sevenDay": "7-day limit",
+  "config.planUsage.models": "Per-model 7-day limits",
   "config.presets.name": "Name used as /name.",
   "config.presets.prompt": "Prompt text. Use {input} for the rest of what you typed."
 }

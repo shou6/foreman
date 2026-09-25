@@ -235,3 +235,57 @@ body {
 .today-text {
   font-family: var(--vscode-editor-font-family);
 }
+
+/* 下端: 契約の利用枠（5 時間枠と 7 日枠） */
+.limits {
+  margin: 8px 12px 0;
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.limits-title {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.limit {
+  margin-bottom: 6px;
+}
+
+.limit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.limit-text {
+  font-family: var(--vscode-editor-font-family);
+  white-space: nowrap;
+}
+
+.limit-reset {
+  font-family: var(--vscode-font-family);
+}
+
+.meter-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--vscode-widget-border, var(--vscode-panel-border));
+  overflow: hidden;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--vscode-progressBar-background, var(--vscode-textLink-foreground));
+}
+
+.limit[data-level='mid'] .meter-fill {
+  background: var(--vscode-editorWarning-foreground, #e5a50a);
+}
+
+.limit[data-level='high'] .meter-fill {
+  background: var(--vscode-editorError-foreground, #f14c4c);
+}

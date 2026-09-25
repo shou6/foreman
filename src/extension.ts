@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { AgentSdkModelCatalog } from './adapters/agentSdkModelCatalog';
 import { AgentSdkRunner } from './adapters/agentSdkRunner';
+import { AgentSdkUsage } from './adapters/agentSdkUsage';
 import { ScriptedRunner } from './adapters/scriptedRunner';
 import type { AgentRunner } from './ports/agentRunner';
 import { resolveClaudePath } from './adapters/claudePath';
@@ -18,6 +19,7 @@ import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
 import { ModelService } from './app/modelService';
+import { RateLimitService } from './app/rateLimitService';
 import { TaskService } from './app/taskService';
 import { Transcripts } from './app/transcripts';
 import { WorktreeService } from './app/worktreeService';
@@ -83,6 +85,26 @@ export async function activate(
       )
   );
   void models.load();
+  // 契約の利用枠。起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
+  const rateLimits = new RateLimitService(
+    scripted !== undefined
+      ? { usage: async () => undefined }
+      : new AgentSdkUsage({
+          query: sdk.query,
+          claudePath: () => locateClaude(),
+          cwd: () => os.tmpdir(),
+        }),
+    {
+      now: () => new Date().toISOString(),
+      onError: (error) =>
+        output.appendLine(
+          `plan usage failed: ${error instanceof Error ? error.message : String(error)}`
+        ),
+    }
+  );
+  void rateLimits.refresh();
+  const usageTimer = setInterval(() => void rateLimits.refresh(), 10 * 60_000);
+  context.subscriptions.push({ dispose: () => clearInterval(usageTimer) });
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -105,6 +127,7 @@ export async function activate(
         `${stamp()} [${taskId}] session ${event.sessionId} model=${event.model} turn=${turn}`
       );
     } else if (event.type === 'turn-end') {
+      void rateLimits.refreshAfterTurn();
       const usage =
         event.ok && event.usage !== undefined
           ? ` in=${event.usage.inputTokens} cacheRead=${event.usage.cacheReadInputTokens} cacheWrite=${event.usage.cacheCreationInputTokens} out=${event.usage.outputTokens}`
@@ -239,6 +262,7 @@ export async function activate(
     extensionUri: context.extensionUri,
     service,
     approvals,
+    rateLimits,
     activeTaskId: () => panels.activeTaskId,
     onDidChangeActive: (listener) => panels.onDidChangeActive(listener),
     openTask: (taskId) => panels.open(taskId),
@@ -251,13 +275,25 @@ export async function activate(
     },
   });
 
+  const statusBar = new StatusBar(
+    service,
+    {
+      id: () => panels.activeTaskId,
+      onDidChange: (listener) => panels.onDidChangeActive(listener),
+    },
+    rateLimits
+  );
   context.subscriptions.push(
     output,
     panels,
     board,
-    new StatusBar(service, {
-      id: () => panels.activeTaskId,
-      onDidChange: (listener) => panels.onDidChangeActive(listener),
+    statusBar,
+    // 利用枠の表示の設定が変わったら描き直す
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('foreman.planUsage')) {
+        void statusBar.refresh();
+        void sidebar.refresh();
+      }
     }),
     new Notifications(
       service,
@@ -300,6 +336,7 @@ export async function activate(
       newDraft: (folder) => review.newDraft(folder),
     },
     openBoard: () => board.open(),
+    refreshUsage: () => rateLimits.refresh(),
     settings: readSettings,
     worktrees,
     worktreeActions,

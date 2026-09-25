@@ -191,6 +191,12 @@
         "title": "%command.openBoard%",
         "category": "Foreman",
         "icon": "$(layout)"
+      },
+      {
+        "command": "foreman.refreshUsage",
+        "title": "%command.refreshUsage%",
+        "category": "Foreman",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -246,6 +252,11 @@
           "command": "foreman.openBoard",
           "when": "view == foreman.tasks",
           "group": "navigation@2"
+        },
+        {
+          "command": "foreman.refreshUsage",
+          "when": "view == foreman.tasks",
+          "group": "navigation@3"
         }
       ],
       "webview/context": [
@@ -427,6 +438,52 @@
           "type": "string",
           "default": "haiku",
           "description": "%config.titleModel%"
+        },
+        "foreman.planUsage.sidebar": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "fiveHour",
+              "sevenDay",
+              "models"
+            ],
+            "enumDescriptions": [
+              "%config.planUsage.fiveHour%",
+              "%config.planUsage.sevenDay%",
+              "%config.planUsage.models%"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "fiveHour",
+            "sevenDay",
+            "models"
+          ],
+          "markdownDescription": "%config.planUsage.sidebar%"
+        },
+        "foreman.planUsage.statusBar": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "fiveHour",
+              "sevenDay",
+              "models"
+            ],
+            "enumDescriptions": [
+              "%config.planUsage.fiveHour%",
+              "%config.planUsage.sevenDay%",
+              "%config.planUsage.models%"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "fiveHour",
+            "sevenDay",
+            "models"
+          ],
+          "markdownDescription": "%config.planUsage.statusBar%"
         },
         "foreman.presets": {
           "type": "array",

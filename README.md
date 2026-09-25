@@ -32,6 +32,7 @@ To prepare tasks without starting them, open the task board and click "New draft
 - **Notifications and status bar**: get a notification when a task needs you, has changes to review, or failed. The status bar counts the running tasks and the tasks that wait for you, shows the model and context usage of the task you are looking at, and opens the task list on click.
 - **Prompt presets and Context panel**: type `/fix`, `/test` or `/review` at the start of a prompt to expand a preset (edit them in `foreman.presets`). The "What Claude will receive" line above the input shows the directory, the permission mode and the number of attachments. Open it to see the exact text Foreman will send and the rules you always allowed.
 - **Token usage**: the task view and the status bar show how much of the context window the task uses. Each turn shows its input and output tokens, and the sidebar shows today's total for all tasks.
+- **Plan usage**: with a Pro or Max plan, the sidebar and the status bar show how much of your 5-hour, 7-day and per-model limits you have used, and the sidebar adds when they reset. Choose what each place shows with `foreman.planUsage.sidebar` and `foreman.planUsage.statusBar`. Foreman reads the figures from your Claude Code at startup, after a turn ends, every 10 minutes, and when you click the refresh icon in the sidebar. Reading them uses none of your limits.
 - **Persistence**: tasks, history and diff cards survive a restart. An interrupted task keeps its session, so your next prompt continues it.
 - **Git worktrees**: run a task in its own worktree and branch. For a worktree task, the "Finish" section in the secondary side bar walks you through approving the changes, reviewing the whole diff and merging into the branch you started from. You can also discard the worktree there. Worktrees live in `.foreman/worktrees` inside the repository.
 - **Checkpoints and forks**: every finished turn is a checkpoint. Hover over the turn divider to rewind the files, or the files and the conversation, to that point, or to fork a new task from it. A worktree task forks from its own branch, and merging the fork brings its changes back into that branch.
@@ -76,6 +77,7 @@ Foreman never reads or stores your credentials. It launches your local `claude` 
 | `foreman.autoTitle` / `foreman.titleModel` | Let a small model name new tasks from the first prompt. The default model is `haiku`. |
 | `foreman.toolCalls` | `collapsed` (the default) or `expanded`: how tool calls appear in the task view. |
 | `foreman.taskViewWidth` | Maximum width of the task view content, in `em`. Default `72`; `0` uses the full width. |
+| `foreman.planUsage.sidebar` / `foreman.planUsage.statusBar` | Which parts of the plan usage each place shows: `fiveHour`, `sevenDay`, `models`. Default: all three. An empty list hides it there. |
 | `foreman.presets` | Prompt presets used as `/name`. `{input}` is replaced with the rest of the prompt. |
 
 ## Models
@@ -111,7 +113,7 @@ Foreman talks to Claude Code through the official Claude Agent SDK. Each task ma
 
 - Changes made by shell commands (not by the edit tools) show up without their previous content, so you cannot revert them from the diff card.
 - A turn that was running when Visual Studio Code closed is not part of the Claude Code conversation. Foreman repeats that instruction when you continue the task.
-- Your remaining subscription quota is not shown yet, because the Agent SDK API for it remains experimental.
+- The plan usage comes from an experimental Agent SDK API. If a Claude Code update changes it, the meters disappear and everything else keeps working. It is not available with an API key.
 
 ## License
 

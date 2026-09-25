@@ -40,12 +40,18 @@
   "command.editDraft": "下書きを編集",
   "command.newDraft": "新しい下書き",
   "command.openBoard": "タスクボードを開く",
+  "command.refreshUsage": "利用枠を取り直す",
   "config.toolCalls": "タスク画面でのツールの呼び出しの見せ方。",
   "config.toolCalls.collapsed": "まとまりごとに 1 行の要約にたたむ。クリックで開く。",
   "config.toolCalls.expanded": "すべての呼び出しを開いて見せる。",
   "config.autoTitle": "タスクの作成直後に、軽いモデルで短いタイトルを付ける。タスクごとに短い問い合わせを 1 回行う。",
   "config.titleModel": "タイトル付けに使うモデル。別名の `haiku` は Haiku の新しい版に追従する。",
   "config.presets": "指示のプリセット。指示の先頭に `/名前` と書くと本文に置き換わる。`{input}` には名前の後ろに書いた文が入る。",
+  "config.planUsage.sidebar": "契約の利用枠（Pro / Max の枠）のうち、サイドバーに出す項目。空なら出さない。",
+  "config.planUsage.statusBar": "契約の利用枠（Pro / Max の枠）のうち、ステータスバーに出す項目。空なら出さない。",
+  "config.planUsage.fiveHour": "5 時間枠",
+  "config.planUsage.sevenDay": "7 日枠",
+  "config.planUsage.models": "モデル別の 7 日枠",
   "config.presets.name": "/名前 として使う名前。",
   "config.presets.prompt": "本文。{input} に、後ろに書いた文が入る。"
 }
