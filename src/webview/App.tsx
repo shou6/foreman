@@ -10,6 +10,7 @@ import {
 } from '../domain/models';
 import type { EffortLevel } from '../domain/task';
 import { applyPreset, matchPresets } from '../domain/presets';
+import { inlineCode, promptBlocks } from '../domain/promptBlocks';
 import { formatTokens, type ContextUsage } from '../domain/usage';
 import {
   answersToInput,
@@ -638,7 +639,7 @@ function BlockView({
 }) {
   switch (block.kind) {
     case 'prompt':
-      return <div class="item prompt">{block.text}</div>;
+      return <PromptView text={block.text} />;
     case 'text':
       return (
         <div
@@ -1200,6 +1201,35 @@ function QuestionCard({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * ユーザーの指示の吹き出し。引用・コードブロック・インラインコードだけを描く。
+ * HTML は組み立てず Preact の要素にするので、貼り付けた文字列がそのまま出る
+ */
+function PromptView({ text }: { text: string }) {
+  const inline = (line: string) =>
+    inlineCode(line).map((part, i) => (part.code ? <code key={i}>{part.text}</code> : part.text));
+  return (
+    <div class="item prompt">
+      {promptBlocks(text).map((block, i) => {
+        switch (block.kind) {
+          case 'quote':
+            return <blockquote key={i}>{inline(block.text)}</blockquote>;
+          case 'code':
+            return (
+              <pre key={i}>
+                <code data-lang={block.lang}>{block.text}</code>
+              </pre>
+            );
+          case 'text':
+            return <span key={i}>{inline(block.text)}</span>;
+          default:
+            return null;
+        }
+      })}
+    </div>
   );
 }
 

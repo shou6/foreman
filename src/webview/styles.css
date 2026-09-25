@@ -191,6 +191,40 @@ body {
   border: 1px solid var(--vscode-panel-border);
 }
 
+/* 指示の中の引用・コードブロック・インラインコード。出力の Markdown と同じ見た目 */
+.item.prompt blockquote {
+  margin: 0.3em 0;
+  padding: 0.2em 0.8em;
+  border-left: 3px solid var(--vscode-textBlockQuote-border);
+  background: var(--vscode-editor-background);
+  white-space: pre-wrap;
+}
+
+.item.prompt pre {
+  margin: 0.3em 0;
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  overflow: auto;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+  white-space: pre;
+}
+
+.item.prompt code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+
+.item.prompt pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
 /* 連続するツールの呼び出し。1 行に並べ、開くと出力が見える */
 .item.tool-group {
   display: flex;
