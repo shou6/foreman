@@ -62,9 +62,63 @@ export function modelsFromSdk(infos: readonly SdkModelInfo[]): ModelList {
   }
   const found = infos.find((info) => info.value === 'default');
   return {
-    models: infos.filter((info) => info.value !== 'default').map(optionOf),
+    models: latestOnly(infos.filter((info) => info.value !== 'default')).map(optionOf),
     defaultModel: found === undefined ? undefined : optionOf(found),
   };
+}
+
+/** 系統と版（claude-opus-4-8 なら opus と [4, 8]）。日付の版と [1m] などの続きは除く。分からなければ undefined */
+function familyOf(info: SdkModelInfo): { family: string; version: number[] } | undefined {
+  const match = /^claude-([a-z]+)-(\d+(?:-\d+)*)/.exec(info.resolvedModel ?? info.value);
+  if (match === null) {
+    return undefined;
+  }
+  const version = (match[2] ?? '')
+    .split('-')
+    .filter((part) => part.length < 8)
+    .map(Number);
+  return { family: match[1] ?? '', version };
+}
+
+function compareVersion(a: readonly number[], b: readonly number[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const diff = (a[i] ?? 0) - (b[i] ?? 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return 0;
+}
+
+/**
+ * 系統（Opus・Fable・Sonnet・Haiku）ごとに、いちばん新しい版だけを残す。同じ版が複数あれば先のものだけ。
+ * Claude Code は古い版も返すが、選択肢が増えすぎるため。系統の分からないモデルはそのまま残す
+ */
+function latestOnly(infos: readonly SdkModelInfo[]): SdkModelInfo[] {
+  const newest = new Map<string, number[]>();
+  for (const info of infos) {
+    const parsed = familyOf(info);
+    const current = parsed === undefined ? undefined : newest.get(parsed.family);
+    if (
+      parsed !== undefined &&
+      (current === undefined || compareVersion(parsed.version, current) > 0)
+    ) {
+      newest.set(parsed.family, parsed.version);
+    }
+  }
+  const taken = new Set<string>();
+  return infos.filter((info) => {
+    const parsed = familyOf(info);
+    if (parsed === undefined) {
+      return true;
+    }
+    const latest = newest.get(parsed.family) ?? [];
+    if (compareVersion(parsed.version, latest) !== 0 || taken.has(parsed.family)) {
+      return false;
+    }
+    taken.add(parsed.family);
+    return true;
+  });
 }
 
 /**

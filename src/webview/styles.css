@@ -1539,45 +1539,79 @@ body.dragging .drop-hint {
   white-space: nowrap;
 }
 
-/* MCP サーバーの状態。名前の前の点の色で状態を見せる */
+/*
+ * MCP サーバーの状態。状態ごとの件数のボタンと、押した状態のサーバーの名前のチップ。
+ * 状態はボタンの前の点の色で見せる。チップの並びは高さに上限を付けてスクロールする
+ */
 .context-facts dd.mcp-servers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2em 1em;
   white-space: normal;
 }
 
-.mcp-server {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4em;
+.mcp-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
 }
 
-.mcp-server::before {
+.mcp-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.6em;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mcp-count:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.mcp-count[aria-pressed='true'] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.mcp-count::before {
   content: '●';
+  margin-right: 0.35em;
   font-size: 0.8em;
   color: var(--vscode-descriptionForeground);
 }
 
-.mcp-server[data-status='connected']::before {
+.mcp-count[data-status='connected']::before {
   color: var(--vscode-testing-iconPassed, #73c991);
 }
 
-.mcp-server[data-status='failed']::before {
+.mcp-count[data-status='failed']::before {
   color: var(--vscode-errorForeground);
 }
 
-.mcp-server[data-status='needs-auth']::before {
+.mcp-count[data-status='needs-auth']::before {
   color: var(--vscode-editorWarning-foreground);
 }
 
-.mcp-state,
-.mcp-error {
-  color: var(--vscode-descriptionForeground);
+.mcp-chips-scroll {
+  max-height: 7.5em;
+  margin-top: 0.35em;
 }
 
-.mcp-error {
-  word-break: break-all;
+.mcp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+.mcp-chip {
+  padding: 0 0.5em;
+  border-radius: 3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 0.9em;
+  white-space: nowrap;
 }
 
 /* 見出しの 2 行目のメーターは、行の文字の大きさに合わせる */

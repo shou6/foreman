@@ -28,6 +28,7 @@ import type { TranscriptItem } from '../domain/transcript';
 import { Icon, STATUS_ICONS } from './icons';
 import { renderMarkdown } from './markdown';
 import { Scroll } from './Scroll';
+import { McpServers } from './McpServers';
 import { hunksOf } from '../domain/diff';
 import {
   diffKey,
@@ -681,18 +682,7 @@ function ContextPanel({
               <dd>{strings.mcpNone}</dd>
             ) : (
               <dd class="mcp-servers">
-                {mcp.servers.map((server) => (
-                  <span
-                    class="mcp-server"
-                    data-status={server.status}
-                    key={server.name}
-                    title={server.scope}
-                  >
-                    {server.name}
-                    <span class="mcp-state">{strings.mcpStatus[server.status]}</span>
-                    {server.error !== undefined && <span class="mcp-error">{server.error}</span>}
-                  </span>
-                ))}
+                <McpServers servers={mcp.servers} strings={strings} />
               </dd>
             )}
           </>
