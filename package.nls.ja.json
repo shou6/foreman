@@ -30,6 +30,8 @@
   "command.mergeTask": "worktree を元のブランチへマージ",
   "command.discardTask": "worktree を破棄",
   "config.useWorktree": "Git リポジトリで新しいタスクを作る時、「worktree で動かす」を先に選んでおく。毎回聞くのは変わらない。",
+  "config.worktreeCopyFiles": "新しいタスクの worktree へ、リポジトリの本体からコピーするファイルの glob（リポジトリのルートからの相対。例：`.env`、`config/*.local.json`）。Git が管理しないファイルに使う。worktree に既にあるファイルは上書きしない。",
+  "config.worktreeSetupCommand": "新しいタスクの worktree で、タスクを始める前に実行するシェルのコマンド（例：`npm install`）。失敗しても警告を出してタスクを始める。出力は Foreman の出力パネルに出る。",
   "config.worktreeBranchPrefix": "タスクの worktree のブランチ名に付ける接頭辞（例：`foreman/`）。",
   "command.exportTask": "タスクを Markdown に書き出す",
   "command.attachSelectionToTask": "選択範囲をタスクに添付",

@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `foreman.planUsage.showInStatusBar` turns off the plan usage in the status bar. When it is off, Foreman does not read the plan usage at startup and waits until you open a Foreman view
+- A new task worktree can be prepared before the task starts. `foreman.worktreeCopyFiles` copies files that Git does not track, such as `.env`, from the repository, and `foreman.worktreeSetupCommand` runs a command such as `npm install` in the worktree. If the setup fails, Foreman shows a warning and starts the task anyway
 
 ### Fixed
 

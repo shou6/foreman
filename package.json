@@ -447,6 +447,19 @@
           "default": "foreman/",
           "description": "%config.worktreeBranchPrefix%"
         },
+        "foreman.worktreeCopyFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "%config.worktreeCopyFiles%"
+        },
+        "foreman.worktreeSetupCommand": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.worktreeSetupCommand%"
+        },
         "foreman.toolCalls": {
           "type": "string",
           "enum": [

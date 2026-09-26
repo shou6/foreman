@@ -30,6 +30,8 @@
   "command.mergeTask": "Merge Worktree into Base Branch",
   "command.discardTask": "Discard Worktree",
   "config.useWorktree": "Preselect \"in a worktree\" when Foreman asks where to run a new task in a Git repository. Foreman still asks every time.",
+  "config.worktreeCopyFiles": "Glob patterns, relative to the repository root, of files to copy from the repository into a new task worktree, such as `.env` or `config/*.local.json`. Use it for files that Git does not track. Files that the worktree already has are not overwritten.",
+  "config.worktreeSetupCommand": "Shell command that Foreman runs in a new task worktree before the task starts, such as `npm install`. If it fails, Foreman shows a warning and starts the task anyway. The output goes to the Foreman output panel.",
   "config.worktreeBranchPrefix": "Prefix for the branch of each task worktree, for example `foreman/`.",
   "command.exportTask": "Export Task as Markdown",
   "command.attachSelectionToTask": "Attach Selection to Task",

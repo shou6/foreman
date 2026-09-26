@@ -26,3 +26,22 @@ suite('有効化のタイミング', () => {
     assert.strictEqual(setting.default, true);
   });
 });
+
+suite('worktree の準備の設定', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+    contributes: {
+      configuration: { properties: Record<string, { type: string; default: unknown }> };
+    };
+  };
+  const properties = pkg.contributes.configuration.properties;
+
+  test('コピーするファイルの glob の一覧があり、既定は空', () => {
+    assert.strictEqual(properties['foreman.worktreeCopyFiles']?.type, 'array');
+    assert.deepStrictEqual(properties['foreman.worktreeCopyFiles']?.default, []);
+  });
+
+  test('準備のコマンドがあり、既定は空', () => {
+    assert.strictEqual(properties['foreman.worktreeSetupCommand']?.type, 'string');
+    assert.strictEqual(properties['foreman.worktreeSetupCommand']?.default, '');
+  });
+});

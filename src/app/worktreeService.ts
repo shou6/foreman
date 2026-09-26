@@ -17,6 +17,26 @@ export interface WorktreeServiceDeps {
   /** dir の直下のフォルダ名。登録の無い worktree のフォルダを見つけるのに使う */
   listDirs?: (dir: string) => Promise<string[]>;
   removeDir?: (dir: string) => Promise<void>;
+  /** worktree を作った直後の準備。無ければ何もしない */
+  setup?: WorktreeSetup;
+}
+
+/**
+ * worktree を作った直後の準備（要件定義書 5.1）。Git が管理しないファイル（.env など）を本体からコピーし、
+ * 準備のコマンド（npm install など）を走らせる。失敗は onError で知らせ、worktree の作成は止めない
+ */
+export interface WorktreeSetup {
+  /** コピーするファイルの glob（リポジトリのルートからの相対）。設定 */
+  copyPatterns: () => readonly string[];
+  /** worktree で走らせるコマンド。空なら走らせない。設定 */
+  command: () => string;
+  /** root の下で patterns に合うファイル（root からの相対） */
+  findFiles: (root: string, patterns: readonly string[]) => Promise<string[]>;
+  exists: (path: string) => Promise<boolean>;
+  copyFile: (from: string, to: string) => Promise<void>;
+  /** cwd でコマンドを走らせる。失敗なら例外 */
+  run: (cwd: string, command: string) => Promise<void>;
+  onError: (error: unknown) => void;
 }
 
 /** タスクごとの git worktree の作成・マージ・破棄（FR-TASK-10、要件定義書 5.1） */
@@ -50,7 +70,43 @@ export class WorktreeService {
     };
     await this.deps.git.ensureExcluded(repo, WORKTREE_DIR.split('/')[0] + '/');
     await this.deps.git.addWorktree(repo, worktree.path, worktree.branch, base);
+    await this.prepare(repo, worktree.path);
     return worktree;
+  }
+
+  /** 本体の無視ファイルをコピーしてから、準備のコマンドを走らせる。worktree に既にあるファイルは上書きしない */
+  private async prepare(repo: string, dir: string): Promise<void> {
+    const setup = this.deps.setup;
+    if (setup === undefined) {
+      return;
+    }
+    const patterns = setup.copyPatterns().filter((p) => p.trim() !== '');
+    if (patterns.length > 0) {
+      let files: string[] = [];
+      try {
+        files = await setup.findFiles(repo, patterns);
+      } catch (error) {
+        setup.onError(error);
+      }
+      for (const file of files) {
+        const to = dir + this.deps.sep + file;
+        try {
+          if (!(await setup.exists(to))) {
+            await setup.copyFile(repo + this.deps.sep + file, to);
+          }
+        } catch (error) {
+          setup.onError(error);
+        }
+      }
+    }
+    const command = setup.command().trim();
+    if (command !== '') {
+      try {
+        await setup.run(dir, command);
+      } catch (error) {
+        setup.onError(error);
+      }
+    }
   }
 
   /** 作業中の変更をブランチにコミットする（切り出しで親の状態を引き継ぐ時に使う） */

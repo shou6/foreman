@@ -46,6 +46,7 @@ import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
 import { tasksToPrune } from './domain/retention';
 import { OrphanCleaner } from './app/orphanCleaner';
 import { FsRunRecordStore, WindowsProcessTable } from './adapters/windowsProcesses';
+import { copyFile, findFiles, runShell } from './adapters/worktreeSetup';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -60,6 +61,7 @@ export interface TestApi {
   locateClaude: () => string;
   /** Claude Code にモデルとコマンドの一覧、利用枠を聞いた回数（台本の時はフェイクが数える） */
   requests: { models: number; commands: number; usage: number };
+  worktrees: WorktreeService;
 }
 
 export async function activate(
@@ -253,6 +255,50 @@ export async function activate(
       }
     },
     removeDir: (dir) => fs.promises.rm(dir, { recursive: true, force: true }),
+    // 作った直後に、無視ファイルのコピーと準備のコマンド（npm install など）を行う。失敗しても続ける
+    setup: {
+      copyPatterns: () => readSettings().worktreeCopyFiles,
+      command: () => readSettings().worktreeSetupCommand,
+      findFiles,
+      exists: (file) =>
+        fs.promises.access(file).then(
+          () => true,
+          () => false
+        ),
+      copyFile,
+      run: async (cwd, command) =>
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: vscode.l10n.t('Preparing the worktree: {0}', command),
+            cancellable: true,
+          },
+          (_progress, token) => {
+            const controller = new AbortController();
+            token.onCancellationRequested(() => controller.abort());
+            output.appendLine(`${new Date().toISOString()} worktree setup in ${cwd}: ${command}`);
+            return runShell(cwd, command, {
+              log: (text) => output.append(text),
+              signal: controller.signal,
+            });
+          }
+        ),
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        output.appendLine(`worktree setup failed: ${message}`);
+        const show = vscode.l10n.t('Show Output');
+        void vscode.window
+          .showWarningMessage(
+            vscode.l10n.t('Could not prepare the worktree. The task starts anyway. {0}', message),
+            show
+          )
+          .then((choice) => {
+            if (choice === show) {
+              output.show();
+            }
+          });
+      },
+    },
   });
   const worktreeActions = new WorktreeActions(service, worktrees);
   // panels と autoTitle は後で作るので、参照は遅延で解く
@@ -484,6 +530,7 @@ export async function activate(
           plans,
           locateClaude,
           requests,
+          worktrees,
         },
       };
 }

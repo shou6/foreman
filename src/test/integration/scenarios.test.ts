@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -374,5 +375,41 @@ suite('Scenario: 監視で拾う変更（VS Code のファイル監視）', func
     assert.strictEqual(change?.source, 'watcher');
     // 監視で拾った変更は、変更前が分からない（新規作成かどうかも判別できない）
     assert.strictEqual(change?.before, undefined);
+  });
+});
+
+suite('Scenario: worktree の準備', function () {
+  this.timeout(60_000);
+
+  test('設定したファイルを本体からコピーし、準備のコマンドを worktree で走らせる', async () => {
+    const t = await api();
+    const repo = workDir();
+    const git = (...args: string[]): void => {
+      execFileSync('git', args, { cwd: repo, stdio: 'ignore' });
+    };
+    git('init', '-b', 'main');
+    git('config', 'user.email', 'test@example.com');
+    git('config', 'user.name', 'test');
+    fs.writeFileSync(path.join(repo, '.gitignore'), '.env\n');
+    fs.writeFileSync(path.join(repo, '.env'), 'SECRET=1\n');
+    git('add', '.gitignore');
+    git('commit', '-m', 'init');
+
+    const config = vscode.workspace.getConfiguration('foreman');
+    await config.update('worktreeCopyFiles', ['.env'], vscode.ConfigurationTarget.Global);
+    await config.update(
+      'worktreeSetupCommand',
+      `node -e "require('fs').writeFileSync('setup-ran.txt', 'ok')"`,
+      vscode.ConfigurationTarget.Global
+    );
+    try {
+      const wt = await t.worktrees.create(repo, 'setup', 'abcdef12-0000');
+      assert.strictEqual(fs.readFileSync(path.join(wt.path, '.env'), 'utf8'), 'SECRET=1\n');
+      assert.strictEqual(fs.readFileSync(path.join(wt.path, 'setup-ran.txt'), 'utf8'), 'ok');
+      await t.worktrees.discard(wt);
+    } finally {
+      await config.update('worktreeCopyFiles', undefined, vscode.ConfigurationTarget.Global);
+      await config.update('worktreeSetupCommand', undefined, vscode.ConfigurationTarget.Global);
+    }
   });
 });
