@@ -1,14 +1,23 @@
 import * as vscode from 'vscode';
 import type { RateLimitService } from '../app/rateLimitService';
 import type { TaskService } from '../app/taskService';
-import { planUsageEntries } from '../domain/rateLimits';
-import { statusCounts } from '../domain/statusCounts';
+import { statusBarView, type StatusBarItemView } from '../domain/statusBarView';
 import { readSettings } from './settings';
-import { contextUsage, formatTokens } from '../domain/usage';
 
-/** ステータスバーに、実行中と「あなたの番」の件数を出す。クリックでタスクの一覧を開く */
+/**
+ * ステータスバーの左側での並びの優先度。VS Code の「問題」（エラーと警告の数）は 50 で、
+ * 同じ値だと並びが id のハッシュで決まり、2 つの項目の間に「問題」が入ることがあった。
+ * 2 つとも 50 より大きくし、「問題」の左に並べて出す
+ */
+const PRIORITY = 51;
+
+/**
+ * ステータスバーに、Foreman の項目（今見ているタスクと実行中の件数）と、Claude の契約の利用枠の項目を出す。
+ * どちらもクリックでタスクの一覧を開く（サイドバーに利用枠の詳細がある）
+ */
 export class StatusBar implements vscode.Disposable {
   private readonly item: vscode.StatusBarItem;
+  private readonly claudeItem: vscode.StatusBarItem;
   private readonly subscriptions: (() => void)[] = [];
 
   constructor(
@@ -23,9 +32,22 @@ export class StatusBar implements vscode.Disposable {
     /** 契約の利用枠。無ければ出さない */
     private readonly rateLimits?: RateLimitService
   ) {
-    this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
+    // id を分ける。省略すると両方が拡張機能の ID になり、右クリックのメニューで 1 つにまとまって一緒に隠れる
+    this.item = vscode.window.createStatusBarItem(
+      'foreman.tasks',
+      vscode.StatusBarAlignment.Left,
+      PRIORITY + 1
+    );
     this.item.name = 'Foreman';
     this.item.command = 'workbench.view.extension.foreman';
+    // Foreman の項目のすぐ右に並べる
+    this.claudeItem = vscode.window.createStatusBarItem(
+      'foreman.planUsage',
+      vscode.StatusBarAlignment.Left,
+      PRIORITY
+    );
+    this.claudeItem.name = vscode.l10n.t('Claude Plan Usage');
+    this.claudeItem.command = 'workbench.view.extension.foreman';
     const activeSubscription = active.onDidChange(() => void this.refresh());
     const limitsSubscription = rateLimits?.onDidChange(() => void this.refresh());
     this.subscriptions.push(
@@ -38,67 +60,19 @@ export class StatusBar implements vscode.Disposable {
   }
 
   async refresh(): Promise<void> {
-    const tasks = await this.service.list();
-    const { running, yourTurn } = statusCounts(tasks);
-    const active = tasks.find((t) => t.id === this.active.id());
     const planUsage = readSettings().planUsage;
-    // 出さない設定の時は、取得済みの値があっても出さない（ツールチップにも）
-    const limits = planUsage.showInStatusBar ? this.rateLimits?.current() : undefined;
-    // 契約の利用枠は、設定で選んだ項目を「5h 22% · 7d 45% · Fable 73%」のように短く出す
-    const entries = limits === undefined ? [] : planUsageEntries(limits, planUsage.statusBar);
-    if (running === 0 && yourTurn === 0 && active === undefined && entries.length === 0) {
-      this.item.hide();
-      return;
-    }
-    const parts: string[] = [];
-    if (active !== undefined) {
-      const model = active.activeModel ?? active.model;
-      const usage = contextUsage(active);
-      const context =
-        usage === undefined
-          ? undefined
-          : usage.ratio === undefined
-            ? formatTokens(usage.used)
-            : `${Math.round(usage.ratio * 100)}%`;
-      const detail = [model, context].filter((v) => v !== undefined).join(' ');
-      if (detail !== '') {
-        parts.push(`$(tasklist) ${detail}`);
-      }
-    }
-    if (running > 0) {
-      parts.push(vscode.l10n.t('$(sync~spin) {0} running', String(running)));
-    }
-    if (yourTurn > 0) {
-      parts.push(vscode.l10n.t('$(bell) {0} your turn', String(yourTurn)));
-    }
-    if (entries.length > 0) {
-      const short = entries.map((e) =>
-        e.kind === 'fiveHour'
-          ? vscode.l10n.t('5h {0}%', String(e.utilization))
-          : e.kind === 'sevenDay'
-            ? vscode.l10n.t('7d {0}%', String(e.utilization))
-            : `${e.name ?? ''} ${e.utilization}%`
-      );
-      parts.push(`$(pulse) ${short.join(' · ')}`);
-    }
-    this.item.text = 'Foreman: ' + parts.join(' · ');
-    const lines = [
-      vscode.l10n.t('Foreman: {0} running, {1} waiting for you', String(running), String(yourTurn)),
-    ];
-    if (limits !== undefined) {
-      lines.push(
-        vscode.l10n.t(
-          'Plan usage: 5-hour {0}%, 7-day {1}%',
-          String(limits.fiveHour?.utilization ?? '-'),
-          String(limits.sevenDay?.utilization ?? '-')
-        )
-      );
-      for (const model of limits.models) {
-        lines.push(`${model.name}: ${model.utilization}%`);
-      }
-    }
-    this.item.tooltip = lines.join('\n');
-    this.item.show();
+    const view = statusBarView(
+      {
+        tasks: await this.service.list(),
+        activeId: this.active.id(),
+        // 出さない設定の時は、取得済みの値があっても出さない（ツールチップにも）
+        limits: planUsage.showInStatusBar ? this.rateLimits?.current() : undefined,
+        planUsageItems: planUsage.statusBar,
+      },
+      vscode.l10n.t
+    );
+    show(this.item, view.foreman);
+    show(this.claudeItem, view.claude);
   }
 
   dispose(): void {
@@ -106,5 +80,16 @@ export class StatusBar implements vscode.Disposable {
       unsubscribe();
     }
     this.item.dispose();
+    this.claudeItem.dispose();
   }
+}
+
+function show(item: vscode.StatusBarItem, view: StatusBarItemView | undefined): void {
+  if (view === undefined) {
+    item.hide();
+    return;
+  }
+  item.text = view.text;
+  item.tooltip = view.tooltip;
+  item.show();
 }

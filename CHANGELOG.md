@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The status bar shows the plan usage as soon as Visual Studio Code starts, without opening Foreman first. At startup Foreman asks Claude Code only for the plan usage; it reads the model and command lists when you first open a Foreman view
+- The plan usage has its own status bar item, labeled `Claude:`, next to the Foreman item
+- The Foreman status bar item no longer shows how many tasks wait for you. Hover over it to see the count
 
 ### Added
 
