@@ -145,10 +145,11 @@ export async function activate(
   // モデルとコマンドの一覧は、Foreman の画面（左右のサイドバー、タスク画面、ボード）を最初に開いた時に取る。
   // 起動時に claude を起動するのは利用枠の取得だけにする（NFR-9）。2 回目からは最初の取得を待つだけ
   const loadCatalogs = (): void => {
+    rateLimits.start();
     void models.load();
     void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
   };
-  // 契約の利用枠。VS Code の起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
+  // 契約の利用枠。取り始めてから、ターンの終わり（1 分に 1 回まで）と 10 分ごとに取り直す。統合テストでは聞かない
   const rateLimits = new RateLimitService(
     scripted !== undefined
       ? {
@@ -170,9 +171,11 @@ export async function activate(
         ),
     }
   );
-  void rateLimits.refresh();
-  const usageTimer = setInterval(() => void rateLimits.refresh(), 10 * 60_000);
-  context.subscriptions.push({ dispose: () => clearInterval(usageTimer) });
+  context.subscriptions.push(rateLimits);
+  // ステータスバーに出すなら VS Code の起動時から取る。出さないなら Foreman の画面を開くまで取らない
+  if (readSettings().planUsage.showInStatusBar) {
+    rateLimits.start();
+  }
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -388,6 +391,9 @@ export async function activate(
     // 利用枠の表示の設定が変わったら描き直す
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('foreman.planUsage')) {
+        if (readSettings().planUsage.showInStatusBar) {
+          rateLimits.start();
+        }
         void statusBar.refresh();
         void sidebar.refresh();
       }

@@ -4,10 +4,15 @@ import type { UsageSource } from '../ports/usageSource';
 export interface RateLimitServiceDeps {
   now: () => string;
   onError?: (error: unknown) => void;
+  /** fn を ms ごとに呼ぶ。返り値で止める。既定は setInterval */
+  every?: (fn: () => void, ms: number) => () => void;
 }
 
 /** ターンの終わりでの取り直しの間隔（この時間の間は 1 回だけ） */
 const AFTER_TURN_INTERVAL_MS = 60_000;
+
+/** 定期の取り直しの間隔 */
+const PERIODIC_INTERVAL_MS = 10 * 60_000;
 
 /**
  * 契約の利用枠。Claude Code に聞いた値を覚えておき、取り直したら画面へ知らせる。
@@ -18,6 +23,7 @@ export class RateLimitService {
   private inFlight: Promise<void> | undefined;
   private lastFetchedAt: number | undefined;
   private readonly listeners = new Set<() => void>();
+  private stopPeriodic: (() => void) | undefined;
 
   constructor(
     private readonly source: UsageSource,
@@ -40,6 +46,29 @@ export class RateLimitService {
       this.inFlight = undefined;
     });
     return this.inFlight;
+  }
+
+  /**
+   * すぐに 1 回取り、その後は 10 分ごとに取り直す。2 回目からは何もしない。
+   * ステータスバーに出す時は起動時に、出さない時は Foreman の画面を最初に開いた時に呼ぶ
+   */
+  start(): void {
+    if (this.stopPeriodic !== undefined) {
+      return;
+    }
+    const every =
+      this.deps.every ??
+      ((fn: () => void, ms: number) => {
+        const timer = setInterval(fn, ms);
+        return () => clearInterval(timer);
+      });
+    this.stopPeriodic = every(() => void this.refresh(), PERIODIC_INTERVAL_MS);
+    void this.refresh();
+  }
+
+  dispose(): void {
+    this.stopPeriodic?.();
+    this.listeners.clear();
   }
 
   /** ターンの終わりの取り直し。前回から 1 分たっていなければ何もしない */

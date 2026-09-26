@@ -30,8 +30,11 @@ export interface Settings {
   titleModel: string;
   /** 指示のプリセット。/名前 で本文に置き換わる */
   presets: Preset[];
-  /** 契約の利用枠を、どこに何を出すか。空なら出さない */
-  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[] };
+  /**
+   * 契約の利用枠を、どこに何を出すか。空なら出さない。
+   * showInStatusBar が false なら statusBar に関係なくステータスバーに出さず、起動時にも取得しない
+   */
+  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[]; showInStatusBar: boolean };
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -61,6 +64,7 @@ export function readSettings(): Settings {
     planUsage: {
       sidebar: normalizePlanUsageItems(config.get<unknown>('planUsage.sidebar')),
       statusBar: normalizePlanUsageItems(config.get<unknown>('planUsage.statusBar')),
+      showInStatusBar: config.get<boolean>('planUsage.showInStatusBar', true),
     },
   };
 }

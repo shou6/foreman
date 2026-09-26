@@ -512,6 +512,11 @@
           ],
           "markdownDescription": "%config.planUsage.sidebar%"
         },
+        "foreman.planUsage.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%config.planUsage.showInStatusBar%"
+        },
         "foreman.planUsage.statusBar": {
           "type": "array",
           "items": {

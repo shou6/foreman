@@ -41,10 +41,11 @@ export class StatusBar implements vscode.Disposable {
     const tasks = await this.service.list();
     const { running, yourTurn } = statusCounts(tasks);
     const active = tasks.find((t) => t.id === this.active.id());
-    const limits = this.rateLimits?.current();
+    const planUsage = readSettings().planUsage;
+    // 出さない設定の時は、取得済みの値があっても出さない（ツールチップにも）
+    const limits = planUsage.showInStatusBar ? this.rateLimits?.current() : undefined;
     // 契約の利用枠は、設定で選んだ項目を「5h 22% · 7d 45% · Fable 73%」のように短く出す
-    const entries =
-      limits === undefined ? [] : planUsageEntries(limits, readSettings().planUsage.statusBar);
+    const entries = limits === undefined ? [] : planUsageEntries(limits, planUsage.statusBar);
     if (running === 0 && yourTurn === 0 && active === undefined && entries.length === 0) {
       this.item.hide();
       return;

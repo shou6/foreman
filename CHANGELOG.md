@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The status bar shows the plan usage as soon as Visual Studio Code starts, without opening Foreman first. At startup Foreman asks Claude Code only for the plan usage; it reads the model and command lists when you first open a Foreman view
 
+### Added
+
+- `foreman.planUsage.showInStatusBar` turns off the plan usage in the status bar. When it is off, Foreman does not read the plan usage at startup and waits until you open a Foreman view
+
 ## [0.1.1] - 2026-09-26
 
 ### Fixed

@@ -53,6 +53,7 @@
   "config.titleModel": "タイトル付けに使うモデル。別名の `haiku` は Haiku の新しい版に追従する。",
   "config.presets": "指示のプリセット。指示の先頭に `/名前` と書くと本文に置き換わる。`{input}` には名前の後ろに書いた文が入る。",
   "config.planUsage.sidebar": "契約の利用枠（Pro / Max の枠）のうち、サイドバーに出す項目。空なら出さない。",
+  "config.planUsage.showInStatusBar": "契約の利用枠をステータスバーに出す。オフにすると `#foreman.planUsage.statusBar#` に関係なく出さず、利用枠の取得も VS Code の起動時ではなく Foreman の画面を開いた時に行う。",
   "config.planUsage.statusBar": "契約の利用枠（Pro / Max の枠）のうち、ステータスバーに出す項目。空なら出さない。",
   "config.planUsage.fiveHour": "5 時間枠",
   "config.planUsage.sevenDay": "7 日枠",

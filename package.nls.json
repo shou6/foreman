@@ -53,6 +53,7 @@
   "config.titleModel": "Model used to write task titles. The alias `haiku` follows new versions of Haiku.",
   "config.presets": "Prompt presets. Type `/name` at the start of a prompt to replace it with the preset text. `{input}` is replaced with the rest of the prompt.",
   "config.planUsage.sidebar": "Which parts of your plan usage (Pro / Max limits) the sidebar shows. Empty hides it there.",
+  "config.planUsage.showInStatusBar": "Show your plan usage in the status bar. When off, the status bar ignores `#foreman.planUsage.statusBar#`, and Foreman reads the plan usage only after you open a Foreman view, not when Visual Studio Code starts.",
   "config.planUsage.statusBar": "Which parts of your plan usage (Pro / Max limits) the status bar shows. Empty hides it there.",
   "config.planUsage.fiveHour": "5-hour limit",
   "config.planUsage.sevenDay": "7-day limit",
