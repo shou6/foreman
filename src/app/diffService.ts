@@ -21,6 +21,8 @@ const EXCLUDED = ['node_modules', '.git'];
 
 /** ターン中に見つけた 1 ファイルの記録。content が undefined は「ファイルが無い」 */
 interface Entry {
+  /** 読み書きに使うパス。編集ツールのパスがあればそれ、無ければ監視が届けたパス */
+  path: string;
   source: 'edit-tool' | 'watcher';
   beforeKnown: boolean;
   before?: string;
@@ -31,6 +33,7 @@ interface Entry {
 interface ActiveTurn {
   turn: number;
   cwd: string;
+  /** キーは keyOf で揃えたパス。同じファイルが、編集ツールと監視で違う書き方で届くため */
   entries: Map<string, Entry>;
   stopWatching: () => void;
   queue: Promise<unknown>;
@@ -186,7 +189,7 @@ export class DiffService {
     const active = this.active.get(taskId);
     return active === undefined
       ? []
-      : [...active.entries.keys()].map((p) => this.relative(active.cwd, p));
+      : [...active.entries.values()].map((e) => this.relative(active.cwd, e.path));
   }
 
   /** インライン差分の材料（FR-DIFF-3） */
@@ -216,10 +219,11 @@ export class DiffService {
     this.active.get(task.id)?.stopWatching();
     const entries = new Map<string, Entry>();
     const stopWatching = this.deps.fs.watch(task.cwd, (path) => {
-      if (this.isExcluded(task.cwd, path) || entries.has(path)) {
+      const key = this.keyOf(path);
+      if (this.isExcluded(task.cwd, path) || entries.has(key)) {
         return;
       }
-      entries.set(path, { source: 'watcher', beforeKnown: false, afterKnown: false });
+      entries.set(key, { path, source: 'watcher', beforeKnown: false, afterKnown: false });
     });
     this.active.set(task.id, {
       turn,
@@ -235,13 +239,16 @@ export class DiffService {
     if (active === undefined) {
       return;
     }
-    const entry = active.entries.get(path) ?? {
+    const key = this.keyOf(path);
+    const entry = active.entries.get(key) ?? {
+      path,
       source: 'edit-tool',
       beforeKnown: false,
       afterKnown: false,
     };
+    entry.path = path;
     entry.source = 'edit-tool';
-    active.entries.set(path, entry);
+    active.entries.set(key, entry);
     if (phase === 'before') {
       if (!entry.beforeKnown) {
         entry.before = await this.deps.fs.readFile(path);
@@ -265,16 +272,17 @@ export class DiffService {
       return;
     }
     // 監視で拾っただけのファイルは、git が無視するもの（生成物など）を除く
-    const watched = [...active.entries]
-      .filter(([, entry]) => entry.source === 'watcher')
-      .map(([path]) => this.relative(active.cwd, path));
+    const watched = [...active.entries.values()]
+      .filter((entry) => entry.source === 'watcher')
+      .map((entry) => this.relative(active.cwd, entry.path));
     const ignored = new Set(
       watched.length > 0 && this.deps.isIgnored !== undefined
         ? await this.deps.isIgnored(active.cwd, watched)
         : []
     );
     const changes: FileChange[] = [];
-    for (const [path, entry] of active.entries) {
+    for (const entry of active.entries.values()) {
+      const path = entry.path;
       const relative = this.relative(active.cwd, path);
       if (entry.source === 'watcher' && ignored.has(relative)) {
         continue;
@@ -356,6 +364,11 @@ export class DiffService {
     const relative = this.relative(cwd, path);
     const first = relative.split(/[\\/]/)[0];
     return first === undefined || EXCLUDED.includes(first);
+  }
+
+  /** 同じファイルを 1 つのキーにする。Windows はパスの大小を区別せず、VS Code の監視はドライブ文字を小文字で届ける */
+  private keyOf(path: string): string {
+    return this.deps.sep === '\\' ? path.toLowerCase() : path;
   }
 
   private relative(cwd: string, path: string): string {

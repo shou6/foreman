@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `foreman.planUsage.showInStatusBar` turns off the plan usage in the status bar. When it is off, Foreman does not read the plan usage at startup and waits until you open a Foreman view
 
+### Fixed
+
+- On Windows, a file that Claude edited could appear twice in a turn's changes, the second time without line counts. Visual Studio Code's file watcher reports the drive letter in lowercase, so Foreman took it for another file
+
 ## [0.1.1] - 2026-09-26
 
 ### Fixed
