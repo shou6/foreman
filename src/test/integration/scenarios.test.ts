@@ -148,6 +148,8 @@ suite('Scenario: 承認と停止', function () {
       suggestions: [],
     });
     await untilStatus(t, task.id, 'waiting');
+    // 状態はファイルから読むので、「入力待ち」の保存が見えてから承認の要求が登録されるまでに間がある
+    await until(async () => t.approvals.pending(task.id) !== undefined, '承認の要求');
     const pending = t.approvals.pending(task.id);
     assert.ok(pending, '承認の要求が画面側に届いていない');
     t.approvals.decide(task.id, pending.id, { behavior: 'allow' });
@@ -264,6 +266,8 @@ suite('Scenario: 常に許可（受け入れ 9.3）', function () {
       suggestions: [rule],
     });
     await untilStatus(t, task.id, 'waiting');
+    // 状態はファイルから読むので、「入力待ち」の保存が見えてから承認の要求が登録されるまでに間がある
+    await until(async () => t.approvals.pending(task.id) !== undefined, '承認の要求');
     const pending = t.approvals.pending(task.id);
     assert.ok(pending);
     t.approvals.decide(task.id, pending.id, { behavior: 'allow-always', permissions: [rule] });
