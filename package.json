@@ -2,7 +2,7 @@
   "name": "foreman",
   "displayName": "Foreman for Claude Code",
   "description": "%description%",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "shou6",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -49,7 +49,9 @@
     "subagent",
     "mcp"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "files": [
@@ -445,6 +447,19 @@
           "default": "foreman/",
           "description": "%config.worktreeBranchPrefix%"
         },
+        "foreman.worktreeCopyFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "%config.worktreeCopyFiles%"
+        },
+        "foreman.worktreeSetupCommand": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.worktreeSetupCommand%"
+        },
         "foreman.toolCalls": {
           "type": "string",
           "enum": [
@@ -509,6 +524,11 @@
             "models"
           ],
           "markdownDescription": "%config.planUsage.sidebar%"
+        },
+        "foreman.planUsage.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%config.planUsage.showInStatusBar%"
         },
         "foreman.planUsage.statusBar": {
           "type": "array",

@@ -20,6 +20,10 @@ export interface Settings {
   useWorktree: boolean;
   /** worktree のブランチ名の接頭辞 */
   worktreeBranchPrefix: string;
+  /** worktree を作った直後に本体からコピーするファイルの glob */
+  worktreeCopyFiles: string[];
+  /** worktree を作った直後に走らせるコマンド。空なら走らせない */
+  worktreeSetupCommand: string;
   /** ツールの呼び出しを最初から開いて見せるか */
   toolCallsExpanded: boolean;
   /** 考えている途中を、たたんで出すか、出さないか */
@@ -30,8 +34,11 @@ export interface Settings {
   titleModel: string;
   /** 指示のプリセット。/名前 で本文に置き換わる */
   presets: Preset[];
-  /** 契約の利用枠を、どこに何を出すか。空なら出さない */
-  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[] };
+  /**
+   * 契約の利用枠を、どこに何を出すか。空なら出さない。
+   * showInStatusBar が false なら statusBar に関係なくステータスバーに出さず、起動時にも取得しない
+   */
+  planUsage: { sidebar: PlanUsageItem[]; statusBar: PlanUsageItem[]; showInStatusBar: boolean };
 }
 
 /** 設定 foreman.* を読む。空文字は未設定として扱う */
@@ -52,6 +59,8 @@ export function readSettings(): Settings {
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),
     worktreeBranchPrefix: config.get<string>('worktreeBranchPrefix', 'foreman/'),
+    worktreeCopyFiles: stringsOf(config.get<unknown>('worktreeCopyFiles', [])),
+    worktreeSetupCommand: config.get<string>('worktreeSetupCommand', ''),
     toolCallsExpanded: config.get<string>('toolCalls', 'collapsed') === 'expanded',
     thinking: config.get<string>('thinking', 'collapsed') === 'hidden' ? 'hidden' : 'collapsed',
     autoTitle: config.get<boolean>('autoTitle', true),
@@ -61,8 +70,16 @@ export function readSettings(): Settings {
     planUsage: {
       sidebar: normalizePlanUsageItems(config.get<unknown>('planUsage.sidebar')),
       statusBar: normalizePlanUsageItems(config.get<unknown>('planUsage.statusBar')),
+      showInStatusBar: config.get<boolean>('planUsage.showInStatusBar', true),
     },
   };
+}
+
+/** 設定の配列から、空でない文字列だけを取り出す */
+function stringsOf(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    : [];
 }
 
 /** 設定の文字列を Effort にする。空や知らない値は undefined（Claude Code に従う） */

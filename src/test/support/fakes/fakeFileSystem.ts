@@ -38,6 +38,15 @@ export class FakeFileSystem implements FileSystem {
     };
   }
 
+  /** 監視に、与えたパスのまま知らせる（VS Code の監視がドライブ文字を小文字にして届けるのを再現する） */
+  report(path: string): void {
+    for (const set of this.watchers.values()) {
+      for (const listener of set) {
+        listener(path);
+      }
+    }
+  }
+
   /** ファイルを外から変えたことにして、監視に知らせる */
   change(path: string, content: string | undefined): void {
     if (content === undefined) {

@@ -46,6 +46,7 @@ import { AgentSdkSessionCatalog } from './adapters/agentSdkSessionCatalog';
 import { tasksToPrune } from './domain/retention';
 import { OrphanCleaner } from './app/orphanCleaner';
 import { FsRunRecordStore, WindowsProcessTable } from './adapters/windowsProcesses';
+import { copyFile, findFiles, runShell } from './adapters/worktreeSetup';
 
 /** エントリポイント。組み立てと登録だけを行い、ロジックは各モジュールに置く */
 /** 統合テストが拡張機能の中身を操作するための入口。FOREMAN_SCRIPTED_RUNNER=1 の時だけ返す */
@@ -58,6 +59,9 @@ export interface TestApi {
   plans: PlanDocuments;
   /** claude CLI の場所を探す（見つからなければ設定を案内するエラー） */
   locateClaude: () => string;
+  /** Claude Code にモデルとコマンドの一覧、利用枠を聞いた回数（台本の時はフェイクが数える） */
+  requests: { models: number; commands: number; usage: number };
+  worktrees: WorktreeService;
 }
 
 export async function activate(
@@ -104,10 +108,17 @@ export async function activate(
       log: (line) => output.append(line),
       processes: orphans,
     });
-  // モデルの選択肢は起動後に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
+  // 統合テストでは Claude Code に聞かず、聞いた回数だけを数える
+  const requests = { models: 0, commands: 0, usage: 0 };
+  // モデルの選択肢は、画面を最初に開いた時に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
   const models = new ModelService(
     scripted !== undefined
-      ? { list: async () => [] }
+      ? {
+          list: async () => {
+            requests.models++;
+            return [];
+          },
+        }
       : new AgentSdkModelCatalog({
           query: sdk.query,
           claudePath: () => locateClaude(),
@@ -118,22 +129,37 @@ export async function activate(
         `model list failed: ${error instanceof Error ? error.message : String(error)}`
       )
   );
-  void models.load();
   // Claude Code のコマンドとスキル。作業フォルダで聞く（プロジェクトのコマンドも出るように）。統合テストでは聞かない
   const commands = new CommandService(
     scripted !== undefined
-      ? { list: async () => [] }
+      ? {
+          list: async () => {
+            requests.commands++;
+            return [];
+          },
+        }
       : new AgentSdkCommandCatalog({ query: sdk.query, claudePath: () => locateClaude() }),
     (error) =>
       output.appendLine(
         `command list failed: ${error instanceof Error ? error.message : String(error)}`
       )
   );
-  void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
-  // 契約の利用枠。起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
+  // モデルとコマンドの一覧は、Foreman の画面（左右のサイドバー、タスク画面、ボード）を最初に開いた時に取る。
+  // 起動時に claude を起動するのは利用枠の取得だけにする（NFR-9）。2 回目からは最初の取得を待つだけ
+  const loadCatalogs = (): void => {
+    rateLimits.start();
+    void models.load();
+    void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
+  };
+  // 契約の利用枠。取り始めてから、ターンの終わり（1 分に 1 回まで）と 10 分ごとに取り直す。統合テストでは聞かない
   const rateLimits = new RateLimitService(
     scripted !== undefined
-      ? { usage: async () => undefined }
+      ? {
+          usage: async () => {
+            requests.usage++;
+            return undefined;
+          },
+        }
       : new AgentSdkUsage({
           query: sdk.query,
           claudePath: () => locateClaude(),
@@ -147,9 +173,11 @@ export async function activate(
         ),
     }
   );
-  void rateLimits.refresh();
-  const usageTimer = setInterval(() => void rateLimits.refresh(), 10 * 60_000);
-  context.subscriptions.push({ dispose: () => clearInterval(usageTimer) });
+  context.subscriptions.push(rateLimits);
+  // ステータスバーに出すなら VS Code の起動時から取る。出さないなら Foreman の画面を開くまで取らない
+  if (readSettings().planUsage.showInStatusBar) {
+    rateLimits.start();
+  }
   const approvals = new ApprovalService(() => randomUUID());
   const service = new TaskService({
     runner,
@@ -227,6 +255,50 @@ export async function activate(
       }
     },
     removeDir: (dir) => fs.promises.rm(dir, { recursive: true, force: true }),
+    // 作った直後に、無視ファイルのコピーと準備のコマンド（npm install など）を行う。失敗しても続ける
+    setup: {
+      copyPatterns: () => readSettings().worktreeCopyFiles,
+      command: () => readSettings().worktreeSetupCommand,
+      findFiles,
+      exists: (file) =>
+        fs.promises.access(file).then(
+          () => true,
+          () => false
+        ),
+      copyFile,
+      run: async (cwd, command) =>
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: vscode.l10n.t('Preparing the worktree: {0}', command),
+            cancellable: true,
+          },
+          (_progress, token) => {
+            const controller = new AbortController();
+            token.onCancellationRequested(() => controller.abort());
+            output.appendLine(`${new Date().toISOString()} worktree setup in ${cwd}: ${command}`);
+            return runShell(cwd, command, {
+              log: (text) => output.append(text),
+              signal: controller.signal,
+            });
+          }
+        ),
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        output.appendLine(`worktree setup failed: ${message}`);
+        const show = vscode.l10n.t('Show Output');
+        void vscode.window
+          .showWarningMessage(
+            vscode.l10n.t('Could not prepare the worktree. The task starts anyway. {0}', message),
+            show
+          )
+          .then((choice) => {
+            if (choice === show) {
+              output.show();
+            }
+          });
+      },
+    },
   });
   const worktreeActions = new WorktreeActions(service, worktrees);
   // panels と autoTitle は後で作るので、参照は遅延で解く
@@ -365,6 +437,9 @@ export async function activate(
     // 利用枠の表示の設定が変わったら描き直す
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('foreman.planUsage')) {
+        if (readSettings().planUsage.showInStatusBar) {
+          rateLimits.start();
+        }
         void statusBar.refresh();
         void sidebar.refresh();
       }
@@ -375,9 +450,21 @@ export async function activate(
       () => readSettings().notifications
     ),
     sidebar,
-    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
+    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, {
+      resolveWebviewView: (view) => {
+        loadCatalogs();
+        sidebar.resolveWebviewView(view);
+      },
+    }),
     details,
-    vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
+    vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, {
+      resolveWebviewView: (view) => {
+        loadCatalogs();
+        details.resolveWebviewView(view);
+      },
+    }),
+    // タスク画面を開くと「今見ているタスク」が変わる
+    panels.onDidChangeActive(loadCatalogs),
     plans,
     vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, plans),
     // 差分エディタの左側（変更前）をスナップショットから出す
@@ -411,7 +498,10 @@ export async function activate(
       editDraft: (taskId) => review.editDraft(taskId),
       newDraft: (folder) => review.newDraft(folder),
     },
-    openBoard: () => board.open(),
+    openBoard: () => {
+      loadCatalogs();
+      board.open();
+    },
     refreshUsage: () => rateLimits.refresh(),
     sessions: new AgentSdkSessionCatalog({
       listSessions: sdk.listSessions,
@@ -430,7 +520,19 @@ export async function activate(
   void cleanupWorktrees(service, worktrees, output);
   return scripted === undefined
     ? undefined
-    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans, locateClaude } };
+    : {
+        testApi: {
+          service,
+          runner: scripted,
+          approvals,
+          diffs,
+          panels,
+          plans,
+          locateClaude,
+          requests,
+          worktrees,
+        },
+      };
 }
 
 export function deactivate(): void {}

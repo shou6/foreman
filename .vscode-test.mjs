@@ -17,7 +17,9 @@ try {
 const override = extensionsDirOverride(process.env);
 
 export default defineConfig({
-  files: 'out/test/integration/**/*.test.js',
+  // extension.test.js を先に走らせる（画面を開く前の状態を確かめるテストがある）。
+  // glob の順は決まっていないので名前で先頭に置く。重なった分は test-cli が 1 つにまとめる
+  files: ['out/test/integration/extension.test.js', 'out/test/integration/**/*.test.js'],
   // 既定のリポジトリ直下だと、GitHub Actions の macOS でソケットのパスが 103 文字の上限を超え、
   // VS Code が EINVAL で起動できなかった。一時ディレクトリの下に短い名前で作る
   launchArgs: [...testLaunchArgs(), ...override.launchArgs],

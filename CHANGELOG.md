@@ -5,6 +5,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-26
+
+### Changed
+
+- The status bar shows the plan usage as soon as Visual Studio Code starts, without opening Foreman first. At startup Foreman asks Claude Code only for the plan usage; it reads the model and command lists when you first open a Foreman view
+- The plan usage has its own status bar item, labeled `Claude:`, next to the Foreman item
+- The Foreman status bar item no longer shows how many tasks wait for you. Hover over it to see the count
+
+### Added
+
+- `foreman.planUsage.showInStatusBar` turns off the plan usage in the status bar. When it is off, Foreman does not read the plan usage at startup and waits until you open a Foreman view
+- A new task worktree can be prepared before the task starts. `foreman.worktreeCopyFiles` copies files that Git does not track, such as `.env`, from the repository, and `foreman.worktreeSetupCommand` runs a command such as `npm install` in the worktree. If the setup fails, Foreman shows a warning and starts the task anyway
+
+### Fixed
+
+- On Windows, a file that Claude edited could appear twice in a turn's changes, the second time without line counts. Visual Studio Code's file watcher reports the drive letter in lowercase, so Foreman took it for another file
+
 ## [0.1.1] - 2026-09-26
 
 ### Fixed

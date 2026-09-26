@@ -170,7 +170,6 @@
   "High": "高",
   "Extra high": "特に高",
   "Max": "最大",
-  "$(bell) {0} your turn": "$(bell) あなたの番 {0}",
   "Foreman: {0} running, {1} waiting for you": "Foreman: 実行中 {0}、あなたの番 {1}",
   "No tasks. Create a task first.": "タスクがありません。先にタスクを作ってください。",
   "Export which task?": "どのタスクを書き出しますか？",
@@ -219,5 +218,9 @@
   "Auto-accept edits": "編集は自動で許可",
   "Claude asks before each tool call": "ツールを使う前に毎回聞く",
   "File edits are allowed automatically; other tools still ask": "ファイルの編集は自動で許可し、ほかのツールは聞く",
-  "Saved file contents were removed after the retention period. Diffs and revert are no longer available.": "保存期間を過ぎたため、ファイルの保存内容を消しました。差分の表示と「戻す」は使えません。"
+  "Saved file contents were removed after the retention period. Diffs and revert are no longer available.": "保存期間を過ぎたため、ファイルの保存内容を消しました。差分の表示と「戻す」は使えません。",
+  "Preparing the worktree: {0}": "worktree を準備しています：{0}",
+  "Could not prepare the worktree. The task starts anyway. {0}": "worktree を準備できませんでした。タスクはそのまま始めます。{0}",
+  "Show Output": "出力を表示",
+  "Claude Plan Usage": "Claude の契約の利用枠"
 }

@@ -87,4 +87,47 @@ suite('RateLimitService', () => {
     await service.refresh();
     assert.strictEqual(s.calls, 2);
   });
+
+  test('定期の取り直しを始めると、すぐに 1 回取り、10 分ごとに取り直す。2 回目の start は何もしない', async () => {
+    const timers: { fn: () => void; ms: number }[] = [];
+    const s = source(async () => RAW);
+    const service = new RateLimitService(s, {
+      now: clock().now,
+      every: (fn, ms) => {
+        timers.push({ fn, ms });
+        return () => {};
+      },
+    });
+    service.start();
+    service.start();
+    // 取得中の refresh は、その完了を待つだけ
+    await service.refresh();
+    assert.strictEqual(s.calls, 1);
+    assert.deepStrictEqual(
+      timers.map((t) => t.ms),
+      [10 * 60_000]
+    );
+    timers[0].fn();
+    await service.refresh();
+    assert.strictEqual(s.calls, 2);
+  });
+
+  test('start する前は定期の取り直しをしない。dispose で止める', async () => {
+    let scheduled = 0;
+    let stopped = 0;
+    const service = new RateLimitService(
+      source(async () => RAW),
+      {
+        now: clock().now,
+        every: () => {
+          scheduled++;
+          return () => stopped++;
+        },
+      }
+    );
+    assert.strictEqual(scheduled, 0);
+    service.start();
+    service.dispose();
+    assert.strictEqual(stopped, 1);
+  });
 });
