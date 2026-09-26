@@ -58,6 +58,8 @@ export interface TestApi {
   plans: PlanDocuments;
   /** claude CLI の場所を探す（見つからなければ設定を案内するエラー） */
   locateClaude: () => string;
+  /** Claude Code にモデルとコマンドの一覧、利用枠を聞いた回数（台本の時はフェイクが数える） */
+  requests: { models: number; commands: number; usage: number };
 }
 
 export async function activate(
@@ -104,10 +106,17 @@ export async function activate(
       log: (line) => output.append(line),
       processes: orphans,
     });
-  // モデルの選択肢は起動後に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
+  // 統合テストでは Claude Code に聞かず、聞いた回数だけを数える
+  const requests = { models: 0, commands: 0, usage: 0 };
+  // モデルの選択肢は、画面を最初に開いた時に 1 回だけ Claude Code から取得する。統合テストでは固定の一覧のまま
   const models = new ModelService(
     scripted !== undefined
-      ? { list: async () => [] }
+      ? {
+          list: async () => {
+            requests.models++;
+            return [];
+          },
+        }
       : new AgentSdkModelCatalog({
           query: sdk.query,
           claudePath: () => locateClaude(),
@@ -118,22 +127,36 @@ export async function activate(
         `model list failed: ${error instanceof Error ? error.message : String(error)}`
       )
   );
-  void models.load();
   // Claude Code のコマンドとスキル。作業フォルダで聞く（プロジェクトのコマンドも出るように）。統合テストでは聞かない
   const commands = new CommandService(
     scripted !== undefined
-      ? { list: async () => [] }
+      ? {
+          list: async () => {
+            requests.commands++;
+            return [];
+          },
+        }
       : new AgentSdkCommandCatalog({ query: sdk.query, claudePath: () => locateClaude() }),
     (error) =>
       output.appendLine(
         `command list failed: ${error instanceof Error ? error.message : String(error)}`
       )
   );
-  void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
-  // 契約の利用枠。起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
+  // モデルとコマンドの一覧は、Foreman の画面（左右のサイドバー、タスク画面、ボード）を最初に開いた時に取る。
+  // 起動時に claude を起動するのは利用枠の取得だけにする（NFR-9）。2 回目からは最初の取得を待つだけ
+  const loadCatalogs = (): void => {
+    void models.load();
+    void commands.load(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.tmpdir());
+  };
+  // 契約の利用枠。VS Code の起動時、ターンの終わり（1 分に 1 回まで）、10 分ごとに取り直す。統合テストでは聞かない
   const rateLimits = new RateLimitService(
     scripted !== undefined
-      ? { usage: async () => undefined }
+      ? {
+          usage: async () => {
+            requests.usage++;
+            return undefined;
+          },
+        }
       : new AgentSdkUsage({
           query: sdk.query,
           claudePath: () => locateClaude(),
@@ -375,9 +398,21 @@ export async function activate(
       () => readSettings().notifications
     ),
     sidebar,
-    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebar),
+    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, {
+      resolveWebviewView: (view) => {
+        loadCatalogs();
+        sidebar.resolveWebviewView(view);
+      },
+    }),
     details,
-    vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, details),
+    vscode.window.registerWebviewViewProvider(DETAILS_VIEW_ID, {
+      resolveWebviewView: (view) => {
+        loadCatalogs();
+        details.resolveWebviewView(view);
+      },
+    }),
+    // タスク画面を開くと「今見ているタスク」が変わる
+    panels.onDidChangeActive(loadCatalogs),
     plans,
     vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, plans),
     // 差分エディタの左側（変更前）をスナップショットから出す
@@ -411,7 +446,10 @@ export async function activate(
       editDraft: (taskId) => review.editDraft(taskId),
       newDraft: (folder) => review.newDraft(folder),
     },
-    openBoard: () => board.open(),
+    openBoard: () => {
+      loadCatalogs();
+      board.open();
+    },
     refreshUsage: () => rateLimits.refresh(),
     sessions: new AgentSdkSessionCatalog({
       listSessions: sdk.listSessions,
@@ -430,7 +468,18 @@ export async function activate(
   void cleanupWorktrees(service, worktrees, output);
   return scripted === undefined
     ? undefined
-    : { testApi: { service, runner: scripted, approvals, diffs, panels, plans, locateClaude } };
+    : {
+        testApi: {
+          service,
+          runner: scripted,
+          approvals,
+          diffs,
+          panels,
+          plans,
+          locateClaude,
+          requests,
+        },
+      };
 }
 
 export function deactivate(): void {}

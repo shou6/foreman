@@ -49,7 +49,9 @@
     "subagent",
     "mcp"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "files": [
