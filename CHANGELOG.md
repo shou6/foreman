@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-26
+
 ### Changed
 
 - The status bar shows the plan usage as soon as Visual Studio Code starts, without opening Foreman first. At startup Foreman asks Claude Code only for the plan usage; it reads the model and command lists when you first open a Foreman view
