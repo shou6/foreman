@@ -127,6 +127,13 @@ export class FakeGit implements Git {
   ignoredPaths: string[] = [];
   /** diff が返す内容。テストで設定する */
   diffText = '';
+  /** stagedDiff が返す内容。テストで設定する */
+  stagedDiffText = '';
+
+  async stagedDiff(dir: string): Promise<string> {
+    this.calls.push(`stagedDiff ${dir}`);
+    return this.stagedDiffText;
+  }
 
   async diff(_dir: string): Promise<string> {
     this.calls.push('diff');

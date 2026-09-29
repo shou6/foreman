@@ -36,13 +36,75 @@ suite('WorktreeService.create', () => {
   });
 });
 
+suite('WorktreeService のコミットメッセージ', () => {
+  function withWriter(
+    write: (request: { repo: string; title: string; diff: string }) => Promise<string | undefined>
+  ): { git: FakeGit; service: WorktreeService } {
+    const git = new FakeGit(REPO, 'main');
+    const service = new WorktreeService({ git, sep: '\\', commitMessage: write });
+    return { git, service };
+  }
+
+  test('マージの前のコミットは、ステージした差分とタイトルから作ったメッセージを使う', async () => {
+    const requests: { repo: string; title: string; diff: string }[] = [];
+    const { git, service } = withWriter(async (request) => {
+      requests.push(request);
+      return 'feat(db): 集計を追加';
+    });
+    const wt = await service.create(REPO, 'Refactor auth', '0f3a9c12');
+    git.dirty.set(wt.path, true);
+    git.stagedDiffText = 'diff --git a/x b/x';
+    await service.merge(wt, 'Refactor auth');
+    assert.deepStrictEqual(requests, [
+      { repo: REPO, title: 'Refactor auth', diff: 'diff --git a/x b/x' },
+    ]);
+    assert.deepStrictEqual(git.commits, [{ dir: wt.path, message: 'feat(db): 集計を追加' }]);
+    assert.ok(!git.merges[0]?.message.includes('feat'), 'マージコミットは今のまま');
+  });
+
+  test('作れなかった時や失敗した時は、既定のメッセージにする', async () => {
+    for (const write of [
+      async () => undefined,
+      async () => {
+        throw new Error('not logged in');
+      },
+    ]) {
+      const { git, service } = withWriter(write);
+      const wt = await service.create(REPO, 'Refactor auth', '0f3a9c12');
+      git.dirty.set(wt.path, true);
+      await service.merge(wt, 'Refactor auth');
+      assert.deepStrictEqual(git.commits, [{ dir: wt.path, message: 'chore: Refactor auth' }]);
+    }
+  });
+
+  test('変更が無ければメッセージを作らない', async () => {
+    let called = false;
+    const { git, service } = withWriter(async () => {
+      called = true;
+      return 'x';
+    });
+    const wt = await service.create(REPO, 't', 'abcdef0123');
+    await service.merge(wt, 't');
+    assert.strictEqual(called, false);
+    assert.deepStrictEqual(git.commits, []);
+  });
+
+  test('切り出しの前のコミットも同じようにメッセージを作る', async () => {
+    const { git, service } = withWriter(async () => 'refactor: 認証を整理');
+    const wt = await service.create(REPO, 'Parent', 'aaaaaa0000');
+    git.dirty.set(wt.path, true);
+    await service.commitWork(wt, 'Parent');
+    assert.deepStrictEqual(git.commits, [{ dir: wt.path, message: 'refactor: 認証を整理' }]);
+  });
+});
+
 suite('WorktreeService.merge', () => {
   test('worktree の変更をコミットしてから元のブランチへマージし、後片付けする', async () => {
     const { git, service } = build();
     const wt = await service.create(REPO, 'Refactor auth', '0f3a9c12');
     git.dirty.set(wt.path, true);
     await service.merge(wt, 'Refactor auth');
-    assert.deepStrictEqual(git.commits, [{ dir: wt.path, message: 'foreman: Refactor auth' }]);
+    assert.deepStrictEqual(git.commits, [{ dir: wt.path, message: 'chore: Refactor auth' }]);
     assert.deepStrictEqual(git.merges, [
       {
         repo: REPO,
