@@ -880,6 +880,25 @@ body.dragging .drop-hint {
   align-items: center;
   gap: 0.75em;
   padding: 0.5em 0.9em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.diff-card-head::-webkit-details-marker {
+  display: none;
+}
+
+.diff-card-head::before {
+  content: '▸';
+  width: 1em;
+  margin-right: -0.5em;
+}
+
+.diff-card[open] > .diff-card-head::before {
+  content: '▾';
+}
+
+.diff-card[open] > .diff-card-head {
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 

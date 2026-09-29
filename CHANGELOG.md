@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- "Auto" permission mode, the same as the auto mode of Claude Code: Claude Code decides each tool call and asks only for risky ones. It is the new default of `foreman.defaultPermissionMode`
+
+### Changed
+
+- "Always allow" for a shell command now covers the command name and subcommand, such as `git commit *`, instead of the exact command line
+- The file list of a diff card starts collapsed. Click the card header to expand it
+
 ## [0.2.0] - 2026-09-26
 
 ### Changed

@@ -48,13 +48,14 @@ export function readSettings(): Settings {
     const value = config.get<string>(key, '').trim();
     return value === '' ? undefined : value;
   };
-  const mode = config.get<string>('defaultPermissionMode', 'default');
+  const mode = config.get<string>('defaultPermissionMode', 'auto');
   const notifications = config.get<string>('notifications', 'all');
   return {
     claudePath: text('claudePath'),
     defaultModel: text('defaultModel'),
     defaultEffort: effortOf(text('defaultEffort')),
-    defaultPermissionMode: mode === 'acceptEdits' || mode === 'plan' ? mode : 'default',
+    defaultPermissionMode:
+      mode === 'default' || mode === 'acceptEdits' || mode === 'plan' ? mode : 'auto',
     notifications: notifications === 'waiting' || notifications === 'none' ? notifications : 'all',
     taskViewWidth: Math.max(0, config.get<number>('taskViewWidth', 72)),
     useWorktree: config.get<boolean>('useWorktree', false),

@@ -26,7 +26,7 @@ export type TaskEvent =
   | 'approve'; // ユーザーが変更を確認した
 
 /** 承認方式。plan は読むだけで、計画の承認（ExitPlanMode）を許可すると抜ける */
-export type PermissionMode = 'default' | 'acceptEdits' | 'plan';
+export type PermissionMode = 'default' | 'acceptEdits' | 'auto' | 'plan';
 
 /** Claude の考える量（Effort）。指定しなければ Claude Code に従う */
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';

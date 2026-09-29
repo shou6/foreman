@@ -461,11 +461,13 @@ export class TaskPanels implements vscode.Disposable {
         permissionModes: {
           default: vscode.l10n.t('Ask each time'),
           acceptEdits: vscode.l10n.t('Auto-accept edits'),
+          auto: vscode.l10n.t('Auto'),
           plan: vscode.l10n.t('Plan only'),
         },
         permissionModeHints: {
           default: vscode.l10n.t('Claude asks before each tool call'),
           acceptEdits: vscode.l10n.t('File edits are allowed automatically; other tools still ask'),
+          auto: vscode.l10n.t('Claude Code decides each tool call; only risky ones ask'),
           plan: vscode.l10n.t('Claude reads and plans, and asks before it edits'),
         },
         inputDetails: vscode.l10n.t('Input details (JSON)'),

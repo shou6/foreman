@@ -14,6 +14,7 @@ import type { PermissionRequest, RunnerEvent } from '../domain/events';
 import { EFFORT_LEVELS } from '../domain/models';
 import type { PermissionMode, PermissionRule, Usage } from '../domain/task';
 import type { AgentRunner, RunHandle, StartOptions } from '../ports/agentRunner';
+import { broadenSuggestions } from '../domain/suggestions';
 
 /*
  * Agent SDK との境界。SDK の型はこのファイルの外へ出さず、domain/events.ts の形に正規化する。
@@ -140,7 +141,7 @@ function finalTextOf(m: SDKMessage): string | undefined {
 
 /**
  * 「このタスクでは常に許可」で保存した内容を、起動時の SDK のオプションへ写す。
- * setMode は acceptEdits までしか写さない（より緩いモードは Foreman では使わない）
+ * setMode は、毎回聞くタスクを acceptEdits にする時だけ写す（auto や plan を弱めない。bypassPermissions などへは写さない）
  */
 export function sdkOptionsFromAlwaysAllowed(
   mode: PermissionMode,
@@ -149,7 +150,7 @@ export function sdkOptionsFromAlwaysAllowed(
   let permissionMode: PermissionMode = mode;
   const allowedTools: string[] = [];
   for (const rule of rules) {
-    if (rule.type === 'setMode' && rule.mode === 'acceptEdits') {
+    if (rule.type === 'setMode' && rule.mode === 'acceptEdits' && mode === 'default') {
       permissionMode = 'acceptEdits';
     } else if (rule.type === 'addRules' && rule.behavior === 'allow' && Array.isArray(rule.rules)) {
       for (const r of rule.rules) {
@@ -207,7 +208,11 @@ export class AgentSdkRunner implements AgentRunner {
     };
 
     const canUseTool: CanUseTool = async (toolName, input, { suggestions }) => {
-      const request: PermissionRequest = { toolName, input, suggestions: suggestions ?? [] };
+      const request: PermissionRequest = {
+        toolName,
+        input,
+        suggestions: broadenSuggestions(suggestions ?? []),
+      };
       const decision = await options.onPermissionRequest(request);
       switch (decision.behavior) {
         case 'allow':

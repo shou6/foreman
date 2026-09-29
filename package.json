@@ -421,14 +421,16 @@
           "enum": [
             "default",
             "acceptEdits",
+            "auto",
             "plan"
           ],
           "enumDescriptions": [
             "%config.defaultPermissionMode.default%",
             "%config.defaultPermissionMode.acceptEdits%",
+            "%config.defaultPermissionMode.auto%",
             "%config.defaultPermissionMode.plan%"
           ],
-          "default": "default",
+          "default": "auto",
           "description": "%config.defaultPermissionMode%"
         },
         "foreman.taskViewWidth": {
