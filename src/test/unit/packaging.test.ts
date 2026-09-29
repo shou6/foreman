@@ -237,14 +237,15 @@ suite('設定の既定値: 契約の利用枠の表示', () => {
 });
 
 suite('設定の既定値: 承認方式', () => {
-  test('plan を選べる', () => {
+  test('auto と plan を選べ、既定は auto', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
-      contributes: { configuration: { properties: Record<string, { enum?: unknown[] }> } };
+      contributes: {
+        configuration: { properties: Record<string, { default?: unknown; enum?: unknown[] }> };
+      };
     };
-    assert.deepStrictEqual(
-      pkg.contributes.configuration.properties['foreman.defaultPermissionMode']?.enum,
-      ['default', 'acceptEdits', 'plan']
-    );
+    const setting = pkg.contributes.configuration.properties['foreman.defaultPermissionMode'];
+    assert.deepStrictEqual(setting?.enum, ['default', 'acceptEdits', 'auto', 'plan']);
+    assert.strictEqual(setting?.default, 'auto');
   });
 });
 

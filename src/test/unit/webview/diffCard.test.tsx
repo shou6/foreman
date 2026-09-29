@@ -89,6 +89,13 @@ suite('webview: 差分カード', () => {
     );
   });
 
+  test('ファイルの一覧は初めはたたみ、見出しを押すと開く', () => {
+    const html = render(<App state={state({ changes: { 0: CHANGES } })} post={() => {}} />);
+    assert.ok(/<details class="diff-card"(?![^>]*\bopen\b)[^>]*>/.test(html), 'たたまれている');
+    assert.ok(/<details class="diff-card"[^>]*><summary class="diff-card-head">/.test(html));
+    assert.ok(/<\/summary>[\s\S]*class="diff-file"/.test(html), '一覧は見出しの外');
+  });
+
   test('見出しはターンの番号。「すべて戻す」は枠のない控えめな操作', () => {
     const html = render(<App state={state({ changes: { 0: CHANGES } })} post={() => {}} />);
     assert.ok(/class="diff-card-title"[^>]*>Changes in turn 1</.test(html));

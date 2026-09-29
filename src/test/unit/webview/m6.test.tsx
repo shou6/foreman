@@ -236,16 +236,17 @@ suite('webview: Effort', () => {
 });
 
 suite('webview: プランモードの切り替え', () => {
-  test('入力欄で承認方式を 3 択（毎回聞く・編集は自動で許可・計画だけ）から選べ、今の方式が選ばれている', () => {
-    for (const mode of ['default', 'acceptEdits', 'plan'] as const) {
+  test('入力欄で承認方式を 4 択（毎回聞く・編集は自動で許可・自動・計画だけ）から選べ、今の方式が選ばれている', () => {
+    for (const mode of ['default', 'acceptEdits', 'auto', 'plan'] as const) {
       const html = render(<App state={state({ permissionMode: mode })} post={() => {}} />);
       assert.ok(/<select[^>]*class="mode-select"/.test(html), mode);
       const options = [
-        ...html.matchAll(/<option([^>]*value="(default|acceptEdits|plan)"[^>]*)>([^<]*)</g),
+        ...html.matchAll(/<option([^>]*value="(default|acceptEdits|auto|plan)"[^>]*)>([^<]*)</g),
       ].map((m) => [m[2], /\bselected\b/.test(m[1] ?? ''), m[3]]);
       assert.deepStrictEqual(options, [
         ['default', mode === 'default', 'Ask each time'],
         ['acceptEdits', mode === 'acceptEdits', 'Auto-accept edits'],
+        ['auto', mode === 'auto', 'Auto'],
         ['plan', mode === 'plan', 'Plan only'],
       ]);
     }
