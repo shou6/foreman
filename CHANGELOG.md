@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-29
+
 ### Added
 
 - "Auto" permission mode, the same as the auto mode of Claude Code: Claude Code decides each tool call and asks only for risky ones. It is the new default of `foreman.defaultPermissionMode`
