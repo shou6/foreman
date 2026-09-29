@@ -42,6 +42,7 @@
   "Merged {0} into {1}.": "{0} を {1} にマージしました。",
   "Discard the worktree of \"{0}\"? Unmerged changes will be lost.": "タスク「{0}」の worktree を破棄しますか？ マージしていない変更は失われます。",
   "Task \"{0}\" has unmerged changes in its worktree. Delete the task and discard them?": "タスク「{0}」の worktree にマージしていない変更があります。タスクを削除して変更を捨てますか？",
+  "Merging \"{0}\"…": "「{0}」をマージ中…",
   "Merge failed: {0}": "マージに失敗しました: {0}",
   "This task does not use a worktree.": "このタスクは worktree を使っていません。",
   "Stop the task before merging or discarding its worktree.": "worktree をマージ・破棄する前に、タスクを止めてください。",

@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - "Always allow" for a shell command now covers the command name and subcommand, such as `git commit *`, instead of the exact command line
 - The file list of a diff card starts collapsed. Click the card header to expand it
+- Merging a worktree task no longer commits with a fixed `foreman: <title>` message. A light model writes the message from the diff, following the commit message convention in the project's `CLAUDE.md` or `.claude/rules`, or Conventional Commits in the language of the task title when there is none
 
 ## [0.2.0] - 2026-09-26
 

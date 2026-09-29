@@ -16,6 +16,7 @@ import { FsTranscriptStore } from './adapters/fsTranscriptStore';
 import { GitCli } from './adapters/gitCli';
 import { VsCodeFileSystem } from './vscode/vsCodeFileSystem';
 import { suggestTitleWithSdk } from './adapters/agentSdkTitler';
+import { writeCommitMessageWithSdk } from './adapters/agentSdkCommitMessage';
 import { ApprovalService } from './app/approvalService';
 import { AutoTitle } from './app/autoTitle';
 import { DiffService } from './app/diffService';
@@ -255,6 +256,19 @@ export async function activate(
       }
     },
     removeDir: (dir) => fs.promises.rm(dir, { recursive: true, force: true }),
+    // コミットメッセージは、リポジトリの CLAUDE.md と .claude/rules の規約に沿って軽いモデルに作らせる。
+    // 台本の Runner の時（統合テスト）は Claude を呼ばず、既定のメッセージにする
+    commitMessage:
+      scripted === undefined
+        ? async ({ repo, title, diff }) =>
+            writeCommitMessageWithSdk(sdk.query, {
+              title,
+              diff,
+              model: readSettings().titleModel,
+              claudePath: locateClaude(),
+              cwd: repo,
+            })
+        : undefined,
     // 作った直後に、無視ファイルのコピーと準備のコマンド（npm install など）を行う。失敗しても続ける
     setup: {
       copyPatterns: () => readSettings().worktreeCopyFiles,

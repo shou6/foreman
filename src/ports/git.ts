@@ -18,6 +18,8 @@ export interface Git {
   worktreeOfBranch(repo: string, branch: string): Promise<string | undefined>;
   /** 未コミットの変更（追跡外を含む）があるか */
   hasChanges(dir: string): Promise<boolean>;
+  /** すべての変更（追跡外を含む）をステージし、ステージした差分（統計と本文）を返す */
+  stagedDiff(dir: string): Promise<string>;
   /** すべての変更をステージしてコミットする。変更が無ければ何もしない */
   commitAll(dir: string, message: string): Promise<void>;
   /** dir（worktree）の今のブランチへ branch をマージする（--no-ff）。衝突したら中止して失敗にする */

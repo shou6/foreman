@@ -63,6 +63,13 @@ export class GitCli implements Git {
     return out.trim() !== '';
   }
 
+  async stagedDiff(dir: string): Promise<string> {
+    await this.run(dir, 'add', '-A');
+    const stat = await this.run(dir, 'diff', '--cached', '--stat');
+    const patch = await this.run(dir, 'diff', '--cached', '--no-color', '--no-ext-diff');
+    return `${stat}\n${patch}`;
+  }
+
   async commitAll(dir: string, message: string): Promise<void> {
     if (!(await this.hasChanges(dir))) {
       return;
