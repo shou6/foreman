@@ -40,7 +40,14 @@ export class WorktreeActions {
     await this.service.close(taskId);
     let result;
     try {
-      result = await this.worktrees.merge(worktree, task.title);
+      // コミットメッセージを Claude に作らせるので数秒かかる
+      result = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: vscode.l10n.t('Merging "{0}"…', task.title),
+        },
+        () => this.worktrees.merge(worktree, task.title)
+      );
     } catch (error) {
       void vscode.window.showErrorMessage(
         vscode.l10n.t('Merge failed: {0}', error instanceof Error ? error.message : String(error))

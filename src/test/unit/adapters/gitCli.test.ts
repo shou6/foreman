@@ -70,6 +70,23 @@ suite('GitCli', function () {
     assert.strictEqual(exclude.split('\n').filter((l) => l === '.foreman/').length, 1);
   });
 
+  test('stagedDiff はすべての変更（追跡外を含む）をステージし、統計と差分を返す', async () => {
+    const repo = makeRepo();
+    const git = new GitCli();
+    fs.writeFileSync(path.join(repo, 'a.txt'), 'a\nchanged\n');
+    fs.writeFileSync(path.join(repo, 'new.txt'), 'new\n');
+    const diff = await git.stagedDiff(repo);
+    assert.ok(diff.includes('a.txt'));
+    assert.ok(diff.includes('new.txt'));
+    assert.ok(diff.includes('+changed'));
+    assert.ok(/2 files changed/.test(diff));
+    const staged = execFileSync('git', ['diff', '--cached', '--name-only'], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.deepStrictEqual(staged.trim().split('\n'), ['a.txt', 'new.txt']);
+  });
+
   test('ブランチをチェックアウトしている worktree のパスが分かる。どこにも無ければ undefined', async () => {
     const repo = makeRepo();
     const git = new GitCli();

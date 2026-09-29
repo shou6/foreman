@@ -508,7 +508,7 @@ export function App({ state, post, initialDraft, onDraftChange }: AppProps) {
                   })
                 }
               >
-                {(['default', 'acceptEdits', 'plan'] as const).map((mode) => (
+                {(['default', 'acceptEdits', 'auto', 'plan'] as const).map((mode) => (
                   <option key={mode} value={mode} title={state.strings.permissionModeHints[mode]}>
                     {state.strings.permissionModes[mode]}
                   </option>
@@ -881,7 +881,10 @@ interface DiffCardProps {
   post: (message: ToExtension) => void;
 }
 
-/** ターンの差分カード（FR-DIFF-1〜7）。ファイルを開くとインラインの差分を拡張機能に求める */
+/**
+ * ターンの差分カード（FR-DIFF-1〜7）。ファイルの一覧は初めはたたみ、見出しを押すと開く。
+ * ファイルを開くとインラインの差分を拡張機能に求める
+ */
 function DiffCard({
   turn,
   changes,
@@ -899,8 +902,8 @@ function DiffCard({
   const removed = changes.reduce((n, c) => n + (c.removed ?? 0), 0);
   const revertible = changes.some((c) => !c.reverted);
   return (
-    <section class="diff-card">
-      <div class="diff-card-head">
+    <details class="diff-card">
+      <summary class="diff-card-head">
         <span class="diff-card-title">
           {strings.changesInTurn.replace('{0}', String(turn + 1))}
         </span>
@@ -914,14 +917,24 @@ function DiffCard({
           <button
             class="revert-all"
             disabled={!revertible}
-            onClick={() => post({ type: 'revertAll', turn })}
+            onClick={(e) => {
+              // 見出しの中のボタンなので、押しても一覧を開閉しない
+              e.preventDefault();
+              post({ type: 'revertAll', turn });
+            }}
           >
             <Icon name="discard" />
             {strings.revertAll}
           </button>
         )}
         {approvable && (
-          <button class="approve primary" onClick={() => post({ type: 'approve' })}>
+          <button
+            class="approve primary"
+            onClick={(e) => {
+              e.preventDefault();
+              post({ type: 'approve' });
+            }}
+          >
             {strings.approveAndDone}
           </button>
         )}
@@ -932,11 +945,17 @@ function DiffCard({
           </span>
         )}
         {approved && unapprovable && (
-          <button class="unapprove" onClick={() => post({ type: 'unapprove' })}>
+          <button
+            class="unapprove"
+            onClick={(e) => {
+              e.preventDefault();
+              post({ type: 'unapprove' });
+            }}
+          >
             {strings.unapprove}
           </button>
         )}
-      </div>
+      </summary>
       {pruned && <div class="diff-pruned">{strings.snapshotsPruned}</div>}
       {changes.map((change) => {
         const key = diffKey(turn, change.path);
@@ -1025,7 +1044,7 @@ function DiffCard({
           </div>
         );
       })}
-    </section>
+    </details>
   );
 }
 

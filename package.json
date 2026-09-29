@@ -2,7 +2,7 @@
   "name": "foreman",
   "displayName": "Foreman for Claude Code",
   "description": "%description%",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "shou6",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -421,14 +421,16 @@
           "enum": [
             "default",
             "acceptEdits",
+            "auto",
             "plan"
           ],
           "enumDescriptions": [
             "%config.defaultPermissionMode.default%",
             "%config.defaultPermissionMode.acceptEdits%",
+            "%config.defaultPermissionMode.auto%",
             "%config.defaultPermissionMode.plan%"
           ],
-          "default": "default",
+          "default": "auto",
           "description": "%config.defaultPermissionMode%"
         },
         "foreman.taskViewWidth": {

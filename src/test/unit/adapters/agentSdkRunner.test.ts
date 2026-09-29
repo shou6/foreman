@@ -6,7 +6,7 @@ import {
   type QueryFn,
   type SdkMessage,
 } from '../../../adapters/agentSdkRunner';
-import type { PermissionDecision, RunnerEvent } from '../../../domain/events';
+import type { PermissionDecision, PermissionRequest, RunnerEvent } from '../../../domain/events';
 
 /** SDK のメッセージの最小限の形。型は adapters の外に出さないので、テストでは unknown 経由で作る */
 const msg = (m: Record<string, unknown>): SdkMessage => m as unknown as SdkMessage;
@@ -243,6 +243,15 @@ suite('sdkOptionsFromAlwaysAllowed', () => {
       permissionMode: 'acceptEdits',
       allowedTools: [],
     });
+  });
+
+  test('auto のタスクは、保存した setMode acceptEdits で弱めない', () => {
+    assert.deepStrictEqual(
+      sdkOptionsFromAlwaysAllowed('auto', [
+        { type: 'setMode', mode: 'acceptEdits', destination: 'session' },
+      ]),
+      { permissionMode: 'auto', allowedTools: [] }
+    );
   });
 
   test('setMode でも、より緩い bypassPermissions などには写さない', () => {
@@ -532,6 +541,41 @@ suite('AgentSdkRunner', () => {
       toolName: 'Edit',
       input: { file_path: 'a' },
       suggestions,
+    });
+  });
+
+  test('Bash の「常に許可」の提案は、コマンド名の接頭辞に広げて渡す', async () => {
+    const { query, fake } = fakeQuery();
+    const runner = new AgentSdkRunner({ query, claudePath: () => 'c' });
+    const requests: PermissionRequest[] = [];
+    runner.start({
+      ...base,
+      onEvent: () => {},
+      onPermissionRequest: async (request) => {
+        requests.push(request);
+        return { behavior: 'allow-always', permissions: request.suggestions };
+      },
+    });
+    const result = await fake.canUseTool('Bash', { command: "git commit -m 'x'" }, [
+      {
+        type: 'addRules',
+        behavior: 'allow',
+        destination: 'localSettings',
+        rules: [{ toolName: 'Bash', ruleContent: "git commit -m 'x' *" }],
+      },
+    ]);
+    const broadened = {
+      type: 'addRules',
+      behavior: 'allow',
+      rules: [{ toolName: 'Bash', ruleContent: 'git commit *' }],
+    };
+    assert.deepStrictEqual(requests[0]?.suggestions, [
+      { ...broadened, destination: 'localSettings' },
+    ]);
+    assert.deepStrictEqual(result, {
+      behavior: 'allow',
+      updatedInput: { command: "git commit -m 'x'" },
+      updatedPermissions: [{ ...broadened, destination: 'session' }],
     });
   });
 

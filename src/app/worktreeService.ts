@@ -1,3 +1,4 @@
+import { defaultCommitMessage } from '../domain/commitMessage';
 import type { Worktree } from '../domain/task';
 import { branchName, worktreeName, worktreePath, WORKTREE_DIR } from '../domain/worktree';
 import type { Git } from '../ports/git';
@@ -19,6 +20,15 @@ export interface WorktreeServiceDeps {
   removeDir?: (dir: string) => Promise<void>;
   /** worktree を作った直後の準備。無ければ何もしない */
   setup?: WorktreeSetup;
+  /**
+   * worktree の変更をコミットする時のメッセージを作る（プロジェクトの規約に沿わせる）。
+   * 無い時、作れない時、失敗した時は既定のメッセージ（chore: <タイトル>）にする
+   */
+  commitMessage?: (request: {
+    repo: string;
+    title: string;
+    diff: string;
+  }) => Promise<string | undefined>;
 }
 
 /**
@@ -111,7 +121,21 @@ export class WorktreeService {
 
   /** 作業中の変更をブランチにコミットする（切り出しで親の状態を引き継ぐ時に使う） */
   commitWork(worktree: Worktree, title: string): Promise<void> {
-    return this.deps.git.commitAll(worktree.path, `foreman: ${title}`);
+    return this.commit(worktree, title);
+  }
+
+  /** 変更があれば、ステージした差分からメッセージを作ってコミットする */
+  private async commit(worktree: Worktree, title: string): Promise<void> {
+    const { git, commitMessage } = this.deps;
+    if (!(await git.hasChanges(worktree.path))) {
+      return;
+    }
+    let message: string | undefined;
+    if (commitMessage !== undefined) {
+      const diff = await git.stagedDiff(worktree.path);
+      message = await commitMessage({ repo: worktree.repo, title, diff }).catch(() => undefined);
+    }
+    await git.commitAll(worktree.path, message ?? defaultCommitMessage(title));
   }
 
   /** 未マージの変更（未コミットの変更）があるか。フォルダが無ければ false */
@@ -135,7 +159,7 @@ export class WorktreeService {
         `The branch "${worktree.base}" to merge into is not checked out in any worktree. Check it out and try again.`
       );
     }
-    await this.deps.git.commitAll(worktree.path, `foreman: ${title}`);
+    await this.commit(worktree, title);
     await this.deps.git.merge(target, worktree.branch, `Merge ${worktree.branch}: ${title}`);
     try {
       await this.remove(worktree);

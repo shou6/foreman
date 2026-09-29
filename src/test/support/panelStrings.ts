@@ -44,11 +44,13 @@ export const PANEL_STRINGS: PanelStrings = {
   permissionModes: {
     default: 'Ask each time',
     acceptEdits: 'Auto-accept edits',
+    auto: 'Auto',
     plan: 'Plan only',
   },
   permissionModeHints: {
     default: 'Claude asks before each tool call',
     acceptEdits: 'File edits are allowed automatically; other tools still ask',
+    auto: 'Claude Code decides each tool call; only risky ones ask',
     plan: 'Claude reads and plans, and asks before it edits',
   },
   inputDetails: 'Input details (JSON)',
