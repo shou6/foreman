@@ -18,7 +18,7 @@ if (!fs.existsSync(helperPath)) {
 const { checkPackageFiles, parseVsceLs } = require(helperPath);
 const { checkPrivateFiles } = require('./check-private-files');
 
-// 手元だけの文書と設定（foreman-docs で管理）が、公開リポジトリに追跡されていないこと
+// 手元だけの文書と設定が、公開リポジトリに追跡されていないこと
 if (!checkPrivateFiles()) {
   process.exit(1);
 }
