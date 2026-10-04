@@ -63,10 +63,11 @@ export function checkPackageFiles(
 }
 
 /**
- * 手元だけで使う文書と設定。公開リポジトリには入れず、foreman-docs（非公開）で管理する。
+ * 手元だけで使う文書と状態。公開リポジトリには入れない。
+ * CLAUDE.md と .claude/ は公開リポジトリで追跡するので含めない。
  * 公開側の無視は .gitignore ではなく .git/info/exclude に書くので、追跡されていないことをここで検査する
  */
-const PRIVATE_PATHS = ['docs/', 'CLAUDE.md', '.claude/', '.automation/', 'spikes/'];
+const PRIVATE_PATHS = ['docs/', '.automation/', 'spikes/'];
 
 /** 追跡されているファイルのうち、手元だけの文書と設定に当たるもの */
 export function privateFilesTracked(trackedFiles: string[]): string[] {
