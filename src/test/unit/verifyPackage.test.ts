@@ -123,7 +123,7 @@ suite('checkPackageFiles: Webview のバンドル', () => {
 });
 
 suite('privateFilesTracked', () => {
-  test('手元だけの文書と設定（docs、CLAUDE.md、.claude、.automation、spikes）が追跡されていれば知らせる', () => {
+  test('手元だけの文書と設定（docs、.automation、spikes）が追跡されていれば知らせる。CLAUDE.md と .claude は公開する', () => {
     assert.deepStrictEqual(
       privateFilesTracked([
         'src/extension.ts',
@@ -135,13 +135,7 @@ suite('privateFilesTracked', () => {
         '.github/workflows/ci.yml',
         'README.md',
       ]),
-      [
-        'docs/requirements.md',
-        'CLAUDE.md',
-        '.claude/rules/commit-message.md',
-        '.automation/manual-tasks.md',
-        'spikes/v1-start.mjs',
-      ]
+      ['docs/requirements.md', '.automation/manual-tasks.md', 'spikes/v1-start.mjs']
     );
   });
 
