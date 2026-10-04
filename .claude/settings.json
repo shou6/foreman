@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npm ls*)",
+      "Bash(npm view*)",
+      "Bash(npm outdated*)",
+      "Bash(npx vsce ls*)",
+      "Bash(npx vsce package*)",
+      "Bash(npx @vscode/vsce ls*)",
+      "Bash(npx @vscode/vsce package*)",
+      "Bash(node -v)",
+      "Bash(node esbuild.js*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "Bash(git checkout *)",
+      "Bash(git show *)",
+      "Bash(find *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:marketplace.visualstudio.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:nodejs.org)"
+    ],
+    "ask": [
+      "Bash(npm install*)",
+      "Bash(npm i *)",
+      "Bash(npm uninstall*)",
+      "Bash(npm update*)",
+      "Bash(npx vsce publish*)",
+      "Bash(npx @vscode/vsce publish*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(npm publish*)",
+      "Bash(npx vsce login*)",
+      "Bash(npx @vscode/vsce login*)",
+      "Read(**/.env)",
+      "Edit(**/.env)"
+    ]
+  }
+}

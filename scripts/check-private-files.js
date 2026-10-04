@@ -1,4 +1,4 @@
-// 手元だけの文書と設定（docs/、CLAUDE.md、.claude/、.automation/、spikes/。非公開の foreman-docs で管理）が、
+// 手元だけの文書と状態（docs/、.automation/、spikes/）が、
 // 公開リポジトリの index に入っていないことを確かめる。
 // 公開側の無視は .git/info/exclude（手元だけの設定）なので、それが無い clone では git add -A で混ざりうる。
 // pre-commit フックと npm run verify:package の両方から呼び、コミットができる前に止める。
@@ -24,7 +24,7 @@ function checkPrivateFiles() {
   const leaked = privateFilesTracked(tracked);
   if (leaked.length > 0) {
     console.error(
-      'Private docs or settings are staged or tracked in the public repository (they belong to foreman-docs):\n  ' +
+      'Private docs or settings are staged or tracked in the public repository:\n  ' +
         leaked.join('\n  ') +
         '\n\nUnstage them (git rm --cached <path>) and add them to .git/info/exclude.'
     );

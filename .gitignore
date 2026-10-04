@@ -22,6 +22,7 @@ Thumbs.db
 *.log
 *.stackdump
 
-# 手元だけで使う文書と設定（docs/、CLAUDE.md、.claude/、.automation/、spikes/）は、
-# 非公開の foreman-docs リポジトリで管理する。公開側では .git/info/exclude で無視し、
+# 手元だけで使う文書と状態（docs/、.automation/、spikes/）は .git/info/exclude で無視し、
 # 追跡されていないことを npm run verify:package で検査する
+
+CLAUDE.local.md

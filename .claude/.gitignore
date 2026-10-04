@@ -1,0 +1,6 @@
+# Log files
+logs/*
+# Local files
+*.local.*
+# textlint (hook / MCP 用の依存)
+node_modules/
