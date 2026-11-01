@@ -622,7 +622,7 @@
     "diff": "^8.0.4",
     "marked": "^18.0.14",
     "overlayscrollbars": "^2.16.0",
-    "preact": "^10.29.8"
+    "preact": "^11.1.0"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
